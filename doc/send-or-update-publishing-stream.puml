@@ -1,0 +1,33 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+title Send or Update a Publishing Stream
+
+autonumber
+== Publisher ==
+Client -> SFU: join
+note right
+{
+    method: offer,
+    params: {
+        "desc": {
+            "type": "offer",
+            "sdp": "..."
+        } as RTCSessionDescription
+    },
+    id: uuid-publisher
+}
+end note
+
+SFU -> Client: answer
+note right
+{
+    result: {
+        "type": "answer",
+        "sdp": "..."
+    } as RTCSessionDescription,
+    id: uuid-publisher
+}
+end note
+
+@enduml

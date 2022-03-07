@@ -1,0 +1,109 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+title Init a Session
+
+autonumber
+== A Initialization Publisher ==
+Client -> SFU: join
+note right
+{
+    method: join,
+    params: {
+        "sid": "defaultroom",
+        "offer": {
+            "type": "offer",
+            "sdp": "..."
+        } as RTCSessionDescription
+    },
+    id: uuid-publisher
+}
+end note
+
+Client -> SFU: ice
+note right #aqua
+{
+    method: trickle,
+    params: {
+        candidate: RTCIceCandidate,
+        target: 0
+    },
+    id: uuid-publisher
+}
+end note
+
+SFU -> Client: answer
+note right
+{
+    result: {
+        "type": "answer",
+        "sdp": "..."
+    } as RTCSessionDescription,
+    id: uuid-publisher
+}
+end note
+
+SFU -> Client: ice
+note right #aqua
+{
+    method: trickle,
+    params: {
+        candidate: RTCIceCandidate,
+        target: 0
+    },
+    id: uuid-publisher
+}
+end note
+
+== B Initialization Subscriber ==
+
+SFU -> Client: offer
+note right
+{
+    method: offer,
+    params: {
+        "type": "offer",
+        "sdp": "..."
+    } as RTCSessionDescription
+    id: uuid-subscriber
+}
+end note
+
+SFU -> Client: ice
+note right #aqua
+{
+    method: trickle,
+    params: {
+        candidate: RTCIceCandidate,
+        target: 1
+    },
+    id: uuid-subscriber
+}
+end note
+
+Client -> SFU: answer
+note right
+{
+    method: answer,
+    params: {
+        "desc": {
+            "type": "answer",
+            "sdp": "..."
+        } as RTCSessionDescription
+    },
+    id: uuid-subscriber
+}
+end note
+
+Client -> SFU: ice
+note right #aqua
+{
+    method: trickle,
+    params: {
+        candidate: RTCIceCandidate,
+        target: 1
+    },
+    id: uuid-subscriber
+}
+end note
+@enduml
