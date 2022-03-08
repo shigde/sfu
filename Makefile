@@ -14,6 +14,9 @@ clean:
 build: go_init
 	go build -o bin/sfu $(GO_LDFLAGS) ./cmd/main.go
 
+build-linux:
+	GOOS=linux GOARCH=amd64 go build -o bin/sfu $(GO_LDFLAGS) ./cmd/main.go
+
 test: go_init
 	go test \
 		-timeout 240s \
