@@ -11,23 +11,22 @@ import (
 
 //const defaulExpireTime = 604800 // 1 week
 
-
-type JwtConfig struct {
-	Enabled bool   `mapstructure:"enabled"`
-	Key     string `mapstructure:"key"`
-	DefaultExpireTime int64 `mapstructure:"defaultexpiretime"`
+type JwtToken struct {
+	Enabled           bool   `mapstructure:"enabled"`
+	Key               string `mapstructure:"key"`
+	DefaultExpireTime int64  `mapstructure:"defaultexpiretime"`
 }
 
 // KeyFunc auth key types
-func (a JwtConfig) KeyFunc(token *jwt.Token) (interface{}, error) {
+func (jwtToken JwtToken) KeyFunc(token *jwt.Token) (interface{}, error) {
 	// nolint: gocritic
 	// Don't forget to validate the alg is what you expect:
 	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-		return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 	}
 
 	// hmacSecret is a []byte containing your secret, e.g. []byte("my_secret_key")
-	return []byte(a.Key), nil
+	return []byte(jwtToken.Key), nil
 }
 
 type Claims struct {
@@ -55,20 +54,20 @@ func (c *Claims) IsSubscriber() bool {
 }
 
 // CreateJWTToken generates a JWT signed token for for the given user
-func CreateJWTToken(principal Principal, jwtConfig *JwtConfig) (string, error) {
+func CreateJWTToken(principal Principal, jwtToken *JwtToken) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"UID":       principal.GetUid(),
 		"SID":       principal.GetSid(),
 		"Publish":   principal.IsPublisher(),
 		"Subscribe": principal.IsSubscriber(),
-		"ExpiresAt": time.Now().Unix() + jwtConfig.DefaultExpireTime,
+		"ExpiresAt": time.Now().Unix() + jwtToken.DefaultExpireTime,
 	})
-	tokenString, err := token.SignedString([]byte(jwtConfig.Key))
+	tokenString, err := token.SignedString([]byte(jwtToken.Key))
 
 	return tokenString, err
 }
 
-func ValidateToken(tokenString string, jwtConfig *JwtConfig) (Principal, error) {
+func ValidateToken(tokenString string, jwtConfig *JwtToken) (Principal, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, jwtConfig.KeyFunc)
 
 	if err != nil {
@@ -83,7 +82,8 @@ func ValidateToken(tokenString string, jwtConfig *JwtConfig) (Principal, error) 
 			Subscribe: claims.IsSubscriber(),
 		}
 		return p, nil
-	} else {
-		return Principal{}, err
 	}
+
+	return Principal{}, fmt.Errorf("invalidated jwt token")
+
 }

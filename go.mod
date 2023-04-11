@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-logr/logr v1.2.2
 	github.com/go-logr/zerologr v1.2.0
 	github.com/gorilla/websocket v1.5.0
@@ -13,6 +14,7 @@ require (
 	github.com/rs/zerolog v1.26.0
 	github.com/sourcegraph/jsonrpc2 v0.1.0
 	github.com/spf13/viper v1.10.1
+	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
 )
 
 //github.com/pion/dtls/v2 v2.1.0
