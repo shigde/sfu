@@ -1,6 +1,6 @@
 SERVER_NAME = stream-server
 GO_LDFLAGS = -ldflags "-s -w"
-GO_VERSION = 1.19
+GO_VERSION = 1.20
 GO_TESTPKGS:=$(shell go list ./... | grep -v cmd | grep -v examples)
 
 all: nodes

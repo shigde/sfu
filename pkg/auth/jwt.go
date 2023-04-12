@@ -6,7 +6,7 @@ import (
 
 	//"github.com/jeroendk/chatApplication/models"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 //const defaulExpireTime = 604800 // 1 week
@@ -34,7 +34,7 @@ type Claims struct {
 	SID       string `json:"sid"`
 	Publish   bool   `json:"publish"`
 	Subscribe bool   `json:"subscribe"`
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 }
 
 func (c *Claims) GetUid() string {
