@@ -1,29 +1,49 @@
 package media
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/pkg/auth"
 	"github.com/shigde/sfu/pkg/config"
 )
 
 type MediaServer struct {
+	server *http.Server
 	config *config.ServerConfig
+	router *mux.Router
 }
 
 func NewMediaServer(config *config.ServerConfig) *MediaServer {
-	return &MediaServer{config}
+	router := mux.NewRouter()
+	return &MediaServer{
+		server: &http.Server{Addr: ":8080", Handler: router},
+		config: config,
+		router: router,
+	}
 }
 
-func homePage(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Welcome to the HomePage!")
-	fmt.Println("Endpoint Hit: homePage")
-}
 func (s *MediaServer) Serve() error {
-	http.Handle("/hello", auth.HttpMiddleware(s.config.AuthConfig, homePage))
-	return http.ListenAndServe(":10000", nil)
+	repository := newStreamRepository()
+
+	s.router.HandleFunc("/streams", auth.HttpMiddleware(s.config.AuthConfig, getStreamList(*repository))).Methods("GET")
+	s.router.HandleFunc("/stream", auth.HttpMiddleware(s.config.AuthConfig, createStream(*repository))).Methods("POST")
+	s.router.HandleFunc("/stream/{id}", auth.HttpMiddleware(s.config.AuthConfig, getStream(*repository))).Methods("GET")
+	s.router.HandleFunc("/stream", auth.HttpMiddleware(s.config.AuthConfig, updateStream(*repository))).Methods("PUT")
+	s.router.HandleFunc("/stream/{id}", auth.HttpMiddleware(s.config.AuthConfig, deleteStream(*repository))).Methods("DELETE")
+
+	if err := s.server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("listening and serve: %w", err)
+	}
+	return nil
 }
 
-func (s *MediaServer) Shutdown() {
+func (s *MediaServer) Shutdown(ctx context.Context) error {
+	if err := s.server.Shutdown(ctx); err != nil {
+		return fmt.Errorf("shuting down http server: %w", err)
+	}
+	return nil
 }

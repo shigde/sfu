@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/go-logr/logr v1.2.2
 	github.com/golang-jwt/jwt/v5 v5.0.0-rc.2
+	github.com/gorilla/mux v1.7.3
 	github.com/pion/ion-sfu v1.11.0
 	github.com/pion/webrtc/v3 v3.1.7
 	github.com/sourcegraph/jsonrpc2 v0.1.0

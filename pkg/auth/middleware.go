@@ -8,7 +8,7 @@ import (
 	"github.com/shigde/sfu/pkg/logging"
 )
 
-var log = logging.NewSlog("")
+var log = logging.NewSlog()
 
 type contextKey string
 
@@ -17,6 +17,7 @@ const PrincipalContextKey = contextKey("principal")
 func HttpMiddleware(ac *AuthConfig, f http.HandlerFunc) http.HandlerFunc {
 	log.Debug("activated authentication http middleware")
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		log.Debug("getting new client request")
 		authHeader := r.Header.Get("Authorization")
 
