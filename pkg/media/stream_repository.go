@@ -1,30 +1,44 @@
 package media
 
+import (
+	"sync"
+
+	"github.com/google/uuid"
+)
+
 type StreamRepository struct {
+	locker  *sync.RWMutex
 	streams []StreamResource
 }
 
 func newStreamRepository() *StreamRepository {
 	streams := []StreamResource{
-		StreamResource{Id: "fsdfdgfshfsdghf"},
-		StreamResource{Id: "Helhhcbdshcbhdsblo"},
+		{Id: uuid.New().String()},
+		{Id: uuid.New().String()},
 	}
 	return &StreamRepository{
+		&sync.RWMutex{},
 		streams,
 	}
 }
 
 func (r *StreamRepository) AddStream(s StreamResource) string {
+	r.locker.Lock()
+	defer r.locker.Unlock()
+	s.Id = uuid.New().String()
 	r.streams = append(r.streams, s)
-	// @TODO create is
 	return s.Id
 }
 
 func (r *StreamRepository) AllStreams() []StreamResource {
+	r.locker.RLocker()
+	defer r.locker.RUnlock()
 	return r.streams
 }
 
 func (r *StreamRepository) StreamById(id string) (StreamResource, bool) {
+	r.locker.RLock()
+	defer r.locker.RUnlock()
 	for _, stream := range r.streams {
 		if stream.Id == id {
 			return stream, true
@@ -34,6 +48,8 @@ func (r *StreamRepository) StreamById(id string) (StreamResource, bool) {
 }
 
 func (r *StreamRepository) DeleteStream(id string) bool {
+	r.locker.Lock()
+	defer r.locker.Unlock()
 	if i := index(id, r.streams); i != -1 {
 		r.streams = append(r.streams[:i], r.streams[i+1:]...)
 		return true
@@ -51,6 +67,8 @@ func index(id string, resources []StreamResource) int {
 }
 
 func (r *StreamRepository) Contains(id string) bool {
+	r.locker.RLock()
+	defer r.locker.RUnlock()
 	for _, stream := range r.AllStreams() {
 		if stream.Id == id {
 			return true
@@ -60,6 +78,8 @@ func (r *StreamRepository) Contains(id string) bool {
 }
 
 func (r *StreamRepository) StreamUpdate(stream StreamResource) bool {
+	r.locker.Lock()
+	defer r.locker.Unlock()
 	if i := index(stream.Id, r.streams); i != -1 {
 		r.streams[i] = stream
 		return true

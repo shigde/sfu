@@ -2,12 +2,16 @@ package media
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/gorilla/mux"
 )
+
+const maxPayloadByte = 1048576
+
+var invalidPayload = errors.New("invalid payload")
 
 func getStreamList(repository StreamRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -54,14 +58,8 @@ func deleteStream(repository StreamRepository) http.HandlerFunc {
 
 func createStream(repository StreamRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
 		var stream StreamResource
-		if err = json.Unmarshal(body, &stream); err != nil {
+		if err := getPayload(w, r, &stream); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -74,22 +72,36 @@ func createStream(repository StreamRepository) http.HandlerFunc {
 
 func updateStream(repository StreamRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
 		var stream StreamResource
-		if err = json.Unmarshal(body, &stream); err != nil {
+		if err := getPayload(w, r, &stream); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		if repository.StreamUpdate(stream) {
-			w.WriteHeader(http.StatusNoContent)
-		} else {
+		if ok := repository.StreamUpdate(stream); !ok {
 			w.WriteHeader(http.StatusNotFound)
+			return
 		}
+
+		w.WriteHeader(http.StatusNoContent)
+
 	}
+}
+
+func getPayload(w http.ResponseWriter, r *http.Request, stream *StreamResource) error {
+	contentType := r.Header.Get("Content-Type")
+	if contentType != "application/json" {
+		return invalidPayload
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxPayloadByte)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+
+	err := dec.Decode(&stream)
+	if err != nil {
+		return invalidPayload
+	}
+
+	return nil
 }
