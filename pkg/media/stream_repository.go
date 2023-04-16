@@ -31,7 +31,7 @@ func (r *StreamRepository) AddStream(s StreamResource) string {
 }
 
 func (r *StreamRepository) AllStreams() []StreamResource {
-	r.locker.RLocker()
+	r.locker.RLock()
 	defer r.locker.RUnlock()
 	return r.streams
 }
