@@ -29,11 +29,11 @@ func NewMediaServer(config *config.ServerConfig) *MediaServer {
 func (s *MediaServer) Serve() error {
 	repository := newStreamRepository()
 
-	s.router.HandleFunc("/streams", auth.HttpMiddleware(s.config.AuthConfig, getStreamList(*repository))).Methods("GET")
-	s.router.HandleFunc("/stream", auth.HttpMiddleware(s.config.AuthConfig, createStream(*repository))).Methods("POST")
-	s.router.HandleFunc("/stream/{id}", auth.HttpMiddleware(s.config.AuthConfig, getStream(*repository))).Methods("GET")
-	s.router.HandleFunc("/stream", auth.HttpMiddleware(s.config.AuthConfig, updateStream(*repository))).Methods("PUT")
-	s.router.HandleFunc("/stream/{id}", auth.HttpMiddleware(s.config.AuthConfig, deleteStream(*repository))).Methods("DELETE")
+	s.router.HandleFunc("/streams", auth.HttpMiddleware(s.config.AuthConfig, getStreamList(repository))).Methods("GET")
+	s.router.HandleFunc("/stream", auth.HttpMiddleware(s.config.AuthConfig, createStream(repository))).Methods("POST")
+	s.router.HandleFunc("/stream/{id}", auth.HttpMiddleware(s.config.AuthConfig, getStream(repository))).Methods("GET")
+	s.router.HandleFunc("/stream", auth.HttpMiddleware(s.config.AuthConfig, updateStream(repository))).Methods("PUT")
+	s.router.HandleFunc("/stream/{id}", auth.HttpMiddleware(s.config.AuthConfig, deleteStream(repository))).Methods("DELETE")
 
 	if err := s.server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("listening and serve: %w", err)

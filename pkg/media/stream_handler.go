@@ -13,7 +13,7 @@ const maxPayloadByte = 1048576
 
 var invalidPayload = errors.New("invalid payload")
 
-func getStreamList(repository StreamRepository) http.HandlerFunc {
+func getStreamList(repository *StreamRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		streams := repository.AllStreams()
 		if err := json.NewEncoder(w).Encode(streams); err != nil {
@@ -21,7 +21,7 @@ func getStreamList(repository StreamRepository) http.HandlerFunc {
 		}
 	}
 }
-func getStream(repository StreamRepository) http.HandlerFunc {
+func getStream(repository *StreamRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, ok := mux.Vars(r)["id"]
 		if !ok {
@@ -40,7 +40,7 @@ func getStream(repository StreamRepository) http.HandlerFunc {
 	}
 }
 
-func deleteStream(repository StreamRepository) http.HandlerFunc {
+func deleteStream(repository *StreamRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, ok := mux.Vars(r)["id"]
 		if !ok {
@@ -56,7 +56,7 @@ func deleteStream(repository StreamRepository) http.HandlerFunc {
 	}
 }
 
-func createStream(repository StreamRepository) http.HandlerFunc {
+func createStream(repository *StreamRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var stream StreamResource
 		if err := getPayload(w, r, &stream); err != nil {
@@ -70,7 +70,7 @@ func createStream(repository StreamRepository) http.HandlerFunc {
 	}
 }
 
-func updateStream(repository StreamRepository) http.HandlerFunc {
+func updateStream(repository *StreamRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var stream StreamResource
 		if err := getPayload(w, r, &stream); err != nil {
