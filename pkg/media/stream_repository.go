@@ -12,10 +12,7 @@ type StreamRepository struct {
 }
 
 func newStreamRepository() *StreamRepository {
-	streams := []StreamResource{
-		{Id: uuid.New().String()},
-		{Id: uuid.New().String()},
-	}
+	var streams []StreamResource
 	return &StreamRepository{
 		&sync.RWMutex{},
 		streams,

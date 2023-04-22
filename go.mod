@@ -5,11 +5,13 @@ go 1.20
 require (
 	github.com/go-logr/logr v1.2.2
 	github.com/golang-jwt/jwt/v5 v5.0.0-rc.2
+	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.7.3
 	github.com/pion/ion-sfu v1.11.0
 	github.com/pion/webrtc/v3 v3.1.7
 	github.com/sourcegraph/jsonrpc2 v0.1.0
 	github.com/spf13/viper v1.10.1
+	github.com/stretchr/testify v1.8.1
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 )
 
@@ -17,11 +19,11 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bep/debounce v1.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/gammazero/deque v0.1.0 // indirect
 	github.com/gammazero/workerpool v1.1.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/lucsky/cuid v1.2.1 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
@@ -45,6 +47,7 @@ require (
 	github.com/pion/transport/v2 v2.0.0 // indirect
 	github.com/pion/turn/v2 v2.0.5 // indirect
 	github.com/pion/udp v0.1.4 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.11.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.26.0 // indirect
@@ -63,4 +66,5 @@ require (
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

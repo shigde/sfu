@@ -21,7 +21,7 @@ func main() {
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	server := media.NewMediaServer(conf)
+	server := media.NewServer(conf)
 
 	go func() {
 		sig := <-sigs
