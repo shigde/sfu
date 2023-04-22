@@ -17,21 +17,21 @@ import (
 
 const bearer = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.h3ygBKXYiYVyGIwEMNYVuejBUCch2eysey4JqsXg9dk"
 
-var router *mux.Router
-var repository *StreamRepository
-var streamId string
-
-func init() {
+func testSetup(t *testing.T) (string, *mux.Router, *StreamRepository) {
+	t.Helper()
 	jwt := &auth.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}
 	config := &auth.AuthConfig{JWT: jwt}
 	// Setup mocks
-	repository = newStreamRepository()
+	repository := newStreamRepository()
 	s := StreamResource{}
-	streamId = repository.AddStream(s)
-	router = newRouter(config, repository)
+	streamId := repository.AddStream(s)
+	router := newRouter(config, repository)
+
+	return streamId, router, repository
 }
 
 func TestGetAllStreamsReq(t *testing.T) {
+	streamId, router, _ := testSetup(t)
 
 	// When: GET /streams is called
 	req := newRequest("GET", "/streams", nil)
@@ -47,6 +47,7 @@ func TestGetAllStreamsReq(t *testing.T) {
 }
 
 func TestGetStreamReq(t *testing.T) {
+	streamId, router, _ := testSetup(t)
 
 	// When: GET /catalog/products is called
 	req := newRequest("GET", fmt.Sprintf("/stream/%s", streamId), nil)
@@ -62,6 +63,8 @@ func TestGetStreamReq(t *testing.T) {
 }
 
 func TestCreateStreamReq(t *testing.T) {
+	_, router, repository := testSetup(t)
+
 	jsonStream, _ := json.Marshal(StreamResource{})
 	body := bytes.NewBuffer(jsonStream)
 	req := newRequest("POST", "/stream", body)
@@ -76,6 +79,8 @@ func TestCreateStreamReq(t *testing.T) {
 }
 
 func TestUpdateStreamReq(t *testing.T) {
+	streamId, router, repository := testSetup(t)
+
 	p, _ := repository.StreamById(streamId)
 	jsonStream, _ := json.Marshal(p)
 	body := bytes.NewBuffer(jsonStream)
@@ -89,6 +94,8 @@ func TestUpdateStreamReq(t *testing.T) {
 }
 
 func TestDeleteStreamReq(t *testing.T) {
+	streamId, router, repository := testSetup(t)
+
 	req := newRequest("DELETE", fmt.Sprintf("/stream/%s", streamId), nil)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
