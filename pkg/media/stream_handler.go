@@ -2,16 +2,11 @@ package media
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
 )
-
-const maxPayloadByte = 1048576
-
-var invalidPayload = errors.New("invalid payload")
 
 func getStreamList(repository *StreamRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +54,7 @@ func deleteStream(repository *StreamRepository) http.HandlerFunc {
 func createStream(repository *StreamRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var stream StreamResource
-		if err := getPayload(w, r, &stream); err != nil {
+		if err := getStreamResourcePayload(w, r, &stream); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -73,7 +68,7 @@ func createStream(repository *StreamRepository) http.HandlerFunc {
 func updateStream(repository *StreamRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var stream StreamResource
-		if err := getPayload(w, r, &stream); err != nil {
+		if err := getStreamResourcePayload(w, r, &stream); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -88,18 +83,13 @@ func updateStream(repository *StreamRepository) http.HandlerFunc {
 	}
 }
 
-func getPayload(w http.ResponseWriter, r *http.Request, stream *StreamResource) error {
-	contentType := r.Header.Get("Content-Type")
-	if contentType != "application/json" {
-		return invalidPayload
+func getStreamResourcePayload(w http.ResponseWriter, r *http.Request, stream *StreamResource) error {
+	dec, err := getPayload(w, r)
+	if err != nil {
+		return err
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxPayloadByte)
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-
-	err := dec.Decode(&stream)
-	if err != nil {
+	if err := dec.Decode(&stream); err != nil {
 		return invalidPayload
 	}
 
