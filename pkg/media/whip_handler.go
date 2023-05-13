@@ -14,7 +14,7 @@ var (
 type offer struct {
 }
 
-func whip(repository *StreamRepository) http.HandlerFunc {
+func whip(repository *engine.RtpStreamRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var offer offer
 		if err := getOfferPayload(w, r, &offer); err != nil {

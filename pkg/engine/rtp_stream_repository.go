@@ -1,4 +1,4 @@
-package media
+package engine
 
 import (
 	"sync"
@@ -6,20 +6,20 @@ import (
 	"github.com/google/uuid"
 )
 
-type StreamRepository struct {
+type RtpStreamRepository struct {
 	locker  *sync.RWMutex
-	streams []StreamResource
+	streams []*RtpStream
 }
 
-func newStreamRepository() *StreamRepository {
-	var streams []StreamResource
-	return &StreamRepository{
+func NewRtpStreamRepository() *RtpStreamRepository {
+	var streams []*RtpStream
+	return &RtpStreamRepository{
 		&sync.RWMutex{},
 		streams,
 	}
 }
 
-func (r *StreamRepository) AddStream(s StreamResource) string {
+func (r *RtpStreamRepository) Add(s *RtpStream) string {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	s.Id = uuid.New().String()
@@ -27,13 +27,13 @@ func (r *StreamRepository) AddStream(s StreamResource) string {
 	return s.Id
 }
 
-func (r *StreamRepository) AllStreams() []StreamResource {
+func (r *RtpStreamRepository) All() []*RtpStream {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 	return r.streams
 }
 
-func (r *StreamRepository) StreamById(id string) (StreamResource, bool) {
+func (r *RtpStreamRepository) FindById(id string) (*RtpStream, bool) {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 	for _, stream := range r.streams {
@@ -41,10 +41,10 @@ func (r *StreamRepository) StreamById(id string) (StreamResource, bool) {
 			return stream, true
 		}
 	}
-	return StreamResource{}, false
+	return nil, false
 }
 
-func (r *StreamRepository) DeleteStream(id string) bool {
+func (r *RtpStreamRepository) Delete(id string) bool {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	if i := index(id, r.streams); i != -1 {
@@ -54,7 +54,7 @@ func (r *StreamRepository) DeleteStream(id string) bool {
 	return false
 }
 
-func index(id string, resources []StreamResource) int {
+func index(id string, resources []*RtpStream) int {
 	for i, stream := range resources {
 		if stream.Id == id {
 			return i
@@ -63,10 +63,10 @@ func index(id string, resources []StreamResource) int {
 	return -1
 }
 
-func (r *StreamRepository) Contains(id string) bool {
+func (r *RtpStreamRepository) Contains(id string) bool {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
-	for _, stream := range r.AllStreams() {
+	for _, stream := range r.All() {
 		if stream.Id == id {
 			return true
 		}
@@ -74,7 +74,7 @@ func (r *StreamRepository) Contains(id string) bool {
 	return false
 }
 
-func (r *StreamRepository) StreamUpdate(stream StreamResource) bool {
+func (r *RtpStreamRepository) Update(stream *RtpStream) bool {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	if i := index(stream.Id, r.streams); i != -1 {

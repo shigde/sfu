@@ -12,19 +12,20 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/pkg/auth"
+	"github.com/shigde/sfu/pkg/engine"
 	"github.com/stretchr/testify/assert"
 )
 
 const bearer = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.h3ygBKXYiYVyGIwEMNYVuejBUCch2eysey4JqsXg9dk"
 
-func testSetup(t *testing.T) (string, *mux.Router, *StreamRepository) {
+func testSetup(t *testing.T) (string, *mux.Router, *engine.RtpStreamRepository) {
 	t.Helper()
 	jwt := &auth.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}
 	config := &auth.AuthConfig{JWT: jwt}
 	// Setup mocks
-	repository := newStreamRepository()
-	s := StreamResource{}
-	streamId := repository.AddStream(s)
+	repository := engine.NewRtpStreamRepository()
+	s := engine.RtpStream{}
+	streamId := repository.Add(&s)
 	router := newRouter(config, repository)
 
 	return streamId, router, repository
@@ -65,7 +66,7 @@ func TestGetStreamReq(t *testing.T) {
 func TestCreateStreamReq(t *testing.T) {
 	_, router, repository := testSetup(t)
 
-	jsonStream, _ := json.Marshal(StreamResource{})
+	jsonStream, _ := json.Marshal(engine.RtpStream{})
 	body := bytes.NewBuffer(jsonStream)
 	req := newRequest("POST", "/stream", body)
 
@@ -81,7 +82,7 @@ func TestCreateStreamReq(t *testing.T) {
 func TestUpdateStreamReq(t *testing.T) {
 	streamId, router, repository := testSetup(t)
 
-	p, _ := repository.StreamById(streamId)
+	p, _ := repository.FindById(streamId)
 	jsonStream, _ := json.Marshal(p)
 	body := bytes.NewBuffer(jsonStream)
 	req := newRequest("PUT", "/stream", body)
@@ -102,7 +103,7 @@ func TestDeleteStreamReq(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
-	assert.Equal(t, 0, len(repository.AllStreams()))
+	assert.Equal(t, 0, len(repository.All()))
 }
 
 func newRequest(method string, url string, body io.Reader) *http.Request {

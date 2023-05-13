@@ -6,17 +6,18 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/shigde/sfu/pkg/engine"
 )
 
-func getStreamList(repository *StreamRepository) http.HandlerFunc {
+func getStreamList(repository *engine.RtpStreamRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		streams := repository.AllStreams()
+		streams := repository.All()
 		if err := json.NewEncoder(w).Encode(streams); err != nil {
 			http.Error(w, "reading resources", http.StatusInternalServerError)
 		}
 	}
 }
-func getStream(repository *StreamRepository) http.HandlerFunc {
+func getStream(repository *engine.RtpStreamRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, ok := mux.Vars(r)["id"]
 		if !ok {
@@ -24,7 +25,7 @@ func getStream(repository *StreamRepository) http.HandlerFunc {
 			return
 		}
 
-		if streamResource, ok := repository.StreamById(id); ok {
+		if streamResource, ok := repository.FindById(id); ok {
 			if err := json.NewEncoder(w).Encode(streamResource); err != nil {
 				http.Error(w, "stream invalid", http.StatusInternalServerError)
 			}
@@ -35,7 +36,7 @@ func getStream(repository *StreamRepository) http.HandlerFunc {
 	}
 }
 
-func deleteStream(repository *StreamRepository) http.HandlerFunc {
+func deleteStream(repository *engine.RtpStreamRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, ok := mux.Vars(r)["id"]
 		if !ok {
@@ -43,7 +44,7 @@ func deleteStream(repository *StreamRepository) http.HandlerFunc {
 			return
 		}
 
-		if repository.DeleteStream(id) {
+		if repository.Delete(id) {
 			w.WriteHeader(http.StatusOK)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
@@ -51,29 +52,29 @@ func deleteStream(repository *StreamRepository) http.HandlerFunc {
 	}
 }
 
-func createStream(repository *StreamRepository) http.HandlerFunc {
+func createStream(repository *engine.RtpStreamRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var stream StreamResource
+		var stream engine.RtpStream
 		if err := getStreamResourcePayload(w, r, &stream); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		id := repository.AddStream(stream)
+		id := repository.Add(&stream)
 		w.Header().Set("Location", fmt.Sprintf("%s/%s", r.URL.String(), id))
 		w.WriteHeader(http.StatusCreated)
 	}
 }
 
-func updateStream(repository *StreamRepository) http.HandlerFunc {
+func updateStream(repository *engine.RtpStreamRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var stream StreamResource
+		var stream engine.RtpStream
 		if err := getStreamResourcePayload(w, r, &stream); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		if ok := repository.StreamUpdate(stream); !ok {
+		if ok := repository.Update(&stream); !ok {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -83,7 +84,7 @@ func updateStream(repository *StreamRepository) http.HandlerFunc {
 	}
 }
 
-func getStreamResourcePayload(w http.ResponseWriter, r *http.Request, stream *StreamResource) error {
+func getStreamResourcePayload(w http.ResponseWriter, r *http.Request, stream *engine.RtpStream) error {
 	dec, err := getPayload(w, r)
 	if err != nil {
 		return err

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/shigde/sfu/pkg/config"
+	"github.com/shigde/sfu/pkg/engine"
 )
 
 type Server struct {
@@ -15,7 +16,7 @@ type Server struct {
 }
 
 func NewServer(config *config.ServerConfig) *Server {
-	repository := newStreamRepository()
+	repository := engine.NewRtpStreamRepository()
 	return &Server{
 		server: &http.Server{Addr: ":8080", Handler: newRouter(config.AuthConfig, repository)},
 		config: config,
