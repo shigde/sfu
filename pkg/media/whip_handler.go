@@ -15,6 +15,9 @@ type offer struct {
 }
 
 func whip(repository *engine.RtpStreamRepository) http.HandlerFunc {
+
+	//user
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		var offer offer
 		if err := getOfferPayload(w, r, &offer); err != nil {
@@ -22,7 +25,9 @@ func whip(repository *engine.RtpStreamRepository) http.HandlerFunc {
 			return
 		}
 
-		_, err := engine.NewConnection()
+		const userId = ""
+		const roomId = ""
+		_, err := engine.NewPeer(userId)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return

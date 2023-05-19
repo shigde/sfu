@@ -16,8 +16,7 @@ build: go_init
 	go build -o ./bin/$(SERVER_NAME) ./cmd/broadcast
 
 run: build
-	./bin/$(SERVER_NAME)
-
+	./bin/$(SERVER_NAME) -c config.toml
 
 build-linux:
 	GOOS=linux GOARCH=amd64 go build -o bin/sfu $(GO_LDFLAGS) ./cmd/main.go
@@ -27,3 +26,6 @@ test: go_init
 		-timeout 240s \
 		-coverprofile=cover.out -covermode=atomic \
 		-v -race ${GO_TESTPKGS}
+
+monitor:
+	docker-compose -f ./mon/dev/docker-compose.yml up -d

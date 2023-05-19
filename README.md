@@ -1,72 +1,24 @@
-# sfu
-Selected Forward Unit
+# Shig SFU
+Selected Forward Unit for distributed environments
 
 ## Quick Start
-### Serving over http
-```
-go build cmd/main.go
-./main -c config.toml -a ":7000"
-```
+### Start SFU
 
-### Serving over `https`
-Generate a keypair and run:
-```
-go build cmd/main.go
-./main -c config.toml -key ./key.pem -cert ./cert.pem -a "0.0.0.0:10000"
+```shell
+make run
 ```
 
-## API
+## Monitoring
 
-### Join
-Initialize a peer connection and join a session.
-```json
-{
-    "sid": "defaultroom",
-    "offer": {
-        "type": "offer",
-        "sdp": "..."
-    }
-}
+### Requirement
+
+please install grafana loki docker plugin
+
+```shell
+docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
 ```
 
-### Offer
-Offer a new sdp to the sfu. Called to renegotiate the peer connection, typically when tracks are added/removed.
-```json
-{
-    "desc": {
-        "type": "offer",
-        "sdp": "..."
-    }
-}
-```
-
-
-### Answer
-Answer a remote offer from the sfu. Called in response to a remote renegotiation. Typically when new tracks are added to/removed from other peers.
-```json
-{
-    "desc": {
-        "type": "answer",
-        "sdp": "..."
-    }
-}
-```
-
-### Trickle
-Provide an ICE candidate.
-```json
-{
-    "candidate": "..."
-}
-```
-
-### leave Event
-
-```json
-{
-  "sid": "defaultroom",
-  "leave": {
-    "id": "publisher"
-  }
-}
+### Start Develop Monitoring 
+```shell
+make monitor
 ```

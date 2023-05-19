@@ -17,7 +17,7 @@
 .DS_Store
 .idea
 main
-bin/*
-bin
-api/*
-api
+/bin/
+/api/
+/doc/
+/mon/dev/log/

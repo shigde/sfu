@@ -5,20 +5,21 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/shigde/sfu/pkg/logging"
+	"golang.org/x/exp/slog"
 )
 
-var log = logging.NewSlog()
-
 type contextKey string
+
+var log = slog.Default()
 
 const PrincipalContextKey = contextKey("principal")
 
 func HttpMiddleware(ac *AuthConfig, f http.HandlerFunc) http.HandlerFunc {
 	log.Debug("activated authentication http middleware")
 	return func(w http.ResponseWriter, r *http.Request) {
+		r.Context()
 		w.Header().Set("Content-Type", "application/json")
-		log.Debug("getting new client request")
+		slog.Debug("getting new client request")
 		authHeader := r.Header.Get("Authorization")
 
 		if !strings.HasPrefix(authHeader, "Bearer ") {

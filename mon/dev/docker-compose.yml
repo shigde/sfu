@@ -1,0 +1,94 @@
+version: "3"
+
+networks:
+  monitoring:
+
+services:
+  tracing-example:
+    image: tracing-example
+    ports:
+      - 8000:8000
+    logging:
+      driver: loki
+      options:
+        loki-url: http://localhost:3100/loki/api/v1/push
+    networks:
+      - monitoring
+
+  loki:
+    image: grafana/loki:2.8.2
+    volumes:
+      - ./etc/loki-config.yml:/etc/loki/loki-config.yml
+    ports:
+      - "3100:3100"
+      - "9093:9093"
+    command: -config.file=/etc/loki/loki-config.yml
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3100/api/prom/push'
+    networks:
+      - monitoring
+
+  promtail:
+    image: grafana/promtail:2.8.2
+    volumes:
+      - ./etc/promtail-config.yml:/etc/promtail/config.yml
+      - ./log:/var/log
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - monitoring
+
+  tempo:
+    image: grafana/tempo:0.7.0
+    command: [ "--target=all", "--storage.trace.backend=local", "--storage.trace.local.path=/var/tempo", "--auth.enabled=false" ]
+    ports:
+      - 8081:80
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3100/api/prom/push'
+    networks:
+      - monitoring
+
+  tempo-query:
+    image: grafana/tempo-query:0.7.0
+    environment:
+      - BACKEND=tempo:80
+    volumes:
+      - ./etc/tempo-query-config.yml:/etc/tempo-query.yaml
+    ports:
+      - "16686:16686"  # jaeger-ui
+    depends_on:
+      - tempo
+    logging:
+      driver: loki
+      options:
+        loki-url: 'http://localhost:3100/api/prom/push'
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    volumes:
+      - ./etc/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    ports:
+      - "3000:3000"
+    networks:
+      - monitoring
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./etc/prometheus-config.yml:/etc/prometheus-config.yml
+    entrypoint:
+      - /bin/prometheus
+      - --config.file=/etc/prometheus-config.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring

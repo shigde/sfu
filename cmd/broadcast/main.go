@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,10 +14,16 @@ import (
 )
 
 func main() {
-	log := logging.NewSlog()
 	conf, err := config.ParseConfig("config.toml")
 	if err != nil {
-		log.Error("parsing config: %w", err)
+		panic(fmt.Errorf("parsing config: %w", err))
+		return
+	}
+
+	log, err := logging.NewSlog(conf.LogConfig)
+	if err != nil {
+		panic(fmt.Errorf("setup logger: %w", err))
+		return
 	}
 
 	sigs := make(chan os.Signal, 1)
@@ -39,4 +46,5 @@ func main() {
 		log.Error("server stopped: %w", err)
 	}
 	log.Info("server finished")
+	log.Close()
 }
