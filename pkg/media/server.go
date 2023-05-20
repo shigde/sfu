@@ -8,6 +8,7 @@ import (
 
 	"github.com/shigde/sfu/pkg/config"
 	"github.com/shigde/sfu/pkg/engine"
+	"golang.org/x/exp/slog"
 )
 
 type Server struct {
@@ -24,6 +25,7 @@ func NewServer(config *config.ServerConfig) *Server {
 }
 
 func (s *Server) Serve() error {
+	slog.Info("server Serve() listen", "addr", s.server.Addr)
 	if err := s.server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("listening and serve: %w", err)
 	}

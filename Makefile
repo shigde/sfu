@@ -29,3 +29,6 @@ test: go_init
 
 monitor:
 	docker-compose -f ./mon/dev/docker-compose.yml up -d
+
+monitor-stop:
+	docker-compose -f ./mon/dev/docker-compose.yml down -v

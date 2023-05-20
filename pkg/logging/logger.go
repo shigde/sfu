@@ -2,7 +2,6 @@ package logging
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 
@@ -16,6 +15,7 @@ type Log struct {
 
 type LogConfig struct {
 	Logfile string `mapstructure:"logfile"`
+	Level   string `mapstructure:"logfile"`
 }
 
 func NewSlog(config *LogConfig) (*Log, error) {
@@ -24,19 +24,35 @@ func NewSlog(config *LogConfig) (*Log, error) {
 		handler slog.Handler
 	)
 
+	// Log file
 	file, err := os.OpenFile(config.Logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, fmt.Errorf("opening log file: %v", err)
 	}
 
+	// Log level
+	var logLevel slog.Level
+	switch config.Level {
+	case "WARN":
+		logLevel = slog.LevelWarn
+	case "ERROR":
+		logLevel = slog.LevelError
+	case "DEBUG":
+		logLevel = slog.LevelDebug
+	default:
+		logLevel = slog.LevelInfo
+	}
+	opts := slog.HandlerOptions{Level: logLevel}
+
+	// Log type
 	switch env {
 	case "production":
-		handler = slog.NewJSONHandler(file)
+		handler = opts.NewJSONHandler(file)
 	default:
-		handler = slog.NewTextHandler(file)
+		handler = opts.NewTextHandler(file)
 	}
+
 	slog.SetDefault(slog.New(handler))
-	log.Println("This is a test log entry")
 	return &Log{file, slog.Default()}, nil
 }
 

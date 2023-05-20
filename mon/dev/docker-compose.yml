@@ -4,17 +4,6 @@ networks:
   monitoring:
 
 services:
-  tracing-example:
-    image: tracing-example
-    ports:
-      - 8000:8000
-    logging:
-      driver: loki
-      options:
-        loki-url: http://localhost:3100/loki/api/v1/push
-    networks:
-      - monitoring
-
   loki:
     image: grafana/loki:2.8.2
     volumes:
@@ -40,10 +29,17 @@ services:
       - monitoring
 
   tempo:
-    image: grafana/tempo:0.7.0
-    command: [ "--target=all", "--storage.trace.backend=local", "--storage.trace.local.path=/var/tempo", "--auth.enabled=false" ]
+    image: grafana/tempo:latest
+    command: [ "-config.file=/etc/tempo.yml", "--auth.enabled=false" ]
+    volumes:
+      - ./etc/tempo-config.yml:/etc/tempo.yml
     ports:
-      - 8081:80
+      - "14268:14268"  # jaeger ingest
+      - "3200:3200"   # tempo
+      - "9095:9095" # tempo grpc
+      - "4317:4317"  # otlp grpc
+      - "4318:4318"  # otlp http
+      - "9411:9411"   # zipkin
     logging:
       driver: loki
       options:
@@ -54,7 +50,7 @@ services:
   tempo-query:
     image: grafana/tempo-query:0.7.0
     environment:
-      - BACKEND=tempo:80
+      - BACKEND=tempo:3200
     volumes:
       - ./etc/tempo-query-config.yml:/etc/tempo-query.yaml
     ports:
@@ -69,15 +65,20 @@ services:
       - monitoring
 
   grafana:
-    image: grafana/grafana-oss:latest
+    image: grafana/grafana:latest
     volumes:
       - ./etc/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
       - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
     ports:
       - "3000:3000"
+    depends_on:
+      - tempo
+      - loki
+      - prometheus
     networks:
       - monitoring
 

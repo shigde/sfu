@@ -1,9 +1,11 @@
+target: all
 auth_enabled: false
 
 server:
   http_listen_port: 3100
 
 common:
+  instance_addr: 127.0.0.1
   path_prefix: /loki
   storage:
     filesystem:
@@ -13,6 +15,9 @@ common:
   ring:
     kvstore:
       store: inmemory
+
+limits_config:
+  retention_period: 1m
 
 schema_config:
   configs:

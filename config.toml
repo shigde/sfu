@@ -1,5 +1,6 @@
 [log]
-# 0 - INFO 1 - DEBUG 2 - TRACE
+#INFO,WARN,ERROR,DEBUG
+level = "DEBUG"
 logfile = "./mon/dev/log/sfu.log"
 
 [auth.jwt]
@@ -7,3 +8,5 @@ enabled = true
 key = "SecretValueReplaceThis"
 defaultexpiretime = 604800  # 1 week not implemented et jet
 
+[metric.prometheus]
+enable = true
