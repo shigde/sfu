@@ -24,14 +24,12 @@ func NewServer(config *Config) (*Server, error) {
 
 	// monitoring
 	if config.MetricConfig.Prometheus.Enable {
-		router.Path("/prometheus").Handler(promhttp.Handler())
-
 		m, err := metric.NewMetric(config.MetricConfig)
 		if err != nil {
 			return nil, fmt.Errorf("creating metric setup: %w", err)
 		}
-
-		router.Use(m.GetPrometheusMiddleware())
+		router.Use(metric.GetPrometheusMiddleware(m))
+		router.Path(m.Endpoint).Handler(promhttp.Handler())
 	}
 
 	return &Server{

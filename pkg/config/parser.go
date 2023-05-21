@@ -38,5 +38,9 @@ func ParseConfig(file string) (*sfu.Config, error) {
 		return nil, fmt.Errorf("log.logfile should not be empty")
 	}
 
+	if len(config.MetricConfig.Prometheus.Endpoint) == 0 {
+		return nil, fmt.Errorf("metric.prometheus.endpoint should not be empty")
+	}
+
 	return config, nil
 }

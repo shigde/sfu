@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 type MetricConfig struct {
@@ -12,11 +11,12 @@ type MetricConfig struct {
 }
 
 type PrometheusConfig struct {
-	Enable bool `mapstructure:"enable"`
+	Enable   bool   `mapstructure:"enable"`
+	Endpoint string `mapstructure:"endpoint"`
 }
 
 type Metric struct {
-	enabled bool
+	Endpoint string
 	// http metrics
 	totalRequests  *prometheus.CounterVec
 	responseStatus *prometheus.CounterVec
@@ -24,7 +24,7 @@ type Metric struct {
 }
 
 func NewMetric(config *MetricConfig) (*Metric, error) {
-	enabled := config.Prometheus.Enable
+	Endpoint := config.Prometheus.Endpoint
 
 	totalRequests := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -42,7 +42,7 @@ func NewMetric(config *MetricConfig) (*Metric, error) {
 		[]string{"status"},
 	)
 
-	httpDuration := promauto.NewHistogramVec(
+	httpDuration := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name: "http_response_time_seconds",
 			Help: "Duration of HTTP requests.",
@@ -54,9 +54,9 @@ func NewMetric(config *MetricConfig) (*Metric, error) {
 	if err := prometheus.Register(responseStatus); err != nil {
 		return nil, fmt.Errorf("register responseStatus metric: %w", err)
 	}
-	//if err := prometheus.Register(httpDuration); err != nil {
-	//	return nil, fmt.Errorf("register httpDuration metric: %w", err)
-	//}
+	if err := prometheus.Register(httpDuration); err != nil {
+		return nil, fmt.Errorf("register httpDuration metric: %w", err)
+	}
 
-	return &Metric{enabled, totalRequests, responseStatus, httpDuration}, nil
+	return &Metric{Endpoint, totalRequests, responseStatus, httpDuration}, nil
 }
