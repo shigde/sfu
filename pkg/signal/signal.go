@@ -1,9 +1,10 @@
-package server
+package signal
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/go-logr/logr"
 	"github.com/pion/ion-sfu/pkg/sfu"
 	"github.com/pion/webrtc/v3"
@@ -29,7 +30,7 @@ type Trickle struct {
 	Candidate webrtc.ICECandidateInit `json:"candidate"`
 }
 
-type Leave struct {}
+type Leave struct{}
 
 type JSONSignal struct {
 	*sfu.PeerLocal
@@ -148,4 +149,3 @@ func (p *JSONSignal) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonr
 		}
 	}
 }
-

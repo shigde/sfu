@@ -4,18 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/shigde/sfu/pkg/auth"
-	"github.com/shigde/sfu/pkg/logging"
+	"github.com/shigde/sfu/pkg/sfu"
 	"github.com/spf13/viper"
 )
 
-type ServerConfig struct {
-	*auth.AuthConfig   `mapstructure:"auth"`
-	*logging.LogConfig `mapstructure:"log"`
-}
-
-func ParseConfig(file string) (*ServerConfig, error) {
-	config := &ServerConfig{}
+func ParseConfig(file string) (*sfu.Config, error) {
+	config := &sfu.Config{}
 
 	if _, err := os.Stat(file); err != nil {
 		return nil, fmt.Errorf("opening config file: %w", err)

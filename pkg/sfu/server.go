@@ -1,4 +1,4 @@
-package media
+package sfu
 
 import (
 	"context"
@@ -6,22 +6,38 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/shigde/sfu/pkg/config"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/shigde/sfu/pkg/engine"
+	"github.com/shigde/sfu/pkg/media"
+	"github.com/shigde/sfu/pkg/metric"
 	"golang.org/x/exp/slog"
 )
 
 type Server struct {
 	server *http.Server
-	config *config.ServerConfig
+	config *Config
 }
 
-func NewServer(config *config.ServerConfig) *Server {
+func NewServer(config *Config) (*Server, error) {
 	repository := engine.NewRtpStreamRepository()
-	return &Server{
-		server: &http.Server{Addr: ":8080", Handler: newRouter(config.AuthConfig, repository)},
-		config: config,
+	router := media.NewRouter(config.AuthConfig, repository)
+
+	// monitoring
+	if config.MetricConfig.Prometheus.Enable {
+		router.Path("/prometheus").Handler(promhttp.Handler())
+
+		m, err := metric.NewMetric(config.MetricConfig)
+		if err != nil {
+			return nil, fmt.Errorf("creating metric setup: %w", err)
+		}
+
+		router.Use(m.GetPrometheusMiddleware())
 	}
+
+	return &Server{
+		server: &http.Server{Addr: ":8080", Handler: router},
+		config: config,
+	}, nil
 }
 
 func (s *Server) Serve() error {

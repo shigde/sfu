@@ -6,7 +6,10 @@ import (
 	"github.com/shigde/sfu/pkg/engine"
 )
 
-func newRouter(config *auth.AuthConfig, repository *engine.RtpStreamRepository) *mux.Router {
+func NewRouter(
+	config *auth.AuthConfig,
+	repository *engine.RtpStreamRepository,
+) *mux.Router {
 	router := mux.NewRouter()
 	router.HandleFunc("/streams", auth.HttpMiddleware(config, getStreamList(repository))).Methods("GET")
 	router.HandleFunc("/stream", auth.HttpMiddleware(config, createStream(repository))).Methods("POST")

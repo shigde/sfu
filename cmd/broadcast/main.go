@@ -10,7 +10,7 @@ import (
 
 	"github.com/shigde/sfu/pkg/config"
 	"github.com/shigde/sfu/pkg/logging"
-	"github.com/shigde/sfu/pkg/media"
+	"github.com/shigde/sfu/pkg/sfu"
 )
 
 func main() {
@@ -28,7 +28,10 @@ func main() {
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	server := media.NewServer(conf)
+	server, err := sfu.NewServer(conf)
+	if err != nil {
+		panic(fmt.Errorf("creating new server: %w", err))
+	}
 
 	go func() {
 		sig := <-sigs

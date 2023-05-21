@@ -26,7 +26,7 @@ func testSetup(t *testing.T) (string, *mux.Router, *engine.RtpStreamRepository) 
 	repository := engine.NewRtpStreamRepository()
 	s := engine.RtpStream{}
 	streamId := repository.Add(&s)
-	router := newRouter(config, repository)
+	router := NewRouter(config, repository)
 
 	return streamId, router, repository
 }
