@@ -2,26 +2,26 @@ package engine
 
 import "fmt"
 
-type Peer struct {
+type Publisher struct {
 	UserId string
 	conn   *Connection
 }
 
-func NewPeer(userId string) (*Peer, error) {
+func NewPublisher(userId string) (*Publisher, error) {
 	conn, err := newConnection()
 	if err != nil {
 		return nil, fmt.Errorf("creation webrtc connection: %w", err)
 	}
-	return &Peer{
+	return &Publisher{
 		UserId: userId,
 		conn:   conn,
 	}, nil
 }
 
-func (peer *Peer) publish() {
+func (peer *Publisher) publish() {
 
 }
 
-func (peer *Peer) subscribe(_ string) {
+func (peer *Publisher) subscribe(_ string) {
 
 }
