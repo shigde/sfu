@@ -17,25 +17,28 @@ import (
 )
 
 const bearer = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.h3ygBKXYiYVyGIwEMNYVuejBUCch2eysey4JqsXg9dk"
+const spaceId = "abc123"
 
 func testSetup(t *testing.T) (string, *mux.Router, *engine.RtpStreamRepository) {
 	t.Helper()
 	jwt := &auth.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}
 	config := &auth.AuthConfig{JWT: jwt}
-	// Setup mocks
-	repository := engine.NewRtpStreamRepository()
-	s := engine.RtpStream{}
-	streamId := repository.Add(&s)
-	router := NewRouter(config, repository)
+	// Setup engine  mocks
+	manager := engine.NewSpaceManager()
+	space := manager.GetOrCreateSpace(spaceId)
 
-	return streamId, router, repository
+	s := engine.RtpStream{}
+	streamId := space.PublicStreamRepo.Add(&s)
+	router := NewRouter(config, manager)
+
+	return streamId, router, space.PublicStreamRepo
 }
 
 func TestGetAllStreamsReq(t *testing.T) {
 	streamId, router, _ := testSetup(t)
 
 	// When: GET /streams is called
-	req := newRequest("GET", "/streams", nil)
+	req := newRequest("GET", "/space/abc123/streams", nil)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 
@@ -51,7 +54,7 @@ func TestGetStreamReq(t *testing.T) {
 	streamId, router, _ := testSetup(t)
 
 	// When: GET /catalog/products is called
-	req := newRequest("GET", fmt.Sprintf("/stream/%s", streamId), nil)
+	req := newRequest("GET", fmt.Sprintf("/space/abc123/stream/%s", streamId), nil)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 
@@ -68,7 +71,7 @@ func TestCreateStreamReq(t *testing.T) {
 
 	jsonStream, _ := json.Marshal(engine.RtpStream{})
 	body := bytes.NewBuffer(jsonStream)
-	req := newRequest("POST", "/stream", body)
+	req := newRequest("POST", "/space/abc123/stream", body)
 
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
@@ -85,7 +88,7 @@ func TestUpdateStreamReq(t *testing.T) {
 	p, _ := repository.FindById(streamId)
 	jsonStream, _ := json.Marshal(p)
 	body := bytes.NewBuffer(jsonStream)
-	req := newRequest("PUT", "/stream", body)
+	req := newRequest("PUT", "/space/abc123/stream", body)
 
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)

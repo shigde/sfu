@@ -9,22 +9,31 @@ type SpaceRepository struct {
 	space  map[string]*Space
 }
 
-func newSpaceRepository() *RtpStreamRepository {
-	var streams []*RtpStream
-	return &RtpStreamRepository{
+func newSpaceRepository() *SpaceRepository {
+	space := make(map[string]*Space)
+	return &SpaceRepository{
 		&sync.RWMutex{},
-		streams,
+		space,
 	}
 }
 
-func (r *SpaceRepository) GetOrCreateHour(id string) *Space {
+func (r *SpaceRepository) GetOrCreateSpace(id string) *Space {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	currentSpace, ok := r.space[id]
 	if !ok {
+		space := newSpace(id)
+		r.space[id] = space
 		return newSpace(id)
 	}
 	return currentSpace
+}
+
+func (r *SpaceRepository) GetSpace(id string) (*Space, bool) {
+	r.locker.Lock()
+	defer r.locker.Unlock()
+	currentSpace, ok := r.space[id]
+	return currentSpace, ok
 }
 
 func (r *SpaceRepository) Delete(id string) bool {
@@ -35,4 +44,10 @@ func (r *SpaceRepository) Delete(id string) bool {
 		return true
 	}
 	return false
+}
+
+func (r *SpaceRepository) Len() int {
+	r.locker.RLock()
+	defer r.locker.RUnlock()
+	return len(r.space)
 }

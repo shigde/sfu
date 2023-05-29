@@ -1,12 +1,18 @@
 package engine
 
 type SpaceManager struct {
+	spaces *SpaceRepository
 }
 
 func NewSpaceManager() *SpaceManager {
-	return &SpaceManager{}
+	spaces := newSpaceRepository()
+	return &SpaceManager{spaces}
 }
 
-func (e *SpaceManager) Publish(Offer interface{}, user interface{}) (*interface{}, error) {
-	return nil, nil
+func (m *SpaceManager) GetSpace(id string) (*Space, bool) {
+	return m.spaces.GetSpace(id)
+}
+
+func (m *SpaceManager) GetOrCreateSpace(id string) *Space {
+	return m.spaces.GetOrCreateSpace(id)
 }

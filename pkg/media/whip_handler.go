@@ -9,12 +9,8 @@ import (
 	"github.com/shigde/sfu/pkg/engine"
 )
 
-var (
-	api *webrtc.API
-)
-
 type whipOffer struct {
-	RoomId   string                    `json:"roomId"`
+	SpaceId  string                    `json:"spaceId"`
 	StreamId string                    `json:"streamId"`
 	Offer    webrtc.SessionDescription `json:"offer"`
 }
@@ -27,16 +23,20 @@ func whip(spaceManager *engine.SpaceManager) http.HandlerFunc {
 			return
 		}
 
-		user, ok := r.Context().Value(auth.PrincipalContextKey).(auth.Principal)
+		user, ok := auth.PrincipalFromContext(r.Context())
 		if !ok {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		if answer, err := spaceManager.Publish(offer, user); err == nil {
-			if err := json.NewEncoder(w).Encode(answer); err != nil {
-				http.Error(w, "stream invalid", http.StatusInternalServerError)
+		if space, ok := spaceManager.GetSpace(""); ok {
+			if answer, err := space.Publish(offer, user); err != nil {
+				if err := json.NewEncoder(w).Encode(answer); err != nil {
+					http.Error(w, "stream invalid", http.StatusInternalServerError)
+				}
+				return
 			}
+			http.Error(w, "could not publish stream", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)

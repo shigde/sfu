@@ -12,7 +12,7 @@ type contextKey string
 
 var log = slog.Default()
 
-const PrincipalContextKey = contextKey("principal")
+const principalContextKey = contextKey("principal")
 
 func HttpMiddleware(ac *AuthConfig, f http.HandlerFunc) http.HandlerFunc {
 	log.Debug("activated authentication http middleware")
@@ -38,7 +38,16 @@ func HttpMiddleware(ac *AuthConfig, f http.HandlerFunc) http.HandlerFunc {
 		}
 
 		log.Debug("authenticating user")
-		ctx := context.WithValue(r.Context(), PrincipalContextKey, principal)
+		ctx := withPrincipal(r.Context(), principal)
 		f(w, r.WithContext(ctx))
 	}
+}
+
+func withPrincipal(ctx context.Context, principal Principal) context.Context {
+	return context.WithValue(ctx, principalContextKey, principal)
+}
+
+func PrincipalFromContext(ctx context.Context) (Principal, bool) {
+	principal, ok := ctx.Value(principalContextKey).(Principal)
+	return principal, ok
 }

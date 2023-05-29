@@ -19,8 +19,8 @@ type Server struct {
 }
 
 func NewServer(config *Config) (*Server, error) {
-	repository := engine.NewRtpStreamRepository()
-	router := media.NewRouter(config.AuthConfig, repository)
+	manager := engine.NewSpaceManager()
+	router := media.NewRouter(config.AuthConfig, manager)
 
 	// monitoring
 	if config.MetricConfig.Prometheus.Enable {

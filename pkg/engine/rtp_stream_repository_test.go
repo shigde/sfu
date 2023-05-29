@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testSetup(t *testing.T) (*RtpStreamRepository, string) {
+func testRtpStreamRepositorySetup(t *testing.T) (*RtpStreamRepository, string) {
 	t.Helper()
 	repository := NewRtpStreamRepository()
 	s := &RtpStream{}
@@ -15,7 +15,7 @@ func testSetup(t *testing.T) (*RtpStreamRepository, string) {
 
 	return repository, streamId
 }
-func TestRtpStream(t *testing.T) {
+func TestRtpStreamRepository(t *testing.T) {
 
 	assertRtpStream := func(t testing.TB, got *RtpStream, want *RtpStream) {
 		t.Helper()
@@ -41,7 +41,7 @@ func TestRtpStream(t *testing.T) {
 	}
 
 	t.Run("Add Stream", func(t *testing.T) {
-		repo, _ := testSetup(t)
+		repo, _ := testRtpStreamRepositorySetup(t)
 		stream := &RtpStream{}
 		repo.Add(stream)
 
@@ -50,7 +50,7 @@ func TestRtpStream(t *testing.T) {
 	})
 
 	t.Run("Delete Stream", func(t *testing.T) {
-		repo, _ := testSetup(t)
+		repo, _ := testRtpStreamRepositorySetup(t)
 		stream := &RtpStream{}
 		id := repo.Add(stream)
 
@@ -62,7 +62,7 @@ func TestRtpStream(t *testing.T) {
 	})
 
 	t.Run("Contains Stream", func(t *testing.T) {
-		repo, streamId := testSetup(t)
+		repo, streamId := testRtpStreamRepositorySetup(t)
 		stream := &RtpStream{}
 		id := repo.Add(stream)
 
@@ -72,7 +72,7 @@ func TestRtpStream(t *testing.T) {
 	})
 
 	t.Run("Find Stream By Id", func(t *testing.T) {
-		repo, streamId := testSetup(t)
+		repo, streamId := testRtpStreamRepositorySetup(t)
 		want := &RtpStream{}
 		id := repo.Add(want)
 
@@ -84,7 +84,7 @@ func TestRtpStream(t *testing.T) {
 	})
 
 	t.Run("Update Stream", func(t *testing.T) {
-		repo, streamId := testSetup(t)
+		repo, streamId := testRtpStreamRepositorySetup(t)
 
 		want, _ := repo.FindById(streamId)
 		assert.True(t, repo.Update(want))
@@ -96,7 +96,7 @@ func TestRtpStream(t *testing.T) {
 	t.Run("Safely Concurrently Adding and Deleting", func(t *testing.T) {
 		wantedCount := 1000
 		deleteOn := 500
-		repo, id := testSetup(t)
+		repo, id := testRtpStreamRepositorySetup(t)
 
 		var wg sync.WaitGroup
 		wg.Add(wantedCount + 1)
@@ -119,5 +119,6 @@ func TestRtpStream(t *testing.T) {
 
 		assertRepoLength(t, repo, wantedCount)
 		assert.False(t, repo.Contains(id))
+		assert.Equal(t, wantedCount, repo.Len())
 	})
 }

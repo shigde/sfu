@@ -83,3 +83,9 @@ func (r *RtpStreamRepository) Update(stream *RtpStream) bool {
 	}
 	return false
 }
+
+func (r *RtpStreamRepository) Len() int {
+	r.locker.RLock()
+	defer r.locker.RUnlock()
+	return len(r.streams)
+}
