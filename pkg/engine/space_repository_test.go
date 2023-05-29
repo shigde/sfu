@@ -35,7 +35,7 @@ func TestSpaceRepository(t *testing.T) {
 		assert.NotNil(t, spaceCreated)
 		spaceGet, ok := repo.GetSpace("789")
 		assert.True(t, ok)
-		assert.Equal(t, spaceCreated, spaceGet)
+		assert.Same(t, spaceCreated, spaceGet)
 	})
 
 	t.Run("Delete Space", func(t *testing.T) {

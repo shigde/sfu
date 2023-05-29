@@ -19,7 +19,7 @@ import (
 const bearer = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.h3ygBKXYiYVyGIwEMNYVuejBUCch2eysey4JqsXg9dk"
 const spaceId = "abc123"
 
-func testSetup(t *testing.T) (string, *mux.Router, *engine.RtpStreamRepository) {
+func testStreamsReqSetup(t *testing.T) (string, *mux.Router, *engine.RtpStreamRepository) {
 	t.Helper()
 	jwt := &auth.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}
 	config := &auth.AuthConfig{JWT: jwt}
@@ -27,18 +27,18 @@ func testSetup(t *testing.T) (string, *mux.Router, *engine.RtpStreamRepository) 
 	manager := engine.NewSpaceManager()
 	space := manager.GetOrCreateSpace(spaceId)
 
-	s := engine.RtpStream{}
-	streamId := space.PublicStreamRepo.Add(&s)
+	s := &engine.RtpStream{}
+	streamId := space.PublicStreamRepo.Add(s)
 	router := NewRouter(config, manager)
 
 	return streamId, router, space.PublicStreamRepo
 }
 
 func TestGetAllStreamsReq(t *testing.T) {
-	streamId, router, _ := testSetup(t)
+	streamId, router, _ := testStreamsReqSetup(t)
 
 	// When: GET /streams is called
-	req := newRequest("GET", "/space/abc123/streams", nil)
+	req := newRequest("GET", fmt.Sprintf("/space/%s/streams", spaceId), nil)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 
@@ -51,10 +51,10 @@ func TestGetAllStreamsReq(t *testing.T) {
 }
 
 func TestGetStreamReq(t *testing.T) {
-	streamId, router, _ := testSetup(t)
+	streamId, router, _ := testStreamsReqSetup(t)
 
 	// When: GET /catalog/products is called
-	req := newRequest("GET", fmt.Sprintf("/space/abc123/stream/%s", streamId), nil)
+	req := newRequest("GET", fmt.Sprintf("/space/%s/stream/%s", spaceId, streamId), nil)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 
@@ -67,28 +67,31 @@ func TestGetStreamReq(t *testing.T) {
 }
 
 func TestCreateStreamReq(t *testing.T) {
-	_, router, repository := testSetup(t)
+	_, router, repository := testStreamsReqSetup(t)
+	url := fmt.Sprintf("/space/%s/stream", spaceId)
+	locationPrefix := fmt.Sprintf("%s/", url)
+	locationRx := fmt.Sprintf("^%s/[a-f0-9]+", url)
 
 	jsonStream, _ := json.Marshal(engine.RtpStream{})
 	body := bytes.NewBuffer(jsonStream)
-	req := newRequest("POST", "/space/abc123/stream", body)
+	req := newRequest("POST", url, body)
 
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusCreated, rr.Code)
-	assert.Regexp(t, "/stream/[a-f0-9]+", rr.Header()["Location"][0])
-	newStreamId := strings.TrimPrefix(rr.Header()["Location"][0], "/stream/")
+	assert.Regexp(t, locationRx, rr.Header()["Location"][0])
+	newStreamId := strings.TrimPrefix(rr.Header()["Location"][0], locationPrefix)
 	assert.True(t, repository.Contains(newStreamId))
 }
 
 func TestUpdateStreamReq(t *testing.T) {
-	streamId, router, repository := testSetup(t)
+	streamId, router, repository := testStreamsReqSetup(t)
 
 	p, _ := repository.FindById(streamId)
 	jsonStream, _ := json.Marshal(p)
 	body := bytes.NewBuffer(jsonStream)
-	req := newRequest("PUT", "/space/abc123/stream", body)
+	req := newRequest("PUT", fmt.Sprintf("/space/%s/stream", spaceId), body)
 
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
@@ -98,14 +101,13 @@ func TestUpdateStreamReq(t *testing.T) {
 }
 
 func TestDeleteStreamReq(t *testing.T) {
-	streamId, router, repository := testSetup(t)
+	streamId, router, repository := testStreamsReqSetup(t)
 
-	req := newRequest("DELETE", fmt.Sprintf("/stream/%s", streamId), nil)
+	req := newRequest("DELETE", fmt.Sprintf("/space/%s/stream/%s", spaceId, streamId), nil)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-
 	assert.Equal(t, 0, len(repository.All()))
 }
 

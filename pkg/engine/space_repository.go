@@ -24,7 +24,7 @@ func (r *SpaceRepository) GetOrCreateSpace(id string) *Space {
 	if !ok {
 		space := newSpace(id)
 		r.space[id] = space
-		return newSpace(id)
+		return space
 	}
 	return currentSpace
 }
