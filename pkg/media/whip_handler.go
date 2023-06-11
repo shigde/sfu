@@ -6,7 +6,7 @@ import (
 
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/pkg/auth"
-	"github.com/shigde/sfu/pkg/engine"
+	"github.com/shigde/sfu/pkg/stream"
 )
 
 type whipOffer struct {
@@ -15,7 +15,7 @@ type whipOffer struct {
 	Offer    webrtc.SessionDescription `json:"offer"`
 }
 
-func whip(spaceManager *engine.SpaceManager) http.HandlerFunc {
+func whip(spaceManager *stream.SpaceManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var offer whipOffer
 		if err := getOfferPayload(w, r, &offer); err != nil {

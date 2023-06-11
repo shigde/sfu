@@ -3,12 +3,12 @@ package media
 import (
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/pkg/auth"
-	"github.com/shigde/sfu/pkg/engine"
+	"github.com/shigde/sfu/pkg/stream"
 )
 
 func NewRouter(
 	config *auth.AuthConfig,
-	manager *engine.SpaceManager,
+	manager *stream.SpaceManager,
 ) *mux.Router {
 	router := mux.NewRouter()
 	router.HandleFunc("/space/{space}/streams", auth.HttpMiddleware(config, getStreamList(manager))).Methods("GET")

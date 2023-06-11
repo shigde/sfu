@@ -7,9 +7,9 @@ import (
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/shigde/sfu/pkg/engine"
 	"github.com/shigde/sfu/pkg/media"
 	"github.com/shigde/sfu/pkg/metric"
+	"github.com/shigde/sfu/pkg/stream"
 	"golang.org/x/exp/slog"
 )
 
@@ -19,7 +19,7 @@ type Server struct {
 }
 
 func NewServer(config *Config) (*Server, error) {
-	manager := engine.NewSpaceManager()
+	manager := stream.NewSpaceManager()
 	router := media.NewRouter(config.AuthConfig, manager)
 
 	// monitoring

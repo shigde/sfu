@@ -13,25 +13,26 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/pkg/auth"
 	"github.com/shigde/sfu/pkg/engine"
+	"github.com/shigde/sfu/pkg/stream"
 	"github.com/stretchr/testify/assert"
 )
 
 const bearer = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.h3ygBKXYiYVyGIwEMNYVuejBUCch2eysey4JqsXg9dk"
 const spaceId = "abc123"
 
-func testStreamsReqSetup(t *testing.T) (string, *mux.Router, *engine.RtpStreamRepository) {
+func testStreamsReqSetup(t *testing.T) (string, *mux.Router, *stream.LiveStreamRepository) {
 	t.Helper()
 	jwt := &auth.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}
 	config := &auth.AuthConfig{JWT: jwt}
 	// Setup engine  mocks
-	manager := engine.NewSpaceManager()
+	manager := stream.NewSpaceManager()
 	space := manager.GetOrCreateSpace(spaceId)
 
-	s := &engine.RtpStream{}
-	streamId := space.PublicStreamRepo.Add(s)
+	s := &stream.LiveStream{}
+	streamId := space.LiveStreamRepo.Add(s)
 	router := NewRouter(config, manager)
 
-	return streamId, router, space.PublicStreamRepo
+	return streamId, router, space.LiveStreamRepo
 }
 
 func TestGetAllStreamsReq(t *testing.T) {

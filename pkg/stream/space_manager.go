@@ -1,4 +1,4 @@
-package engine
+package stream
 
 type SpaceManager struct {
 	spaces *SpaceRepository
