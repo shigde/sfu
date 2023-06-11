@@ -12,7 +12,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/pkg/auth"
-	"github.com/shigde/sfu/pkg/engine"
 	"github.com/shigde/sfu/pkg/stream"
 	"github.com/stretchr/testify/assert"
 )
@@ -73,7 +72,7 @@ func TestCreateStreamReq(t *testing.T) {
 	locationPrefix := fmt.Sprintf("%s/", url)
 	locationRx := fmt.Sprintf("^%s/[a-f0-9]+", url)
 
-	jsonStream, _ := json.Marshal(engine.RtpStream{})
+	jsonStream, _ := json.Marshal(stream.LiveStream{})
 	body := bytes.NewBuffer(jsonStream)
 	req := newRequest("POST", url, body)
 

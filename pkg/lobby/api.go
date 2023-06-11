@@ -1,4 +1,4 @@
-package engine
+package lobby
 
 import "github.com/pion/webrtc/v3"
 
