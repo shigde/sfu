@@ -6,20 +6,20 @@ import (
 	"github.com/google/uuid"
 )
 
-type RtpStreamRepository struct {
+type rtpStreamRepository struct {
 	locker  *sync.RWMutex
 	streams []*RtpStream
 }
 
-func NewRtpStreamRepository() *RtpStreamRepository {
+func newRtpStreamRepository() *rtpStreamRepository {
 	var streams []*RtpStream
-	return &RtpStreamRepository{
+	return &rtpStreamRepository{
 		&sync.RWMutex{},
 		streams,
 	}
 }
 
-func (r *RtpStreamRepository) Add(s *RtpStream) string {
+func (r *rtpStreamRepository) Add(s *RtpStream) string {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	s.Id = uuid.New().String()
@@ -27,13 +27,13 @@ func (r *RtpStreamRepository) Add(s *RtpStream) string {
 	return s.Id
 }
 
-func (r *RtpStreamRepository) All() []*RtpStream {
+func (r *rtpStreamRepository) All() []*RtpStream {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 	return r.streams
 }
 
-func (r *RtpStreamRepository) FindById(id string) (*RtpStream, bool) {
+func (r *rtpStreamRepository) FindById(id string) (*RtpStream, bool) {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 	for _, stream := range r.streams {
@@ -44,7 +44,7 @@ func (r *RtpStreamRepository) FindById(id string) (*RtpStream, bool) {
 	return nil, false
 }
 
-func (r *RtpStreamRepository) Delete(id string) bool {
+func (r *rtpStreamRepository) Delete(id string) bool {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	if i := index(id, r.streams); i != -1 {
@@ -63,7 +63,7 @@ func index(id string, resources []*RtpStream) int {
 	return -1
 }
 
-func (r *RtpStreamRepository) Contains(id string) bool {
+func (r *rtpStreamRepository) Contains(id string) bool {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 	for _, stream := range r.All() {
@@ -74,7 +74,7 @@ func (r *RtpStreamRepository) Contains(id string) bool {
 	return false
 }
 
-func (r *RtpStreamRepository) Update(stream *RtpStream) bool {
+func (r *rtpStreamRepository) Update(stream *RtpStream) bool {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	if i := index(stream.Id, r.streams); i != -1 {
@@ -84,7 +84,7 @@ func (r *RtpStreamRepository) Update(stream *RtpStream) bool {
 	return false
 }
 
-func (r *RtpStreamRepository) Len() int {
+func (r *rtpStreamRepository) Len() int {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 	return len(r.streams)

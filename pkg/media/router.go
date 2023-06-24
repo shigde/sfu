@@ -8,13 +8,16 @@ import (
 
 func NewRouter(
 	config *auth.AuthConfig,
-	manager *stream.SpaceManager,
+	spaceManager *stream.SpaceManager,
 ) *mux.Router {
 	router := mux.NewRouter()
-	router.HandleFunc("/space/{space}/streams", auth.HttpMiddleware(config, getStreamList(manager))).Methods("GET")
-	router.HandleFunc("/space/{space}/stream", auth.HttpMiddleware(config, createStream(manager))).Methods("POST")
-	router.HandleFunc("/space/{space}/stream/{id}", auth.HttpMiddleware(config, getStream(manager))).Methods("GET")
-	router.HandleFunc("/space/{space}/stream", auth.HttpMiddleware(config, updateStream(manager))).Methods("PUT")
-	router.HandleFunc("/space/{space}/stream/{id}", auth.HttpMiddleware(config, deleteStream(manager))).Methods("DELETE")
+	// Space
+	router.HandleFunc("/space/{space}/streams", auth.HttpMiddleware(config, getStreamList(spaceManager))).Methods("GET")
+	router.HandleFunc("/space/{space}/stream", auth.HttpMiddleware(config, createStream(spaceManager))).Methods("POST")
+	router.HandleFunc("/space/{space}/stream/{id}", auth.HttpMiddleware(config, getStream(spaceManager))).Methods("GET")
+	router.HandleFunc("/space/{space}/stream", auth.HttpMiddleware(config, updateStream(spaceManager))).Methods("PUT")
+	router.HandleFunc("/space/{space}/stream/{id}", auth.HttpMiddleware(config, deleteStream(spaceManager))).Methods("DELETE")
+	// Lobby
+	router.HandleFunc("/space/{space}/stream/{id}/whip", auth.HttpMiddleware(config, whip(spaceManager))).Methods("POST")
 	return router
 }

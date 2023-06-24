@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/shigde/sfu/pkg/lobby"
 	"github.com/shigde/sfu/pkg/media"
 	"github.com/shigde/sfu/pkg/metric"
 	"github.com/shigde/sfu/pkg/stream"
@@ -19,8 +20,9 @@ type Server struct {
 }
 
 func NewServer(config *Config) (*Server, error) {
-	manager := stream.NewSpaceManager()
-	router := media.NewRouter(config.AuthConfig, manager)
+	lobbyManager := lobby.NewLobbyManager()
+	spaceManager := stream.NewSpaceManager(lobbyManager)
+	router := media.NewRouter(config.AuthConfig, spaceManager)
 
 	// monitoring
 	if config.MetricConfig.Prometheus.Enable {

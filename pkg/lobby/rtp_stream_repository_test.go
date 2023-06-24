@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testRtpStreamRepositorySetup(t *testing.T) (*RtpStreamRepository, string) {
+func testRtpStreamRepositorySetup(t *testing.T) (*rtpStreamRepository, string) {
 	t.Helper()
-	repository := NewRtpStreamRepository()
+	repository := newRtpStreamRepository()
 	s := &RtpStream{}
 	streamId := repository.Add(s)
 
@@ -24,7 +24,7 @@ func TestRtpStreamRepository(t *testing.T) {
 		}
 	}
 
-	assertRepoLength := func(t testing.TB, repo *RtpStreamRepository, want int) {
+	assertRepoLength := func(t testing.TB, repo *rtpStreamRepository, want int) {
 		t.Helper()
 
 		if len(repo.All()) != want {
@@ -32,7 +32,7 @@ func TestRtpStreamRepository(t *testing.T) {
 		}
 	}
 
-	assertRepoHasStream := func(t testing.TB, repo *RtpStreamRepository, want *RtpStream) {
+	assertRepoHasStream := func(t testing.TB, repo *rtpStreamRepository, want *RtpStream) {
 		t.Helper()
 		want, hasStream := repo.FindById(want.Id)
 		assert.True(t, hasStream)

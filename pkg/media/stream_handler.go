@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/shigde/sfu/pkg/auth"
 	"github.com/shigde/sfu/pkg/stream"
 )
 
@@ -24,26 +25,14 @@ func getStreamList(manager *stream.SpaceManager) http.HandlerFunc {
 }
 func getStream(manager *stream.SpaceManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		space, ok := getSpace(r, manager)
-		if !ok {
-			w.WriteHeader(http.StatusBadRequest)
+		streamResource, _, found := getLiveStream(w, r, manager)
+		if !found {
 			return
 		}
 
-		id, ok := mux.Vars(r)["id"]
-		if !ok {
-			w.WriteHeader(http.StatusBadRequest)
-			return
+		if err := json.NewEncoder(w).Encode(streamResource); err != nil {
+			http.Error(w, "stream invalid", http.StatusInternalServerError)
 		}
-
-		if streamResource, ok := space.LiveStreamRepo.FindById(id); ok {
-			if err := json.NewEncoder(w).Encode(streamResource); err != nil {
-				http.Error(w, "stream invalid", http.StatusInternalServerError)
-			}
-			return
-		}
-
-		w.WriteHeader(http.StatusNotFound)
 	}
 }
 
@@ -71,6 +60,11 @@ func deleteStream(manager *stream.SpaceManager) http.HandlerFunc {
 
 func createStream(manager *stream.SpaceManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		user, ok := auth.PrincipalFromContext(r.Context())
+		if !ok {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		space, ok := getOrCreateSpace(r, manager)
 		if !ok {
 			w.WriteHeader(http.StatusBadRequest)
@@ -82,7 +76,8 @@ func createStream(manager *stream.SpaceManager) http.HandlerFunc {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-
+		liveStream.User = user.UID
+		liveStream.SpaceId = space.Id
 		id := space.LiveStreamRepo.Add(&liveStream)
 		w.Header().Set("Location", fmt.Sprintf("%s/%s", r.URL.String(), id))
 		w.WriteHeader(http.StatusCreated)
@@ -124,25 +119,4 @@ func getStreamResourcePayload(w http.ResponseWriter, r *http.Request, liveStream
 	}
 
 	return nil
-}
-
-func getSpaceId(r *http.Request) (string, bool) {
-	spaceId, ok := mux.Vars(r)["space"]
-	return spaceId, ok
-}
-
-func getSpace(r *http.Request, manager *stream.SpaceManager) (*stream.Space, bool) {
-	if spaceId, ok := getSpaceId(r); ok {
-		space, ok := manager.GetSpace(spaceId)
-		return space, ok
-	}
-	return nil, false
-}
-
-func getOrCreateSpace(r *http.Request, manager *stream.SpaceManager) (*stream.Space, bool) {
-	if spaceId, ok := getSpaceId(r); ok {
-		space := manager.GetOrCreateSpace(spaceId)
-		return space, ok
-	}
-	return nil, false
 }

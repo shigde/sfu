@@ -7,13 +7,15 @@ import (
 type SpaceRepository struct {
 	locker *sync.RWMutex
 	space  map[string]*Space
+	lobby  LobbyJoiner
 }
 
-func newSpaceRepository() *SpaceRepository {
+func newSpaceRepository(lobby LobbyJoiner) *SpaceRepository {
 	space := make(map[string]*Space)
 	return &SpaceRepository{
 		&sync.RWMutex{},
 		space,
+		lobby,
 	}
 }
 
@@ -22,7 +24,7 @@ func (r *SpaceRepository) GetOrCreateSpace(id string) *Space {
 	defer r.locker.Unlock()
 	currentSpace, ok := r.space[id]
 	if !ok {
-		space := newSpace(id)
+		space := newSpace(id, r.lobby)
 		r.space[id] = space
 		return space
 	}
