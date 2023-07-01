@@ -2,10 +2,10 @@ package stream
 
 type SpaceManager struct {
 	spaces *SpaceRepository
-	lobby  lobbyGetCreator
+	lobby  lobbyAccessor
 }
 
-func NewSpaceManager(lobby lobbyGetCreator) *SpaceManager {
+func NewSpaceManager(lobby lobbyAccessor) *SpaceManager {
 	spaces := newSpaceRepository(lobby)
 	return &SpaceManager{spaces, lobby}
 }

@@ -18,7 +18,7 @@ type Answer struct {
 	session string
 }
 
-func (m *RtpStreamLobbyManager) GetOrCreateLobby(id string) (*RtpStreamLobby, error) {
+func (m *RtpStreamLobbyManager) AccessLobby(id string) (*RtpStreamLobby, error) {
 	// The error is need for distributed lobbies later
 	return m.lobbies.GetOrCreateLobby(id), nil
 }

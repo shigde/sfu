@@ -10,7 +10,7 @@ class LiveStream {
 }
 
 'LiveStream "1" <-- "1..n" RTPStream
-Space "1" <-- "1..n" LiveStream
+Space "1" --> "1..n" LiveStream
 
 LiveStream - Transcoder
 Transcoder - Subscriber

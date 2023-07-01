@@ -1,0 +1,32 @@
+@startuml
+'https://plantuml.com/class-diagram
+package stream {
+class SpaceManager << (S,#FF7700) Singleton >>
+class Space {
+    id: string
+}
+class LiveStream {
+    id: string
+}
+
+SpaceManager "1" --> "n" Space
+Space "1"-->"n" LiveStream
+}
+
+package lobby {
+class LobbyManager << (S,#FF7700) Singleton >>
+class Lobby {
+    id: string
+}
+class RtpStream {
+    id: string
+}
+
+SpaceManager -> LobbyManager
+LobbyManager "1" --> "n" Lobby
+Lobby "1" --> "n" RtpStream
+}
+
+Space "1".>"0..1" Lobby : access Lobby with \nLiveStream x
+
+@enduml

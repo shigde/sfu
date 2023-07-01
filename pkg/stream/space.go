@@ -7,28 +7,28 @@ import (
 	"github.com/shigde/sfu/pkg/lobby"
 )
 
-type lobbyGetCreator interface {
-	GetOrCreateLobby(id string) (*lobby.RtpStreamLobby, error)
+type lobbyAccessor interface {
+	AccessLobby(id string) (*lobby.RtpStreamLobby, error)
 }
 
 type Space struct {
 	Id             string `json:"Id"`
 	LiveStreamRepo *LiveStreamRepository
-	lobby          lobbyGetCreator
+	lobby          lobbyAccessor
 }
 
-func newSpace(id string, lobby lobbyGetCreator) *Space {
+func newSpace(id string, lobby lobbyAccessor) *Space {
 	repo := NewLiveStreamRepository()
 	return &Space{Id: id, LiveStreamRepo: repo, lobby: lobby}
 }
 
-func (s *Space) EnterLobby(sdp *webrtc.SessionDescription, userId string, streamId string, role string) (*webrtc.SessionDescription, error) {
-	lobbySpace, err := s.lobby.GetOrCreateLobby(s.Id)
+func (s *Space) EnterLobby(sdp *webrtc.SessionDescription, stream *LiveStream, userId string, role string) (*webrtc.SessionDescription, error) {
+	lobbySpace, err := s.lobby.AccessLobby(s.Id)
 	if err != nil {
 		return nil, fmt.Errorf("creating lobby: %w", err)
 	}
 	offer := lobby.Offer{
-		streamId,
+		stream.Id,
 		userId,
 		sdp,
 		role,

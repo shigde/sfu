@@ -7,10 +7,10 @@ import (
 type SpaceRepository struct {
 	locker *sync.RWMutex
 	space  map[string]*Space
-	lobby  LobbyJoiner
+	lobby  lobbyAccessor
 }
 
-func newSpaceRepository(lobby LobbyJoiner) *SpaceRepository {
+func newSpaceRepository(lobby lobbyAccessor) *SpaceRepository {
 	space := make(map[string]*Space)
 	return &SpaceRepository{
 		&sync.RWMutex{},

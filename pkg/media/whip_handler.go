@@ -27,7 +27,7 @@ func whip(spaceManager *stream.SpaceManager) http.HandlerFunc {
 			return
 		}
 
-		if answer, ok := space.EnterLobby(&offer, liveStream, user.UID); ok {
+		if answer, err := space.EnterLobby(&offer.Sdp, liveStream, user.UID, "role"); err == nil {
 			if err := json.NewEncoder(w).Encode(answer); err != nil {
 				http.Error(w, "stream invalid", http.StatusInternalServerError)
 			}

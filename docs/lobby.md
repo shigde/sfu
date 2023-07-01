@@ -1,8 +1,8 @@
 # Lobby
 
-## Live Stream
-!["live-stream"](./uml/class/live-stream.png)
+## Lobby vs.Rtp Stream
 
-## RTP Stream
+The room gives access to the lobby
 
-!["rtp-stream"](./uml/class/rtp-stream.png)
+!["live-stream"](./uml/class/lobby.class.png)
+
