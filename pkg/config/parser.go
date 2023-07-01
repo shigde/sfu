@@ -30,6 +30,14 @@ func ParseConfig(file string) (*sfu.Config, error) {
 		return nil, fmt.Errorf("loading config file: %w", err)
 	}
 
+	if config.StorageConfig.Name != "sqlite3" {
+		return nil, fmt.Errorf("store.name currently supportes only Sqlite3")
+	}
+
+	if len(config.StorageConfig.DataSource) == 0 {
+		return nil, fmt.Errorf("store.dataSource should not be empty")
+	}
+
 	if len(config.AuthConfig.JWT.Key) < 1 {
 		return nil, fmt.Errorf("auth.jwt.key should not be empty")
 	}

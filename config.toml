@@ -1,7 +1,12 @@
 [log]
-#INFO,WARN,ERROR,DEBUG
+# INFO,WARN,ERROR,DEBUG
 level = "DEBUG"
 logfile = "./mon/dev/log/sfu.log"
+
+[store]
+# currently only Sqlite3 supported
+name = "sqlite3"
+dataSource = "shig.db"
 
 [auth.jwt]
 enabled = true

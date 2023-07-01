@@ -14,19 +14,19 @@ Space "1"-->"n" LiveStream
 }
 
 package lobby {
-class LobbyManager << (S,#FF7700) Singleton >>
-class Lobby {
+class RtpStreamLobbyManager << (S,#FF7700) Singleton >>
+class RtpStreamLobby {
     id: string
 }
 class RtpStream {
     id: string
 }
 
-SpaceManager -> LobbyManager
-LobbyManager "1" --> "n" Lobby
-Lobby "1" --> "n" RtpStream
+SpaceManager -> RtpStreamLobbyManager
+RtpStreamLobbyManager "1" --> "n" RtpStreamLobby
+RtpStreamLobby "1" --> "n" RtpStream
 }
 
-Space "1".>"0..1" Lobby : access Lobby with \nLiveStream x
+Space "1".>"0..1" RtpStreamLobby : access Lobby with \nLiveStream x
 
 @enduml
