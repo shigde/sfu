@@ -61,10 +61,11 @@ func TestSpaceRepository(t *testing.T) {
 
 		var wg sync.WaitGroup
 		wg.Add(wantedCount + 2)
+		created := make(chan struct{})
 
 		for i := 0; i < wantedCount; i++ {
-			go func(id int) {
-				space := repo.GetOrCreateSpace(fmt.Sprintf("id-%d", id))
+			go func(spaceId int) {
+				space := repo.GetOrCreateSpace(fmt.Sprintf("id-%d", spaceId))
 				assert.NotNil(t, space)
 				wg.Done()
 			}(i)
@@ -73,12 +74,14 @@ func TestSpaceRepository(t *testing.T) {
 				go func() {
 					space := repo.GetOrCreateSpace(id)
 					assert.NotNil(t, space)
+					close(created)
 					wg.Done()
 				}()
 			}
 
 			if i == deleteOn {
 				go func() {
+					<-created
 					deleted := repo.Delete(id)
 					assert.True(t, deleted)
 					wg.Done()

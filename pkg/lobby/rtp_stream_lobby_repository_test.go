@@ -60,6 +60,7 @@ func TestSpaceRepository(t *testing.T) {
 
 		var wg sync.WaitGroup
 		wg.Add(wantedCount + 2)
+		created := make(chan struct{})
 
 		for i := 0; i < wantedCount; i++ {
 			go func(id int) {
@@ -72,12 +73,14 @@ func TestSpaceRepository(t *testing.T) {
 				go func() {
 					lobby := repo.GetOrCreateLobby(id)
 					assert.NotNil(t, lobby)
+					close(created)
 					wg.Done()
 				}()
 			}
 
 			if i == deleteOn {
 				go func() {
+					<-created
 					deleted := repo.Delete(id)
 					assert.True(t, deleted)
 					wg.Done()
