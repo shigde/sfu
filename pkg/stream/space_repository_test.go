@@ -10,7 +10,8 @@ import (
 
 func testSpaceRepositorySetup(t *testing.T) *SpaceRepository {
 	t.Helper()
-	repository := newSpaceRepository()
+	var lobby lobbyAccessor
+	repository := newSpaceRepository(lobby)
 
 	return repository
 }
