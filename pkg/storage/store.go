@@ -1,28 +1,26 @@
-package store
+package storage
 
 import (
-	"database/sql"
 	"fmt"
+
+	"gorm.io/gorm"
 )
 
 type StorageConfig struct {
 	Name       string `mapstructure:"name"`
 	DataSource string `mapstructure:"dataSource"`
 }
-type Storage struct {
-	db *sql.DB
+type Store struct {
+	db *gorm.DB
 }
 
-func NewStorage(config StorageConfig) (*Storage, error) {
+func NewStore(config *StorageConfig) (*Store, error) {
 	if config.Name == "sqlite3" {
 		return newSqlite(config.DataSource)
 	}
 	return nil, fmt.Errorf("creating storage %s not supported", config.Name)
 }
 
-func (s Storage) Close() error {
-	if err := s.db.Close(); err != nil {
-		return fmt.Errorf("closing database: %w", err)
-	}
-	return nil
+func (s *Store) GetDatabase() *gorm.DB {
+	return s.db
 }

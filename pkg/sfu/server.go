@@ -10,6 +10,7 @@ import (
 	"github.com/shigde/sfu/pkg/lobby"
 	"github.com/shigde/sfu/pkg/media"
 	"github.com/shigde/sfu/pkg/metric"
+	"github.com/shigde/sfu/pkg/storage"
 	"github.com/shigde/sfu/pkg/stream"
 	"golang.org/x/exp/slog"
 )
@@ -20,8 +21,20 @@ type Server struct {
 }
 
 func NewServer(config *Config) (*Server, error) {
+	// RTP lobby
 	lobbyManager := lobby.NewLobbyManager()
-	spaceManager := stream.NewSpaceManager(lobbyManager)
+
+	// Live streams and space
+	store, err := storage.NewStore(config.StorageConfig)
+	if err != nil {
+		return nil, fmt.Errorf("setup storage %w", err)
+	}
+	spaceManager, err := stream.NewSpaceManager(lobbyManager, store)
+	if err != nil {
+		return nil, fmt.Errorf("setup space manager %w", err)
+	}
+
+	// api endpoints
 	router := media.NewRouter(config.AuthConfig, spaceManager)
 
 	// monitoring
@@ -34,6 +47,7 @@ func NewServer(config *Config) (*Server, error) {
 		router.Path(m.Endpoint).Handler(promhttp.Handler())
 	}
 
+	// start server
 	return &Server{
 		server: &http.Server{Addr: ":8080", Handler: router},
 		config: config,

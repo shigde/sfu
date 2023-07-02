@@ -12,9 +12,10 @@ type lobbyAccessor interface {
 }
 
 type Space struct {
-	Id             string `json:"Id"`
-	LiveStreamRepo *LiveStreamRepository
-	lobby          lobbyAccessor
+	Id             string                `json:"Id" gorm:"primaryKey"`
+	LiveStreamRepo *LiveStreamRepository `gorm:"-"`
+	lobby          lobbyAccessor         `gorm:"-"`
+	entity
 }
 
 func newSpace(id string, lobby lobbyAccessor) *Space {

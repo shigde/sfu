@@ -34,7 +34,7 @@ func getSpaceId(r *http.Request) (string, bool) {
 
 func getSpace(r *http.Request, manager *stream.SpaceManager) (*stream.Space, bool) {
 	if spaceId, ok := getSpaceId(r); ok {
-		space, ok := manager.GetSpace(spaceId)
+		space, ok := manager.GetSpace(r.Context(), spaceId)
 		return space, ok
 	}
 	return nil, false
@@ -42,7 +42,7 @@ func getSpace(r *http.Request, manager *stream.SpaceManager) (*stream.Space, boo
 
 func getOrCreateSpace(r *http.Request, manager *stream.SpaceManager) (*stream.Space, bool) {
 	if spaceId, ok := getSpaceId(r); ok {
-		space := manager.GetOrCreateSpace(spaceId)
+		space := manager.GetOrCreateSpace(r.Context(), spaceId)
 		return space, ok
 	}
 	return nil, false

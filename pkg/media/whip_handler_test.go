@@ -1,6 +1,7 @@
 package media
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +12,8 @@ import (
 	"github.com/shigde/sfu/pkg/lobby"
 	"github.com/shigde/sfu/pkg/stream"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 func testWhipReqSetup(t *testing.T) (string, *mux.Router, *stream.LiveStreamRepository) {
@@ -19,8 +22,9 @@ func testWhipReqSetup(t *testing.T) (string, *mux.Router, *stream.LiveStreamRepo
 	config := &auth.AuthConfig{JWT: jwt}
 	// Setup engine  mocks
 	lobbyManager := lobby.NewLobbyManager()
-	manager := stream.NewSpaceManager(lobbyManager)
-	space := manager.GetOrCreateSpace(spaceId)
+	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	manager, _ := stream.NewSpaceManager(lobbyManager, &testStore{db})
+	space := manager.GetOrCreateSpace(context.Background(), spaceId)
 
 	s := &stream.LiveStream{}
 
