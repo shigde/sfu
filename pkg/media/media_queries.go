@@ -30,7 +30,7 @@ func getLiveStream(r *http.Request, manager *stream.SpaceManager) (*stream.LiveS
 
 	streamResource, err := space.LiveStreamRepo.FindById(r.Context(), id)
 	if err != nil && errors.Is(err, stream.ErrStreamNotFound) {
-		return nil, nil, fmt.Errorf("%s: %w", errStreamNotFound, err)
+		return nil, nil, errors.Join(err, errStreamNotFound)
 	}
 
 	if err != nil {
@@ -55,7 +55,7 @@ func getSpace(r *http.Request, manager *stream.SpaceManager) (*stream.Space, err
 	}
 	space, err := manager.GetSpace(r.Context(), spaceId)
 	if err != nil && errors.Is(err, stream.ErrSpaceNotFound) {
-		return nil, fmt.Errorf("%s: %w", errSpaceNotFound, err)
+		return nil, errors.Join(err, errSpaceNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("getting space from manager: %w", err)
@@ -85,7 +85,7 @@ func handleResourceError(w http.ResponseWriter, err error) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	httpError(w, "get stream", http.StatusInternalServerError, err)
+	httpError(w, "error get media", http.StatusInternalServerError, err)
 }
 
 func httpError(w http.ResponseWriter, errResponse string, code int, err error) {

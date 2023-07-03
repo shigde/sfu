@@ -77,10 +77,11 @@ func (r *LiveStreamRepository) FindById(ctx context.Context, id string) (*LiveSt
 
 	result := tx.First(liveStream)
 	if result.Error != nil {
+		err := fmt.Errorf("finding stream by id %s: %w", id, result.Error)
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("finding stream by id %s: %s: %w", id, ErrStreamNotFound, result.Error)
+			return nil, errors.Join(err, ErrStreamNotFound)
 		}
-		return nil, fmt.Errorf("finding stream by id %s: %w", id, result.Error)
+		return nil, err
 	}
 
 	return liveStream, nil
