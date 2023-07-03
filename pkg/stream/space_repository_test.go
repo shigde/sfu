@@ -11,14 +11,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type testStore struct {
-	db *gorm.DB
-}
-
-func (s *testStore) GetDatabase() *gorm.DB {
-	return s.db
-}
-
 func testSpaceRepositorySetup(t *testing.T) *SpaceRepository {
 	t.Helper()
 	var lobby lobbyAccessor
@@ -31,37 +23,37 @@ func TestSpaceRepository(t *testing.T) {
 
 	t.Run("Get not existing Space", func(t *testing.T) {
 		repo := testSpaceRepositorySetup(t)
-		space, ok := repo.GetSpace(context.Background(), "123")
-		assert.False(t, ok)
+		space, err := repo.GetSpace(context.Background(), "123")
+		assert.Error(t, err, ErrSpaceNotFound)
 		assert.Nil(t, space)
 	})
 
 	t.Run("Create Space", func(t *testing.T) {
 		repo := testSpaceRepositorySetup(t)
-		space := repo.GetOrCreateSpace(context.Background(), "456")
+		space, _ := repo.GetOrCreateSpace(context.Background(), "456")
 		assert.NotNil(t, space)
 	})
 
 	t.Run("Create and Get Space", func(t *testing.T) {
 		repo := testSpaceRepositorySetup(t)
-		spaceCreated := repo.GetOrCreateSpace(context.Background(), "789")
+		spaceCreated, _ := repo.GetOrCreateSpace(context.Background(), "789")
 		assert.NotNil(t, spaceCreated)
-		spaceGet, ok := repo.GetSpace(context.Background(), "789")
-		assert.True(t, ok)
+		spaceGet, err := repo.GetSpace(context.Background(), "789")
+		assert.NoError(t, err)
 		assert.NotSame(t, spaceCreated, spaceGet)
 		assert.Equal(t, spaceCreated, spaceGet)
 	})
 
 	t.Run("Delete Space", func(t *testing.T) {
 		repo := testSpaceRepositorySetup(t)
-		spaceCreated := repo.GetOrCreateSpace(context.Background(), "1012")
+		spaceCreated, _ := repo.GetOrCreateSpace(context.Background(), "1012")
 		assert.NotNil(t, spaceCreated)
 
-		deleted := repo.Delete(context.Background(), "1012")
-		assert.True(t, deleted)
+		err := repo.Delete(context.Background(), "1012")
+		assert.NoError(t, err)
 
-		spaceGet, ok := repo.GetSpace(context.Background(), "1012")
-		assert.False(t, ok)
+		spaceGet, err := repo.GetSpace(context.Background(), "1012")
+		assert.Error(t, err)
 		assert.Nil(t, spaceGet)
 	})
 
@@ -78,14 +70,14 @@ func TestSpaceRepository(t *testing.T) {
 
 		for i := 0; i < wantedCount; i++ {
 			go func(spaceId int) {
-				space := repo.GetOrCreateSpace(context.Background(), fmt.Sprintf("id-%d", spaceId))
+				space, _ := repo.GetOrCreateSpace(context.Background(), fmt.Sprintf("id-%d", spaceId))
 				assert.NotNil(t, space)
 				wg.Done()
 			}(i)
 
 			if i == createOn {
 				go func() {
-					space := repo.GetOrCreateSpace(context.Background(), id)
+					space, _ := repo.GetOrCreateSpace(context.Background(), id)
 					assert.NotNil(t, space)
 					close(created)
 					wg.Done()
@@ -95,8 +87,8 @@ func TestSpaceRepository(t *testing.T) {
 			if i == deleteOn {
 				go func() {
 					<-created
-					deleted := repo.Delete(context.Background(), id)
-					assert.True(t, deleted)
+					err := repo.Delete(context.Background(), id)
+					assert.NoError(t, err)
 					wg.Done()
 				}()
 			}
@@ -104,8 +96,8 @@ func TestSpaceRepository(t *testing.T) {
 
 		wg.Wait()
 
-		_, ok := repo.GetSpace(context.Background(), id)
-		assert.False(t, ok)
+		_, err := repo.GetSpace(context.Background(), id)
+		assert.Error(t, err, ErrSpaceNotFound)
 		assert.Equal(t, int64(wantedCount), repo.Len(context.Background()))
 	})
 }

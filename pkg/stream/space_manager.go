@@ -18,10 +18,10 @@ func NewSpaceManager(lobby lobbyAccessor, store storage) (*SpaceManager, error) 
 	return &SpaceManager{spaces, lobby}, nil
 }
 
-func (m *SpaceManager) GetSpace(ctx context.Context, id string) (*Space, bool) {
+func (m *SpaceManager) GetSpace(ctx context.Context, id string) (*Space, error) {
 	return m.spaces.GetSpace(ctx, id)
 }
 
-func (m *SpaceManager) GetOrCreateSpace(ctx context.Context, id string) *Space {
+func (m *SpaceManager) GetOrCreateSpace(ctx context.Context, id string) (*Space, error) {
 	return m.spaces.GetOrCreateSpace(ctx, id)
 }

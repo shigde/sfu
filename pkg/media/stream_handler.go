@@ -12,35 +12,41 @@ import (
 
 func getStreamList(manager *stream.SpaceManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		space, ok := getSpace(r, manager)
-		if !ok {
-			w.WriteHeader(http.StatusBadRequest)
+		space, err := getSpace(r, manager)
+		if err != nil {
+			handleResourceError(w, err)
 			return
 		}
-		streams := space.LiveStreamRepo.All()
+		streams, err := space.LiveStreamRepo.All(r.Context())
+		if err != nil {
+			httpError(w, "error reading stream list", http.StatusInternalServerError, err)
+			return
+		}
+
 		if err := json.NewEncoder(w).Encode(streams); err != nil {
-			http.Error(w, "reading resources", http.StatusInternalServerError)
+			httpError(w, "error reading stream list", http.StatusInternalServerError, err)
 		}
 	}
 }
 func getStream(manager *stream.SpaceManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		streamResource, _, found := getLiveStream(w, r, manager)
-		if !found {
+		streamResource, _, err := getLiveStream(r, manager)
+		if err != nil {
+			handleResourceError(w, err)
 			return
 		}
 
 		if err := json.NewEncoder(w).Encode(streamResource); err != nil {
-			http.Error(w, "stream invalid", http.StatusInternalServerError)
+			httpError(w, "stream invalid", http.StatusInternalServerError, err)
 		}
 	}
 }
 
 func deleteStream(manager *stream.SpaceManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		space, ok := getSpace(r, manager)
-		if !ok {
-			w.WriteHeader(http.StatusBadRequest)
+		space, err := getSpace(r, manager)
+		if err != nil {
+			handleResourceError(w, err)
 			return
 		}
 
@@ -50,11 +56,11 @@ func deleteStream(manager *stream.SpaceManager) http.HandlerFunc {
 			return
 		}
 
-		if space.LiveStreamRepo.Delete(id) {
-			w.WriteHeader(http.StatusOK)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
+		if err := space.LiveStreamRepo.Delete(r.Context(), id); err != nil {
+			httpError(w, "error delete stream", http.StatusInternalServerError, err)
+			return
 		}
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -65,9 +71,9 @@ func createStream(manager *stream.SpaceManager) http.HandlerFunc {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		space, ok := getOrCreateSpace(r, manager)
-		if !ok {
-			w.WriteHeader(http.StatusBadRequest)
+		space, err := getOrCreateSpace(r, manager)
+		if err != nil {
+			handleResourceError(w, err)
 			return
 		}
 
@@ -78,7 +84,11 @@ func createStream(manager *stream.SpaceManager) http.HandlerFunc {
 		}
 		liveStream.User = user.UID
 		liveStream.SpaceId = space.Id
-		id := space.LiveStreamRepo.Add(&liveStream)
+		id, err := space.LiveStreamRepo.Add(r.Context(), &liveStream)
+		if err != nil {
+			httpError(w, "error create stream", http.StatusInternalServerError, err)
+			return
+		}
 		w.Header().Set("Location", fmt.Sprintf("%s/%s", r.URL.String(), id))
 		w.WriteHeader(http.StatusCreated)
 	}
@@ -86,9 +96,9 @@ func createStream(manager *stream.SpaceManager) http.HandlerFunc {
 
 func updateStream(manager *stream.SpaceManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		space, ok := getSpace(r, manager)
-		if !ok {
-			w.WriteHeader(http.StatusBadRequest)
+		space, err := getSpace(r, manager)
+		if err != nil {
+			handleResourceError(w, err)
 			return
 		}
 
@@ -98,13 +108,12 @@ func updateStream(manager *stream.SpaceManager) http.HandlerFunc {
 			return
 		}
 
-		if ok := space.LiveStreamRepo.Update(&liveStream); !ok {
-			w.WriteHeader(http.StatusNotFound)
+		if err := space.LiveStreamRepo.Update(r.Context(), &liveStream); err != nil {
+			httpError(w, "error update stream", http.StatusInternalServerError, err)
 			return
 		}
 
 		w.WriteHeader(http.StatusNoContent)
-
 	}
 }
 

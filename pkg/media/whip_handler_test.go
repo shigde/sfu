@@ -24,11 +24,11 @@ func testWhipReqSetup(t *testing.T) (string, *mux.Router, *stream.LiveStreamRepo
 	lobbyManager := lobby.NewLobbyManager()
 	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	manager, _ := stream.NewSpaceManager(lobbyManager, &testStore{db})
-	space := manager.GetOrCreateSpace(context.Background(), spaceId)
+	space, _ := manager.GetOrCreateSpace(context.Background(), spaceId)
 
 	s := &stream.LiveStream{}
 
-	streamId := space.LiveStreamRepo.Add(s)
+	streamId, _ := space.LiveStreamRepo.Add(context.Background(), s)
 	router := NewRouter(config, manager)
 
 	return streamId, router, space.LiveStreamRepo

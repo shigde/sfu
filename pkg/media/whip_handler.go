@@ -10,8 +10,9 @@ import (
 
 func whip(spaceManager *stream.SpaceManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		liveStream, space, found := getLiveStream(w, r, spaceManager)
-		if !found {
+		liveStream, space, err := getLiveStream(r, spaceManager)
+		if err != nil {
+			handleResourceError(w, err)
 			return
 		}
 
@@ -23,18 +24,19 @@ func whip(spaceManager *stream.SpaceManager) http.HandlerFunc {
 
 		user, ok := auth.PrincipalFromContext(r.Context())
 		if !ok {
-			w.WriteHeader(http.StatusInternalServerError)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		if answer, err := space.EnterLobby(&offer.Sdp, liveStream, user.UID, "role"); err == nil {
-			if err := json.NewEncoder(w).Encode(answer); err != nil {
-				http.Error(w, "stream invalid", http.StatusInternalServerError)
-			}
+		answer, err := space.EnterLobby(&offer.Sdp, liveStream, user.UID, "role")
+		if err != nil {
+			httpError(w, "error build whip", http.StatusInternalServerError, err)
 			return
 		}
 
-		w.WriteHeader(http.StatusForbidden)
+		if err := json.NewEncoder(w).Encode(answer); err != nil {
+			httpError(w, "error build whip", http.StatusInternalServerError, err)
+		}
 	}
 }
 

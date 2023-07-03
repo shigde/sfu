@@ -15,12 +15,16 @@ type Space struct {
 	Id             string                `json:"Id" gorm:"primaryKey"`
 	LiveStreamRepo *LiveStreamRepository `gorm:"-"`
 	lobby          lobbyAccessor         `gorm:"-"`
+	store          storage               `gorm:"-"`
 	entity
 }
 
-func newSpace(id string, lobby lobbyAccessor) *Space {
-	repo := NewLiveStreamRepository()
-	return &Space{Id: id, LiveStreamRepo: repo, lobby: lobby}
+func newSpace(id string, lobby lobbyAccessor, store storage) (*Space, error) {
+	repo, err := NewLiveStreamRepository(store)
+	if err != nil {
+		return nil, fmt.Errorf("creating live stream repository")
+	}
+	return &Space{Id: id, LiveStreamRepo: repo, lobby: lobby, store: store}, nil
 }
 
 func (s *Space) EnterLobby(sdp *webrtc.SessionDescription, stream *LiveStream, userId string, role string) (*webrtc.SessionDescription, error) {
@@ -28,6 +32,7 @@ func (s *Space) EnterLobby(sdp *webrtc.SessionDescription, stream *LiveStream, u
 	if err != nil {
 		return nil, fmt.Errorf("creating lobby: %w", err)
 	}
+
 	offer := lobby.Offer{
 		stream.Id,
 		userId,

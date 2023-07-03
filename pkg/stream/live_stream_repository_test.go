@@ -1,115 +1,119 @@
 package stream
 
 import (
+	"context"
 	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func testRtpStreamRepositorySetup(t *testing.T) (*LiveStreamRepository, string) {
+func testLiveStreamRepositorySetup(t *testing.T) (*LiveStreamRepository, string) {
 	t.Helper()
-	repository := NewLiveStreamRepository()
+	repository, _ := NewLiveStreamRepository(newTestStore())
 	s := &LiveStream{}
-	streamId := repository.Add(s)
+	streamId, _ := repository.Add(context.Background(), s)
 
 	return repository, streamId
 }
-func TestRtpStreamRepository(t *testing.T) {
+func TestLiveStreamRepository(t *testing.T) {
 
 	assertRtpStream := func(t testing.TB, got *LiveStream, want *LiveStream) {
 		t.Helper()
-		if got != want {
-			t.Errorf("got %s want %s", got.Id, want.Id)
-		}
+		assert.NotNil(t, got)
+		assert.Equal(t, want, got)
 	}
 
-	assertRepoLength := func(t testing.TB, repo *LiveStreamRepository, want int) {
+	assertRepoLength := func(t testing.TB, repo *LiveStreamRepository, want int64) {
 		t.Helper()
 
-		if len(repo.All()) != want {
-			t.Fatalf("wanted %d, got %d", want, len(repo.All()))
+		if repo.Len(context.Background()) != want {
+			t.Fatalf("wanted %d, got %d", want, repo.Len(context.Background()))
 		}
 	}
 
 	assertRepoHasStream := func(t testing.TB, repo *LiveStreamRepository, want *LiveStream) {
 		t.Helper()
-		want, hasStream := repo.FindById(want.Id)
-		assert.True(t, hasStream)
-
-		assertRtpStream(t, want, want)
+		got, err := repo.FindById(context.Background(), want.Id)
+		assert.NoError(t, err)
+		assertRtpStream(t, want, got)
 	}
 
+	t.Run("Get not existing Stream", func(t *testing.T) {
+		repo, _ := testLiveStreamRepositorySetup(t)
+		stream, err := repo.FindById(context.Background(), "123")
+		assert.Error(t, err, ErrStreamNotFound)
+		assert.Nil(t, stream)
+	})
+
 	t.Run("Add Stream", func(t *testing.T) {
-		repo, _ := testRtpStreamRepositorySetup(t)
+		repo, _ := testLiveStreamRepositorySetup(t)
 		stream := &LiveStream{}
-		repo.Add(stream)
+		_, _ = repo.Add(context.Background(), stream)
 
 		assertRepoHasStream(t, repo, stream)
 		assertRepoLength(t, repo, 2)
 	})
 
 	t.Run("Delete Stream", func(t *testing.T) {
-		repo, _ := testRtpStreamRepositorySetup(t)
+		repo, _ := testLiveStreamRepositorySetup(t)
 		stream := &LiveStream{}
-		id := repo.Add(stream)
+		id, _ := repo.Add(context.Background(), stream)
 
-		if deleted := repo.Delete(id); !deleted {
-			t.Fatalf("deleting of rtp stream fails")
-		}
-
-		assert.False(t, repo.Contains(id))
+		err := repo.Delete(context.Background(), id)
+		assert.NoError(t, err)
+		assert.False(t, repo.Contains(context.Background(), id))
 	})
 
 	t.Run("Contains Stream", func(t *testing.T) {
-		repo, streamId := testRtpStreamRepositorySetup(t)
+		repo, streamId := testLiveStreamRepositorySetup(t)
 		stream := &LiveStream{}
-		id := repo.Add(stream)
+		id, _ := repo.Add(context.Background(), stream)
 
-		assert.True(t, repo.Contains(id))
-		assert.True(t, repo.Contains(streamId))
-		assert.False(t, repo.Contains("not_in_repo"))
+		assert.True(t, repo.Contains(context.Background(), id))
+		assert.True(t, repo.Contains(context.Background(), streamId))
+		assert.False(t, repo.Contains(context.Background(), "not_in_repo"))
 	})
 
 	t.Run("Find Stream By Id", func(t *testing.T) {
-		repo, streamId := testRtpStreamRepositorySetup(t)
+		repo, streamId := testLiveStreamRepositorySetup(t)
 		want := &LiveStream{}
-		id := repo.Add(want)
+		id, _ := repo.Add(context.Background(), want)
 
-		_, find := repo.FindById(streamId)
-		got, _ := repo.FindById(id)
+		_, err := repo.FindById(context.Background(), streamId)
+		got, _ := repo.FindById(context.Background(), id)
 
-		assert.True(t, find)
+		assert.NoError(t, err)
 		assertRtpStream(t, got, want)
 	})
 
 	t.Run("Update Stream", func(t *testing.T) {
-		repo, streamId := testRtpStreamRepositorySetup(t)
+		repo, streamId := testLiveStreamRepositorySetup(t)
 
-		want, _ := repo.FindById(streamId)
-		assert.True(t, repo.Update(want))
+		want, _ := repo.FindById(context.Background(), streamId)
+		assert.NoError(t, repo.Update(context.Background(), want))
 
-		got, _ := repo.FindById(streamId)
+		got, _ := repo.FindById(context.Background(), streamId)
 		assertRtpStream(t, got, want)
 	})
 
 	t.Run("Safely Concurrently Adding and Deleting", func(t *testing.T) {
 		wantedCount := 1000
 		deleteOn := 500
-		repo, id := testRtpStreamRepositorySetup(t)
+		repo, id := testLiveStreamRepositorySetup(t)
 
 		var wg sync.WaitGroup
 		wg.Add(wantedCount + 1)
 
 		for i := 0; i < wantedCount; i++ {
 			go func() {
-				repo.Add(&LiveStream{})
+				_, _ = repo.Add(context.Background(), &LiveStream{})
 				wg.Done()
 			}()
 
 			if i == deleteOn {
 				go func() {
-					repo.Delete(id)
+					_ = repo.Delete(context.Background(), id)
 					wg.Done()
 				}()
 			}
@@ -117,8 +121,8 @@ func TestRtpStreamRepository(t *testing.T) {
 
 		wg.Wait()
 
-		assertRepoLength(t, repo, wantedCount)
-		assert.False(t, repo.Contains(id))
-		assert.Equal(t, wantedCount, repo.Len())
+		assertRepoLength(t, repo, int64(wantedCount))
+		assert.False(t, repo.Contains(context.Background(), id))
+		assert.Equal(t, int64(wantedCount), repo.Len(context.Background()))
 	})
 }

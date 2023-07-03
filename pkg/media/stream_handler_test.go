@@ -39,10 +39,10 @@ func testStreamsReqSetup(t *testing.T) (string, *mux.Router, *stream.LiveStreamR
 	lobbyManager := lobby.NewLobbyManager()
 	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	manager, _ := stream.NewSpaceManager(lobbyManager, &testStore{db})
-	space := manager.GetOrCreateSpace(context.Background(), spaceId)
+	space, _ := manager.GetOrCreateSpace(context.Background(), spaceId)
 
 	s := &stream.LiveStream{}
-	streamId := space.LiveStreamRepo.Add(s)
+	streamId, _ := space.LiveStreamRepo.Add(context.Background(), s)
 	router := NewRouter(config, manager)
 
 	return streamId, router, space.LiveStreamRepo
@@ -96,13 +96,13 @@ func TestCreateStreamReq(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, rr.Code)
 	assert.Regexp(t, locationRx, rr.Header()["Location"][0])
 	newStreamId := strings.TrimPrefix(rr.Header()["Location"][0], locationPrefix)
-	assert.True(t, repository.Contains(newStreamId))
+	assert.True(t, repository.Contains(context.Background(), newStreamId))
 }
 
 func TestUpdateStreamReq(t *testing.T) {
 	streamId, router, repository := testStreamsReqSetup(t)
 
-	p, _ := repository.FindById(streamId)
+	p, _ := repository.FindById(context.Background(), streamId)
 	jsonStream, _ := json.Marshal(p)
 	body := bytes.NewBuffer(jsonStream)
 	req := newRequest("PUT", fmt.Sprintf("/space/%s/stream", spaceId), body)
@@ -111,7 +111,7 @@ func TestUpdateStreamReq(t *testing.T) {
 	router.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusNoContent, rr.Code)
-	assert.True(t, repository.Contains(streamId))
+	assert.True(t, repository.Contains(context.Background(), streamId))
 }
 
 func TestDeleteStreamReq(t *testing.T) {
@@ -122,7 +122,7 @@ func TestDeleteStreamReq(t *testing.T) {
 	router.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	assert.Equal(t, 0, len(repository.All()))
+	assert.Equal(t, int64(0), repository.Len(context.Background()))
 }
 
 func newRequest(method string, url string, body io.Reader) *http.Request {

@@ -2,21 +2,22 @@ package stream
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
 	"gorm.io/gorm"
 )
 
+var ErrSpaceNotFound = errors.New("reading unknown space in store")
+
 type SpaceRepository struct {
 	locker *sync.RWMutex
-	space  map[string]*Space
-	db     *gorm.DB
+	store  storage
 	lobby  lobbyAccessor
 }
 
 func newSpaceRepository(lobby lobbyAccessor, store storage) (*SpaceRepository, error) {
-	space := make(map[string]*Space)
 	db := store.GetDatabase()
 	if err := db.AutoMigrate(&Space{}); err != nil {
 		return nil, fmt.Errorf("migrating the space schema: %w", err)
@@ -24,75 +25,94 @@ func newSpaceRepository(lobby lobbyAccessor, store storage) (*SpaceRepository, e
 
 	return &SpaceRepository{
 		&sync.RWMutex{},
-		space,
-		db,
+		store,
 		lobby,
 	}, nil
 }
 
-func (r *SpaceRepository) GetOrCreateSpace(ctx context.Context, id string) *Space {
+func (r *SpaceRepository) GetOrCreateSpace(ctx context.Context, id string) (*Space, error) {
 	r.locker.Lock()
 	ctx, cancel := context.WithTimeout(ctx, queryTimeOut)
 	defer func() {
 		r.locker.Unlock()
 		cancel()
 	}()
-	space := newSpace(id, r.lobby)
-	tx := r.db.WithContext(ctx)
+
+	space, err := newSpace(id, r.lobby, r.store)
+	if err != nil {
+		return nil, fmt.Errorf("get or creating space by id %s: %w", id, err)
+	}
+
+	db := r.store.GetDatabase()
+	tx := db.WithContext(ctx)
 	result := tx.FirstOrCreate(&space)
-	if result.Error != nil || result.RowsAffected != 1 {
-		return nil
+	if result.Error != nil {
+		return nil, fmt.Errorf("get or creating space by id %s: %w", id, result.Error)
 	}
-	return space
+
+	return space, nil
 }
 
-func (r *SpaceRepository) GetSpace(ctx context.Context, id string) (*Space, bool) {
+func (r *SpaceRepository) GetSpace(ctx context.Context, id string) (*Space, error) {
 	r.locker.Lock()
-	ctx, cancel := context.WithTimeout(ctx, queryTimeOut)
+	tx, cancel := r.getStoreWithContext(ctx)
 	defer func() {
 		r.locker.Unlock()
 		cancel()
 	}()
 
-	space := newSpace(id, r.lobby)
-	tx := r.db.WithContext(ctx)
-	result := tx.Find(&space)
-	if result.Error != nil || result.RowsAffected != 1 {
-		return nil, false
+	space, err := newSpace(id, r.lobby, r.store)
+	if err != nil {
+		return nil, fmt.Errorf("finding space by space id %s: %w", id, err)
 	}
-	return space, true
+
+	result := tx.First(space)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("finding space by space id %s: %s: %w", id, ErrSpaceNotFound, result.Error)
+		}
+		return nil, fmt.Errorf("finding space by space id %s: %w", id, result.Error)
+	}
+
+	return space, nil
 }
 
-func (r *SpaceRepository) Delete(ctx context.Context, id string) bool {
+func (r *SpaceRepository) Delete(ctx context.Context, id string) error {
 	r.locker.Lock()
-	ctx, cancel := context.WithTimeout(ctx, queryTimeOut)
+	tx, cancel := r.getStoreWithContext(ctx)
 	defer func() {
 		r.locker.Unlock()
 		cancel()
 	}()
-	if _, ok := r.space[id]; ok {
-		delete(r.space, id)
-		return true
+
+	space, err := newSpace(id, r.lobby, r.store)
+	if err != nil {
+		return fmt.Errorf("deleting space by space id %s: %w", id, err)
 	}
 
-	space := newSpace(id, r.lobby)
-	tx := r.db.WithContext(ctx)
 	result := tx.Delete(space)
-	if result.Error != nil || result.RowsAffected != 1 {
-		return false
+	if result.Error != nil {
+		return fmt.Errorf("deleting space by space id %s: %w", id, result.Error)
 	}
-	return true
+	return nil
 }
 
 func (r *SpaceRepository) Len(ctx context.Context) int64 {
 	r.locker.RLock()
-	ctx, cancel := context.WithTimeout(ctx, queryTimeOut)
+	tx, cancel := r.getStoreWithContext(ctx)
 	defer func() {
 		r.locker.RUnlock()
 		cancel()
 	}()
-	tx := r.db.WithContext(ctx)
+
 	var count int64
 	tx.Model(&Space{}).Count(&count)
 	return count
+}
+
+func (r *SpaceRepository) getStoreWithContext(ctx context.Context) (*gorm.DB, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeOut)
+	db := r.store.GetDatabase()
+	tx := db.WithContext(ctx)
+	return tx, cancel
 }
