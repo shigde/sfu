@@ -91,5 +91,7 @@ services:
       - --config.file=/etc/prometheus-config.yml
     ports:
       - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - monitoring
