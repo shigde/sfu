@@ -17,8 +17,6 @@ const principalContextKey = contextKey("principal")
 func HttpMiddleware(ac *AuthConfig, f http.HandlerFunc) http.HandlerFunc {
 	log.Debug("activated authentication http middleware")
 	return func(w http.ResponseWriter, r *http.Request) {
-		r.Context()
-		w.Header().Set("Content-Type", "application/json")
 		slog.Debug("getting new client request")
 		authHeader := r.Header.Get("Authorization")
 

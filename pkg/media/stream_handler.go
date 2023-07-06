@@ -12,6 +12,7 @@ import (
 
 func getStreamList(manager *stream.SpaceManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		space, err := getSpace(r, manager)
 		if err != nil {
 			handleResourceError(w, err)
@@ -30,6 +31,7 @@ func getStreamList(manager *stream.SpaceManager) http.HandlerFunc {
 }
 func getStream(manager *stream.SpaceManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		streamResource, _, err := getLiveStream(r, manager)
 		if err != nil {
 			handleResourceError(w, err)
@@ -44,6 +46,7 @@ func getStream(manager *stream.SpaceManager) http.HandlerFunc {
 
 func deleteStream(manager *stream.SpaceManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		space, err := getSpace(r, manager)
 		if err != nil {
 			handleResourceError(w, err)
@@ -66,6 +69,7 @@ func deleteStream(manager *stream.SpaceManager) http.HandlerFunc {
 
 func createStream(manager *stream.SpaceManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		user, ok := auth.PrincipalFromContext(r.Context())
 		if !ok {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -96,6 +100,7 @@ func createStream(manager *stream.SpaceManager) http.HandlerFunc {
 
 func updateStream(manager *stream.SpaceManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		space, err := getSpace(r, manager)
 		if err != nil {
 			handleResourceError(w, err)
