@@ -1,8 +1,10 @@
 package media
 
 import (
-	"encoding/json"
+	"crypto/md5"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/shigde/sfu/pkg/auth"
 )
@@ -34,6 +36,8 @@ func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 
 		answer, err := space.EnterLobby(offer, liveStream, user.UID, "role")
 		resourceId := "1234567" // The lobby generate this resource id!
+		response := []byte(answer.SDP)
+		hash := md5.Sum(response)
 
 		if err != nil {
 			httpError(w, "error build whip", http.StatusInternalServerError, err)
@@ -41,11 +45,13 @@ func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		if err := json.NewEncoder(w).Encode(answer); err != nil {
+		contentLen, err := w.Write(response)
+		if err != nil {
 			httpError(w, "error build whip", http.StatusInternalServerError, err)
 		}
-		w.Header().Set("etag", "etag")
-		w.Header().Set("Content-Length", "1400")
+
+		w.Header().Set("etag", fmt.Sprintf("%x", hash))
+		w.Header().Set("Content-Length", strconv.Itoa(contentLen))
 		w.Header().Set("Location", "resource/"+resourceId)
 	}
 }

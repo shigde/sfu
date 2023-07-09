@@ -43,7 +43,7 @@ func (s *Space) EnterLobby(sdp *webrtc.SessionDescription, stream *LiveStream, u
 	// @TODO run this lobby as goroutine
 	_, _ = lobbySpace.Join(offer)
 
-	return &webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer}, nil
+	return &webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: "---"}, nil
 
 	// @TODO: Dead log!! This will be fixed in next commit
 	//select {

@@ -22,7 +22,8 @@ func (s *testStore) GetDatabase() *gorm.DB {
 }
 
 const testOffer = ""
-const testAnswer = "{\"type\":\"answer\",\"sdp\":\"\"}\n"
+const testAnswer = "---"
+const testAnswerETag = "9efc314b65237d5d646e1b817372afc6"
 
 type testLobbyManager struct {
 }

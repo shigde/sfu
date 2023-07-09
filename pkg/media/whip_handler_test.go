@@ -45,9 +45,9 @@ func TestWhipReq(t *testing.T) {
 
 	// Then: status is 201
 	assert.Equal(t, http.StatusCreated, rr.Code)
-	assert.Equal(t, "etag", rr.Header().Get("ETag"))
+	assert.Equal(t, testAnswerETag, rr.Header().Get("ETag"))
 	assert.Equal(t, "application/sdp", rr.Header().Get("Content-Type"))
-	assert.Equal(t, "1400", rr.Header().Get("Content-Length"))
+	assert.Equal(t, strconv.Itoa(len([]byte(testAnswer))), rr.Header().Get("Content-Length"))
 	assert.Regexp(t, "^resource/1234567", rr.Header().Get("Location"))
 	assert.Regexp(t, "^session.id=[a-zA-z0-9]+", rr.Header().Get("Set-Cookie"))
 	assert.Equal(t, testAnswer, rr.Body.String())
