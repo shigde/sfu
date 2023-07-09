@@ -1,6 +1,8 @@
 package media
 
 import (
+	"context"
+
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/pkg/auth"
 	"github.com/shigde/sfu/pkg/stream"
@@ -8,7 +10,7 @@ import (
 
 func NewRouter(
 	config *auth.AuthConfig,
-	spaceManager *stream.SpaceManager,
+	spaceManager spaceGetCreator,
 ) *mux.Router {
 	router := mux.NewRouter()
 	// Space
@@ -20,4 +22,9 @@ func NewRouter(
 	// Lobby
 	router.HandleFunc("/space/{space}/stream/{id}/whip", auth.HttpMiddleware(config, whip(spaceManager))).Methods("POST")
 	return router
+}
+
+type spaceGetCreator interface {
+	GetSpace(ctx context.Context, id string) (*stream.Space, error)
+	GetOrCreateSpace(ctx context.Context, id string) (*stream.Space, error)
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/shigde/sfu/pkg/stream"
 )
 
-func getStreamList(manager *stream.SpaceManager) http.HandlerFunc {
+func getStreamList(manager spaceGetCreator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		space, err := getSpace(r, manager)
@@ -29,7 +29,7 @@ func getStreamList(manager *stream.SpaceManager) http.HandlerFunc {
 		}
 	}
 }
-func getStream(manager *stream.SpaceManager) http.HandlerFunc {
+func getStream(manager spaceGetCreator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		streamResource, _, err := getLiveStream(r, manager)
@@ -44,7 +44,7 @@ func getStream(manager *stream.SpaceManager) http.HandlerFunc {
 	}
 }
 
-func deleteStream(manager *stream.SpaceManager) http.HandlerFunc {
+func deleteStream(manager spaceGetCreator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		space, err := getSpace(r, manager)
@@ -67,7 +67,7 @@ func deleteStream(manager *stream.SpaceManager) http.HandlerFunc {
 	}
 }
 
-func createStream(manager *stream.SpaceManager) http.HandlerFunc {
+func createStream(manager spaceGetCreator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		user, ok := auth.PrincipalFromContext(r.Context())
@@ -98,7 +98,7 @@ func createStream(manager *stream.SpaceManager) http.HandlerFunc {
 	}
 }
 
-func updateStream(manager *stream.SpaceManager) http.HandlerFunc {
+func updateStream(manager spaceGetCreator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		space, err := getSpace(r, manager)
@@ -123,7 +123,7 @@ func updateStream(manager *stream.SpaceManager) http.HandlerFunc {
 }
 
 func getStreamResourcePayload(w http.ResponseWriter, r *http.Request, liveStream *stream.LiveStream) error {
-	dec, err := getPayload(w, r)
+	dec, err := getJsonPayload(w, r)
 	if err != nil {
 		return err
 	}

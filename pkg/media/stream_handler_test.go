@@ -16,31 +16,21 @@ import (
 	"github.com/shigde/sfu/pkg/lobby"
 	"github.com/shigde/sfu/pkg/stream"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
 
 const bearer = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.h3ygBKXYiYVyGIwEMNYVuejBUCch2eysey4JqsXg9dk"
-const spaceId = "abc123"
-
-type testStore struct {
-	db *gorm.DB
-}
-
-func (s *testStore) GetDatabase() *gorm.DB {
-	return s.db
-}
 
 func testStreamsReqSetup(t *testing.T) (string, *mux.Router, *stream.LiveStreamRepository) {
 	t.Helper()
 	jwt := &auth.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}
 	config := &auth.AuthConfig{JWT: jwt}
-	// Setup engine  mocks
+	// Setup space
 	lobbyManager := lobby.NewLobbyManager()
-	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	manager, _ := stream.NewSpaceManager(lobbyManager, &testStore{db})
+	store := newTestStore()
+	manager, _ := stream.NewSpaceManager(lobbyManager, store)
 	space, _ := manager.GetOrCreateSpace(context.Background(), spaceId)
 
+	// Setup Stream
 	s := &stream.LiveStream{}
 	streamId, _ := space.LiveStreamRepo.Add(context.Background(), s)
 	router := NewRouter(config, manager)
@@ -52,7 +42,7 @@ func TestGetAllStreamsReq(t *testing.T) {
 	streamId, router, _ := testStreamsReqSetup(t)
 
 	// When: GET /streams is called
-	req := newRequest("GET", fmt.Sprintf("/space/%s/streams", spaceId), nil)
+	req := newJsonContentRequest("GET", fmt.Sprintf("/space/%s/streams", spaceId), nil)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 
@@ -68,7 +58,7 @@ func TestGetStreamReq(t *testing.T) {
 	streamId, router, _ := testStreamsReqSetup(t)
 
 	// When: GET /catalog/products is called
-	req := newRequest("GET", fmt.Sprintf("/space/%s/stream/%s", spaceId, streamId), nil)
+	req := newJsonContentRequest("GET", fmt.Sprintf("/space/%s/stream/%s", spaceId, streamId), nil)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 
@@ -88,7 +78,7 @@ func TestCreateStreamReq(t *testing.T) {
 
 	jsonStream, _ := json.Marshal(stream.LiveStream{})
 	body := bytes.NewBuffer(jsonStream)
-	req := newRequest("POST", url, body)
+	req := newJsonContentRequest("POST", url, body)
 
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
@@ -105,7 +95,7 @@ func TestUpdateStreamReq(t *testing.T) {
 	p, _ := repository.FindById(context.Background(), streamId)
 	jsonStream, _ := json.Marshal(p)
 	body := bytes.NewBuffer(jsonStream)
-	req := newRequest("PUT", fmt.Sprintf("/space/%s/stream", spaceId), body)
+	req := newJsonContentRequest("PUT", fmt.Sprintf("/space/%s/stream", spaceId), body)
 
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
@@ -117,7 +107,7 @@ func TestUpdateStreamReq(t *testing.T) {
 func TestDeleteStreamReq(t *testing.T) {
 	streamId, router, repository := testStreamsReqSetup(t)
 
-	req := newRequest("DELETE", fmt.Sprintf("/space/%s/stream/%s", spaceId, streamId), nil)
+	req := newJsonContentRequest("DELETE", fmt.Sprintf("/space/%s/stream/%s", spaceId, streamId), nil)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 
@@ -125,7 +115,7 @@ func TestDeleteStreamReq(t *testing.T) {
 	assert.Equal(t, int64(0), repository.Len(context.Background()))
 }
 
-func newRequest(method string, url string, body io.Reader) *http.Request {
+func newJsonContentRequest(method string, url string, body io.Reader) *http.Request {
 	req, _ := http.NewRequest(method, url, body)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", bearer)

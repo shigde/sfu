@@ -17,7 +17,7 @@ var (
 	errStreamNotFound          = errors.New("reading stream from manager")
 )
 
-func getLiveStream(r *http.Request, manager *stream.SpaceManager) (*stream.LiveStream, *stream.Space, error) {
+func getLiveStream(r *http.Request, manager spaceGetCreator) (*stream.LiveStream, *stream.Space, error) {
 	space, err := getSpace(r, manager)
 	if err != nil {
 		return nil, nil, err
@@ -48,7 +48,7 @@ func getSpaceId(r *http.Request) (string, error) {
 	return spaceId, nil
 }
 
-func getSpace(r *http.Request, manager *stream.SpaceManager) (*stream.Space, error) {
+func getSpace(r *http.Request, manager spaceGetCreator) (*stream.Space, error) {
 	spaceId, err := getSpaceId(r)
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func getSpace(r *http.Request, manager *stream.SpaceManager) (*stream.Space, err
 	return space, nil
 }
 
-func getOrCreateSpace(r *http.Request, manager *stream.SpaceManager) (*stream.Space, error) {
+func getOrCreateSpace(r *http.Request, manager spaceGetCreator) (*stream.Space, error) {
 	spaceId, err := getSpaceId(r)
 	if err != nil {
 		return nil, err

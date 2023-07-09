@@ -41,18 +41,20 @@ func (s *Space) EnterLobby(sdp *webrtc.SessionDescription, stream *LiveStream, u
 	}
 
 	// @TODO run this lobby as goroutine
-	state, errFromLobby := lobbySpace.Join(offer)
+	_, _ = lobbySpace.Join(offer)
+
+	return &webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer}, nil
 
 	// @TODO: Dead log!! This will be fixed in next commit
-	select {
-	case err, _ := <-errFromLobby:
-		return nil, fmt.Errorf("reading from ReadWriter a: %w", err)
-	case answer, ok := <-state:
-		if ok {
-			return answer.Sdp, nil
-		}
-		// channel closed Lobby closed!
-		return nil, fmt.Errorf("reading from ReadWriter a: %w", err)
-	}
+	//select {
+	//case err, _ := <-errFromLobby:
+	//	return nil, fmt.Errorf("reading from ReadWriter a: %w", err)
+	//case answer, ok := <-state:
+	//	if ok {
+	//		return answer.Sdp, nil
+	//	}
+	//	// channel closed Lobby closed!
+	//	return nil, fmt.Errorf("reading from ReadWriter a: %w", err)
+	//}
 
 }
