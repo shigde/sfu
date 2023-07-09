@@ -10,6 +10,10 @@ import (
 func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/sdp")
+		if err := auth.StartSession(w, r); err != nil {
+			httpError(w, "error", http.StatusInternalServerError, err)
+		}
+
 		liveStream, space, err := getLiveStream(r, spaceManager)
 		if err != nil {
 			handleResourceError(w, err)
@@ -29,6 +33,8 @@ func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 		}
 
 		answer, err := space.EnterLobby(offer, liveStream, user.UID, "role")
+		resourceId := "1234567" // The lobby generate this resource id!
+
 		if err != nil {
 			httpError(w, "error build whip", http.StatusInternalServerError, err)
 			return
@@ -40,7 +46,6 @@ func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 		}
 		w.Header().Set("etag", "etag")
 		w.Header().Set("Content-Length", "1400")
-		w.Header().Set("Location", "https://whip.example.com/resource/id")
-		w.Header().Set("Cookie", "session-id")
+		w.Header().Set("Location", "resource/"+resourceId)
 	}
 }

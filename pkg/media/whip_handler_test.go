@@ -38,6 +38,7 @@ func TestWhipReq(t *testing.T) {
 	router, streamId := testWhipReqSetup(t)
 	offer := []byte(testOffer)
 	body := bytes.NewBuffer(offer)
+
 	req := newSDPContentRequest("POST", fmt.Sprintf("/space/%s/stream/%s/whip", spaceId, streamId), body, len(offer))
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
@@ -47,8 +48,8 @@ func TestWhipReq(t *testing.T) {
 	assert.Equal(t, "etag", rr.Header().Get("ETag"))
 	assert.Equal(t, "application/sdp", rr.Header().Get("Content-Type"))
 	assert.Equal(t, "1400", rr.Header().Get("Content-Length"))
-	assert.Equal(t, "https://whip.example.com/resource/id", rr.Header().Get("Location"))
-	assert.Equal(t, "session-id", rr.Header().Get("Cookie")) // ??? session cookie
+	assert.Regexp(t, "^resource/1234567", rr.Header().Get("Location"))
+	assert.Regexp(t, "^session.id=[a-zA-z0-9]+", rr.Header().Get("Set-Cookie"))
 	assert.Equal(t, testAnswer, rr.Body.String())
 }
 
