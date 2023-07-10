@@ -10,14 +10,14 @@ import (
 func testRtpStreamRepositorySetup(t *testing.T) (*rtpStreamRepository, string) {
 	t.Helper()
 	repository := newRtpStreamRepository()
-	s := &RtpStream{}
+	s := &rtpStream{}
 	streamId := repository.Add(s)
 
 	return repository, streamId
 }
 func TestRtpStreamRepository(t *testing.T) {
 
-	assertRtpStream := func(t testing.TB, got *RtpStream, want *RtpStream) {
+	assertRtpStream := func(t testing.TB, got *rtpStream, want *rtpStream) {
 		t.Helper()
 		if got != want {
 			t.Errorf("got %s want %s", got.Id, want.Id)
@@ -32,7 +32,7 @@ func TestRtpStreamRepository(t *testing.T) {
 		}
 	}
 
-	assertRepoHasStream := func(t testing.TB, repo *rtpStreamRepository, want *RtpStream) {
+	assertRepoHasStream := func(t testing.TB, repo *rtpStreamRepository, want *rtpStream) {
 		t.Helper()
 		want, hasStream := repo.FindById(want.Id)
 		assert.True(t, hasStream)
@@ -42,7 +42,7 @@ func TestRtpStreamRepository(t *testing.T) {
 
 	t.Run("Add Stream", func(t *testing.T) {
 		repo, _ := testRtpStreamRepositorySetup(t)
-		stream := &RtpStream{}
+		stream := &rtpStream{}
 		repo.Add(stream)
 
 		assertRepoHasStream(t, repo, stream)
@@ -51,7 +51,7 @@ func TestRtpStreamRepository(t *testing.T) {
 
 	t.Run("Delete Stream", func(t *testing.T) {
 		repo, _ := testRtpStreamRepositorySetup(t)
-		stream := &RtpStream{}
+		stream := &rtpStream{}
 		id := repo.Add(stream)
 
 		if deleted := repo.Delete(id); !deleted {
@@ -63,7 +63,7 @@ func TestRtpStreamRepository(t *testing.T) {
 
 	t.Run("Contains Stream", func(t *testing.T) {
 		repo, streamId := testRtpStreamRepositorySetup(t)
-		stream := &RtpStream{}
+		stream := &rtpStream{}
 		id := repo.Add(stream)
 
 		assert.True(t, repo.Contains(id))
@@ -73,7 +73,7 @@ func TestRtpStreamRepository(t *testing.T) {
 
 	t.Run("Find Stream By Id", func(t *testing.T) {
 		repo, streamId := testRtpStreamRepositorySetup(t)
-		want := &RtpStream{}
+		want := &rtpStream{}
 		id := repo.Add(want)
 
 		_, find := repo.FindById(streamId)
@@ -103,7 +103,7 @@ func TestRtpStreamRepository(t *testing.T) {
 
 		for i := 0; i < wantedCount; i++ {
 			go func() {
-				repo.Add(&RtpStream{})
+				repo.Add(&rtpStream{})
 				wg.Done()
 			}()
 

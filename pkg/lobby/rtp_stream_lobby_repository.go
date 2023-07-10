@@ -17,7 +17,7 @@ func newRtpStreamLobbyRepository() *RtpStreamLobbyRepository {
 	}
 }
 
-func (r *RtpStreamLobbyRepository) GetOrCreateLobby(id string) *RtpStreamLobby {
+func (r *RtpStreamLobbyRepository) getOrCreateLobby(id string) *RtpStreamLobby {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	currentLobby, ok := r.lobbies[id]
@@ -29,7 +29,7 @@ func (r *RtpStreamLobbyRepository) GetOrCreateLobby(id string) *RtpStreamLobby {
 	return currentLobby
 }
 
-func (r *RtpStreamLobbyRepository) GetLobby(id string) (*RtpStreamLobby, bool) {
+func (r *RtpStreamLobbyRepository) getLobby(id string) (*RtpStreamLobby, bool) {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	currentLobby, ok := r.lobbies[id]

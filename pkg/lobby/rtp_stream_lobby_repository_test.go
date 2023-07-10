@@ -18,35 +18,35 @@ func TestSpaceRepository(t *testing.T) {
 
 	t.Run("Get not existing Lobby", func(t *testing.T) {
 		repo := testRtpStreamLobbyRepositorySetup(t)
-		space, ok := repo.GetLobby("123")
+		space, ok := repo.getLobby("123")
 		assert.False(t, ok)
 		assert.Nil(t, space)
 	})
 
 	t.Run("Create Lobby", func(t *testing.T) {
 		repo := testRtpStreamLobbyRepositorySetup(t)
-		lobby := repo.GetOrCreateLobby("456")
+		lobby := repo.getOrCreateLobby("456")
 		assert.NotNil(t, lobby)
 	})
 
 	t.Run("Create and Get Lobby", func(t *testing.T) {
 		repo := testRtpStreamLobbyRepositorySetup(t)
-		lobbyCreated := repo.GetOrCreateLobby("789")
+		lobbyCreated := repo.getOrCreateLobby("789")
 		assert.NotNil(t, lobbyCreated)
-		lobbyGet, ok := repo.GetLobby("789")
+		lobbyGet, ok := repo.getLobby("789")
 		assert.True(t, ok)
 		assert.Same(t, lobbyCreated, lobbyGet)
 	})
 
 	t.Run("Delete Lobby", func(t *testing.T) {
 		repo := testRtpStreamLobbyRepositorySetup(t)
-		created := repo.GetOrCreateLobby("1012")
+		created := repo.getOrCreateLobby("1012")
 		assert.NotNil(t, created)
 
 		deleted := repo.Delete("1012")
 		assert.True(t, deleted)
 
-		get, ok := repo.GetLobby("1012")
+		get, ok := repo.getLobby("1012")
 		assert.False(t, ok)
 		assert.Nil(t, get)
 	})
@@ -64,14 +64,14 @@ func TestSpaceRepository(t *testing.T) {
 
 		for i := 0; i < wantedCount; i++ {
 			go func(id int) {
-				lobby := repo.GetOrCreateLobby(fmt.Sprintf("id-%d", id))
+				lobby := repo.getOrCreateLobby(fmt.Sprintf("id-%d", id))
 				assert.NotNil(t, lobby)
 				wg.Done()
 			}(i)
 
 			if i == createOn {
 				go func() {
-					lobby := repo.GetOrCreateLobby(id)
+					lobby := repo.getOrCreateLobby(id)
 					assert.NotNil(t, lobby)
 					close(created)
 					wg.Done()
@@ -90,7 +90,7 @@ func TestSpaceRepository(t *testing.T) {
 
 		wg.Wait()
 
-		_, ok := repo.GetLobby(id)
+		_, ok := repo.getLobby(id)
 		assert.False(t, ok)
 		assert.Equal(t, wantedCount, repo.Len())
 	})

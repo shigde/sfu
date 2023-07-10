@@ -20,5 +20,5 @@ type Answer struct {
 
 func (m *RtpStreamLobbyManager) AccessLobby(id string) (*RtpStreamLobby, error) {
 	// The error is need for distributed lobbies later
-	return m.lobbies.GetOrCreateLobby(id), nil
+	return m.lobbies.getOrCreateLobby(id), nil
 }

@@ -34,20 +34,26 @@ func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 			return
 		}
 
-		answer, err := space.EnterLobby(offer, liveStream, user.UID, "role")
-		resourceId := "1234567" // The lobby generate this resource id!
-		response := []byte(answer.SDP)
-		hash := md5.Sum(response)
+		userId, err := user.GetUUid()
+		if err != nil {
+			httpError(w, "error user", http.StatusBadRequest, err)
+			return
+		}
+		answer, resourceId, err := space.EnterLobby(offer, liveStream, userId)
 
 		if err != nil {
 			httpError(w, "error build whip", http.StatusInternalServerError, err)
 			return
 		}
 
+		response := []byte(answer.SDP)
+		hash := md5.Sum(response)
+
 		w.WriteHeader(http.StatusCreated)
 		contentLen, err := w.Write(response)
 		if err != nil {
-			httpError(w, "error build whip", http.StatusInternalServerError, err)
+			httpError(w, "error build response", http.StatusInternalServerError, err)
+			return
 		}
 
 		w.Header().Set("etag", fmt.Sprintf("%x", hash))

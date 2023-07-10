@@ -16,17 +16,31 @@ Space "1"-->"n" LiveStream
 package lobby {
 class RtpStreamLobbyManager << (S,#FF7700) Singleton >>
 class RtpStreamLobby {
-    id: string
+    id: string (LiveStreamId)
 }
-class RtpStream {
-    id: string
+package lobby.session {
+    class rtpStream {
+        id: string
+    }
+    class rtpSession {
+        id uuid
+        user uuid
+    }
 }
 
 SpaceManager -> RtpStreamLobbyManager
 RtpStreamLobbyManager "1" --> "n" RtpStreamLobby
-RtpStreamLobby "1" --> "n" RtpStream
+RtpStreamLobby "1" ..> "n" rtpSession : "  join with user uuid"
+
+rtpSession "1" --> "n" rtpStream
 }
 
-Space "1".>"0..1" RtpStreamLobby : access Lobby with \nLiveStream x
+
+rtpSession -() WebRTC_Resource : "         "
+
+
+
+Space "1"->"0..1" RtpStreamLobby : access Lobby and on Join get: \nResourceId, \nAnswer,\nRtpSessionId
+
 
 @enduml

@@ -8,18 +8,18 @@ import (
 
 type rtpStreamRepository struct {
 	locker  *sync.RWMutex
-	streams []*RtpStream
+	streams []*rtpStream
 }
 
 func newRtpStreamRepository() *rtpStreamRepository {
-	var streams []*RtpStream
+	var streams []*rtpStream
 	return &rtpStreamRepository{
 		&sync.RWMutex{},
 		streams,
 	}
 }
 
-func (r *rtpStreamRepository) Add(s *RtpStream) string {
+func (r *rtpStreamRepository) Add(s *rtpStream) string {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	s.Id = uuid.New().String()
@@ -27,13 +27,13 @@ func (r *rtpStreamRepository) Add(s *RtpStream) string {
 	return s.Id
 }
 
-func (r *rtpStreamRepository) All() []*RtpStream {
+func (r *rtpStreamRepository) All() []*rtpStream {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 	return r.streams
 }
 
-func (r *rtpStreamRepository) FindById(id string) (*RtpStream, bool) {
+func (r *rtpStreamRepository) FindById(id string) (*rtpStream, bool) {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 	for _, stream := range r.streams {
@@ -54,7 +54,7 @@ func (r *rtpStreamRepository) Delete(id string) bool {
 	return false
 }
 
-func index(id string, resources []*RtpStream) int {
+func index(id string, resources []*rtpStream) int {
 	for i, stream := range resources {
 		if stream.Id == id {
 			return i
@@ -74,7 +74,7 @@ func (r *rtpStreamRepository) Contains(id string) bool {
 	return false
 }
 
-func (r *rtpStreamRepository) Update(stream *RtpStream) bool {
+func (r *rtpStreamRepository) Update(stream *rtpStream) bool {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	if i := index(stream.Id, r.streams); i != -1 {

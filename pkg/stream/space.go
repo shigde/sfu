@@ -3,6 +3,7 @@ package stream
 import (
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/pkg/lobby"
 )
@@ -27,34 +28,17 @@ func newSpace(id string, lobby lobbyAccessor, store storage) (*Space, error) {
 	return &Space{Id: id, LiveStreamRepo: repo, lobby: lobby, store: store}, nil
 }
 
-func (s *Space) EnterLobby(sdp *webrtc.SessionDescription, stream *LiveStream, userId string, role string) (*webrtc.SessionDescription, error) {
-	lobbySpace, err := s.lobby.AccessLobby(s.Id)
+func (s *Space) EnterLobby(sdp *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, string, error) {
+	lobbySpace, err := s.lobby.AccessLobby(stream.Id)
+	var resource string
 	if err != nil {
-		return nil, fmt.Errorf("creating lobby: %w", err)
+		return nil, resource, fmt.Errorf("creating lobby: %w", err)
 	}
-
-	offer := lobby.Offer{
-		stream.Id,
-		userId,
-		sdp,
-		role,
+	resourceData, err := lobbySpace.Join(userId, sdp)
+	if err != nil {
+		return nil, resource, fmt.Errorf("joining lobby: %w", err)
 	}
+	resource = resourceData.Resource.String()
 
-	// @TODO run this lobby as goroutine
-	_, _ = lobbySpace.Join(offer)
-
-	return &webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: "---"}, nil
-
-	// @TODO: Dead log!! This will be fixed in next commit
-	//select {
-	//case err, _ := <-errFromLobby:
-	//	return nil, fmt.Errorf("reading from ReadWriter a: %w", err)
-	//case answer, ok := <-state:
-	//	if ok {
-	//		return answer.Sdp, nil
-	//	}
-	//	// channel closed Lobby closed!
-	//	return nil, fmt.Errorf("reading from ReadWriter a: %w", err)
-	//}
-
+	return resourceData.Answer, resource, nil
 }
