@@ -16,7 +16,7 @@ func StartSession(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("no loged in user")
 	}
 
-	userUuid, err := user.GetUUid()
+	userUuid, err := user.GetUuid()
 	if err != nil {
 		return fmt.Errorf("read user uuid: %w", err)
 	}
@@ -25,9 +25,8 @@ func StartSession(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return fmt.Errorf("start session by reding session: %w", err)
 	}
-
 	session.Values["authenticated"] = true
-	session.Values["userUuid"] = userUuid
+	session.Values["userUuid"] = userUuid.String()
 	if err = session.Save(r, w); err != nil {
 		return fmt.Errorf("start session by saving session id: %w", err)
 	}

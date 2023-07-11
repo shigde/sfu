@@ -18,8 +18,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const bearer = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.h3ygBKXYiYVyGIwEMNYVuejBUCch2eysey4JqsXg9dk"
-
 func testStreamsReqSetup(t *testing.T) (string, *mux.Router, *stream.LiveStreamRepository) {
 	t.Helper()
 	jwt := &auth.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}

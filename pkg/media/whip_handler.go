@@ -34,7 +34,7 @@ func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 			return
 		}
 
-		userId, err := user.GetUUid()
+		userId, err := user.GetUuid()
 		if err != nil {
 			httpError(w, "error user", http.StatusBadRequest, err)
 			return

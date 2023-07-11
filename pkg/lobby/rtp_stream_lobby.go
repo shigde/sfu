@@ -29,6 +29,7 @@ type RtpResourceData struct {
 func (l *RtpStreamLobby) Join(user uuid.UUID, offer *webrtc.SessionDescription) (*RtpResourceData, error) {
 	l.locker.Lock()
 	defer l.locker.Unlock()
+
 	session, ok := l.sessions[user]
 	if !ok {
 		session = newRtpSession(user)
@@ -38,6 +39,7 @@ func (l *RtpStreamLobby) Join(user uuid.UUID, offer *webrtc.SessionDescription) 
 	if err != nil {
 		return nil, fmt.Errorf("joining rtp session: %w", err)
 	}
+
 	return &RtpResourceData{
 		Answer:       answer,
 		Resource:     l.resourceId,

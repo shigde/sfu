@@ -86,7 +86,7 @@ func createStream(manager spaceGetCreator) http.HandlerFunc {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		liveStream.User = user.UID
+		liveStream.User = user.UUID
 		liveStream.SpaceId = space.Id
 		id, err := space.LiveStreamRepo.Add(r.Context(), &liveStream)
 		if err != nil {

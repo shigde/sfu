@@ -5,11 +5,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
-	"github.com/shigde/sfu/pkg/lobby"
 )
 
 type lobbyAccessor interface {
-	AccessLobby(id string) (*lobby.RtpStreamLobby, error)
+	AccessLobby(id string, userId uuid.UUID, offer *webrtc.SessionDescription) (struct {
+		Answer       *webrtc.SessionDescription
+		Resource     uuid.UUID
+		RtpSessionId uuid.UUID
+	}, error)
 }
 
 type Space struct {
@@ -29,16 +32,11 @@ func newSpace(id string, lobby lobbyAccessor, store storage) (*Space, error) {
 }
 
 func (s *Space) EnterLobby(sdp *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, string, error) {
-	lobbySpace, err := s.lobby.AccessLobby(stream.Id)
 	var resource string
+	resourceData, err := s.lobby.AccessLobby(stream.Id, userId, sdp)
 	if err != nil {
-		return nil, resource, fmt.Errorf("creating lobby: %w", err)
-	}
-	resourceData, err := lobbySpace.Join(userId, sdp)
-	if err != nil {
-		return nil, resource, fmt.Errorf("joining lobby: %w", err)
+		return nil, resource, fmt.Errorf("accessing lobby: %w", err)
 	}
 	resource = resourceData.Resource.String()
-
 	return resourceData.Answer, resource, nil
 }

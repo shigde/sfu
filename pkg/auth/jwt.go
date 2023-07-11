@@ -30,36 +30,18 @@ func (jwtToken JwtToken) KeyFunc(token *jwt.Token) (interface{}, error) {
 }
 
 type Claims struct {
-	UID       string `json:"uid"`
-	SID       string `json:"sid"`
-	Publish   bool   `json:"publish"`
-	Subscribe bool   `json:"subscribe"`
+	UUID string `json:"uuid"`
 	jwt.RegisteredClaims
 }
 
-func (c *Claims) GetUid() string {
-	return c.UID
-}
-
-func (c *Claims) GetSID() string {
-	return c.SID
-}
-
-func (c *Claims) IsPublisher() bool {
-	return c.Publish
-}
-
-func (c *Claims) IsSubscriber() bool {
-	return c.Subscribe
+func (c *Claims) GetUuidString() string {
+	return c.UUID
 }
 
 // CreateJWTToken generates a JWT signed token for for the given user
 func CreateJWTToken(principal Principal, jwtToken *JwtToken) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"UID":       principal.GetUid(),
-		"SID":       principal.GetSid(),
-		"Publish":   principal.IsPublisher(),
-		"Subscribe": principal.IsSubscriber(),
+		"uuid":      principal.GetUuidString(),
 		"ExpiresAt": time.Now().Unix() + jwtToken.DefaultExpireTime,
 	})
 	tokenString, err := token.SignedString([]byte(jwtToken.Key))
@@ -76,10 +58,7 @@ func ValidateToken(tokenString string, jwtConfig *JwtToken) (Principal, error) {
 
 	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
 		p := Principal{
-			UID:       claims.GetUid(),
-			SID:       claims.GetSID(),
-			Publish:   claims.IsPublisher(),
-			Subscribe: claims.IsSubscriber(),
+			UUID: claims.GetUuidString(),
 		}
 		return p, nil
 	}
