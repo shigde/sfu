@@ -8,16 +8,16 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
-type RtpStreamLobby struct {
+type rtpStreamLobby struct {
 	Id         uuid.UUID
 	locker     *sync.RWMutex
 	sessions   map[uuid.UUID]*rtpSession
 	resourceId uuid.UUID
 }
 
-func newRtpStreamLobby(id uuid.UUID) *RtpStreamLobby {
+func newRtpStreamLobby(id uuid.UUID) *rtpStreamLobby {
 	s := make(map[uuid.UUID]*rtpSession)
-	return &RtpStreamLobby{Id: id, resourceId: uuid.New(), sessions: s}
+	return &rtpStreamLobby{Id: id, resourceId: uuid.New(), sessions: s}
 }
 
 type RtpResourceData struct {
@@ -26,7 +26,7 @@ type RtpResourceData struct {
 	RtpSessionId uuid.UUID
 }
 
-func (l *RtpStreamLobby) Join(user uuid.UUID, offer *webrtc.SessionDescription) (*RtpResourceData, error) {
+func (l *rtpStreamLobby) Join(user uuid.UUID, offer *webrtc.SessionDescription) (*RtpResourceData, error) {
 	l.locker.Lock()
 	defer l.locker.Unlock()
 
