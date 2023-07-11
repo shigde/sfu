@@ -40,6 +40,10 @@ func (r *LiveStreamRepository) Add(ctx context.Context, liveStream *LiveStream) 
 		liveStream.Id = uuid.New().String()
 	}
 
+	if liveStream.UUID == uuid.Nil {
+		liveStream.Id = uuid.New().String()
+	}
+
 	result := tx.Create(liveStream)
 	if result.Error != nil || result.RowsAffected != 1 {
 		return "", fmt.Errorf("adding live stream: %w", result.Error)

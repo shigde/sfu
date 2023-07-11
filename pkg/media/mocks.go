@@ -33,7 +33,7 @@ func newTestLobbyManager() *testLobbyManager {
 	return &testLobbyManager{}
 }
 
-func (l *testLobbyManager) AccessLobby(_ string, _ uuid.UUID, _ *webrtc.SessionDescription) (struct {
+func (l *testLobbyManager) AccessLobby(_ uuid.UUID, _ uuid.UUID, _ *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Resource     uuid.UUID
 	RtpSessionId uuid.UUID

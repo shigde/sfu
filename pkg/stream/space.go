@@ -8,7 +8,7 @@ import (
 )
 
 type lobbyAccessor interface {
-	AccessLobby(id string, userId uuid.UUID, offer *webrtc.SessionDescription) (struct {
+	AccessLobby(liveStreamId uuid.UUID, userId uuid.UUID, offer *webrtc.SessionDescription) (struct {
 		Answer       *webrtc.SessionDescription
 		Resource     uuid.UUID
 		RtpSessionId uuid.UUID
@@ -33,7 +33,7 @@ func newSpace(id string, lobby lobbyAccessor, store storage) (*Space, error) {
 
 func (s *Space) EnterLobby(sdp *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, string, error) {
 	var resource string
-	resourceData, err := s.lobby.AccessLobby(stream.Id, userId, sdp)
+	resourceData, err := s.lobby.AccessLobby(stream.UUID, userId, sdp)
 	if err != nil {
 		return nil, resource, fmt.Errorf("accessing lobby: %w", err)
 	}

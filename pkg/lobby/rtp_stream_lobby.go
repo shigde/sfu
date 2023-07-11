@@ -9,13 +9,13 @@ import (
 )
 
 type RtpStreamLobby struct {
-	Id         string
+	Id         uuid.UUID
 	locker     *sync.RWMutex
 	sessions   map[uuid.UUID]*rtpSession
 	resourceId uuid.UUID
 }
 
-func newRtpStreamLobby(id string) *RtpStreamLobby {
+func newRtpStreamLobby(id uuid.UUID) *RtpStreamLobby {
 	s := make(map[uuid.UUID]*rtpSession)
 	return &RtpStreamLobby{Id: id, resourceId: uuid.New(), sessions: s}
 }

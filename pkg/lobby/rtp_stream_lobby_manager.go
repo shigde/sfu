@@ -16,7 +16,7 @@ func NewLobbyManager() *RtpStreamLobbyManager {
 	return &RtpStreamLobbyManager{lobbies}
 }
 
-func (m *RtpStreamLobbyManager) AccessLobby(liveStreamId string, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
+func (m *RtpStreamLobbyManager) AccessLobby(liveStreamId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Resource     uuid.UUID
 	RtpSessionId uuid.UUID

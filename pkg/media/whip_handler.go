@@ -39,8 +39,8 @@ func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 			httpError(w, "error user", http.StatusBadRequest, err)
 			return
 		}
-		answer, resourceId, err := space.EnterLobby(offer, liveStream, userId)
 
+		answer, resourceId, err := space.EnterLobby(offer, liveStream, userId)
 		if err != nil {
 			httpError(w, "error build whip", http.StatusInternalServerError, err)
 			return
