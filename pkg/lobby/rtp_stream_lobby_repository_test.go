@@ -14,7 +14,7 @@ func testRtpStreamLobbyRepositorySetup(t *testing.T) *RtpStreamLobbyRepository {
 
 	return repository
 }
-func TestSpaceRepository(t *testing.T) {
+func TestStreamLobbyRepository(t *testing.T) {
 
 	t.Run("Get not existing Lobby", func(t *testing.T) {
 		repo := testRtpStreamLobbyRepositorySetup(t)

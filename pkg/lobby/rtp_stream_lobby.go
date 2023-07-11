@@ -17,7 +17,7 @@ type rtpStreamLobby struct {
 
 func newRtpStreamLobby(id uuid.UUID) *rtpStreamLobby {
 	s := make(map[uuid.UUID]*rtpSession)
-	return &rtpStreamLobby{Id: id, resourceId: uuid.New(), sessions: s}
+	return &rtpStreamLobby{Id: id, locker: &sync.RWMutex{}, resourceId: uuid.New(), sessions: s}
 }
 
 type RtpResourceData struct {
