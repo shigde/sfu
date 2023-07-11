@@ -13,20 +13,28 @@ type rtpStreamLobby struct {
 	locker     *sync.RWMutex
 	sessions   map[uuid.UUID]*rtpSession
 	resourceId uuid.UUID
+	quit       chan struct{}
+	active     bool
 }
 
 func newRtpStreamLobby(id uuid.UUID) *rtpStreamLobby {
 	s := make(map[uuid.UUID]*rtpSession)
-	return &rtpStreamLobby{Id: id, locker: &sync.RWMutex{}, resourceId: uuid.New(), sessions: s}
+	return &rtpStreamLobby{
+		Id:         id,
+		locker:     &sync.RWMutex{},
+		resourceId: uuid.New(),
+		sessions:   s,
+		active:     false,
+	}
 }
 
-type RtpResourceData struct {
+type rtpResourceData struct {
 	Answer       *webrtc.SessionDescription
 	Resource     uuid.UUID
 	RtpSessionId uuid.UUID
 }
 
-func (l *rtpStreamLobby) Join(user uuid.UUID, offer *webrtc.SessionDescription) (*RtpResourceData, error) {
+func (l *rtpStreamLobby) Join(user uuid.UUID, offer *webrtc.SessionDescription) (*rtpResourceData, error) {
 	l.locker.Lock()
 	defer l.locker.Unlock()
 
@@ -40,9 +48,17 @@ func (l *rtpStreamLobby) Join(user uuid.UUID, offer *webrtc.SessionDescription) 
 		return nil, fmt.Errorf("joining rtp session: %w", err)
 	}
 
-	return &RtpResourceData{
+	return &rtpResourceData{
 		Answer:       answer,
 		Resource:     l.resourceId,
 		RtpSessionId: session.Id,
 	}, nil
+}
+
+func (l *rtpStreamLobby) IsActive() bool {
+	return l.quit != nil
+}
+
+func (l *rtpStreamLobby) Run(quit chan struct{}) {
+	l.quit = quit
 }

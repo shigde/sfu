@@ -23,7 +23,7 @@ func (m *RtpStreamLobbyManager) AccessLobby(liveStreamId uuid.UUID, user uuid.UU
 }, error) {
 	// The error is need for distributed lobbies later
 	errChan := make(chan error)
-	resChan := make(chan *RtpResourceData)
+	resChan := make(chan *rtpResourceData)
 	defer func() {
 		close(errChan)
 		close(resChan)
