@@ -31,7 +31,7 @@ func newRtpSession(user uuid.UUID) *rtpSession {
 }
 
 func (s *rtpSession) run() {
-	slog.Info("lobby.rtpSession: run rtp session", "id", s.Id, "user", s.user)
+	slog.Info("lobby.rtpSession: run", "id", s.Id, "user", s.user)
 	for {
 		select {
 		case <-s.quit:
@@ -42,10 +42,12 @@ func (s *rtpSession) run() {
 }
 
 func (s *rtpSession) offer(_ *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+	slog.Info("lobby.rtpSession: offer", "id", s.Id, "user", s.user)
 	return nil, nil
 }
 
 func (s *rtpSession) stop() error {
+	slog.Info("lobby.rtpSession: stop", "id", s.Id, "user", s.user)
 	select {
 	case <-s.quit:
 		slog.Error("lobby.rtpSession: the rtp session was already closed", "id", s.Id, "user", s.user)

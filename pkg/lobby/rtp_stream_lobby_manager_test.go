@@ -26,13 +26,28 @@ func TestLobbyManager(t *testing.T) {
 		assert.Error(t, err, errLobbyRequestTimeout)
 	})
 
-	t.Run("Access a Lobby with timeout", func(t *testing.T) {
+	t.Run("Access a new Lobby", func(t *testing.T) {
 		manager, lobby := testLobbyManagerSetup(t)
 		var offer *webrtc.SessionDescription
 		userId := uuid.New()
 		data, err := manager.AccessLobby(context.Background(), lobby.Id, userId, offer)
 
 		assert.NoError(t, err)
+		assert.Nil(t, data.Answer)
+		assert.False(t, uuid.Nil == data.RtpSessionId)
+		assert.False(t, uuid.Nil == data.Resource)
+	})
+
+	t.Run("Access a already started Lobby", func(t *testing.T) {
+		manager, lobby := testLobbyManagerSetup(t)
+		var offer *webrtc.SessionDescription
+
+		_, err := manager.AccessLobby(context.Background(), lobby.Id, uuid.New(), offer)
+		assert.NoError(t, err)
+
+		data, err := manager.AccessLobby(context.Background(), lobby.Id, uuid.New(), offer)
+		assert.NoError(t, err)
+
 		assert.Nil(t, data.Answer)
 		assert.False(t, uuid.Nil == data.RtpSessionId)
 		assert.False(t, uuid.Nil == data.Resource)

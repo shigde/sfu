@@ -33,7 +33,7 @@ func newRtpStreamLobby(id uuid.UUID) *rtpStreamLobby {
 }
 
 func (l *rtpStreamLobby) run() {
-	slog.Info("lobby.rtpStreamLobby: run rtp session", "id", l.Id)
+	slog.Info("lobby.rtpStreamLobby: run", "id", l.Id)
 	for {
 		select {
 		case req := <-l.request:
@@ -53,6 +53,7 @@ func (l *rtpStreamLobby) run() {
 }
 
 func (l *rtpStreamLobby) handleJoin(req *joinRequest) {
+	slog.Info("lobby.rtpStreamLobby: join", "id", l.Id, "user", req.user)
 	session, ok := l.sessions[req.user]
 	if !ok {
 		session = newRtpSession(req.user)
@@ -67,6 +68,7 @@ func (l *rtpStreamLobby) handleJoin(req *joinRequest) {
 		// @TODO: We have to catch the case join gets canceled but session was not already finish offer.
 		// In this case we become a ghosts session!
 		// Pass the context to the session is the best way to do this.
+		// @TODO Here we hav a race condition. I will change this in a way that an offer will not be faster as an run session.
 		answer, err = session.offer(req.offer)
 		done <- struct{}{}
 	}()
@@ -87,6 +89,7 @@ func (l *rtpStreamLobby) handleJoin(req *joinRequest) {
 }
 
 func (l *rtpStreamLobby) handleLeave(req *leaveRequest) {
+	slog.Info("lobby.rtpStreamLobby: leave", "id", l.Id, "user", req.user)
 	if session, ok := l.sessions[req.user]; ok {
 		if err := session.stop(); err != nil {
 			req.error <- fmt.Errorf("stopping rtp session %s for user %s: %w", session.Id, req.user, err)
@@ -98,6 +101,7 @@ func (l *rtpStreamLobby) handleLeave(req *leaveRequest) {
 }
 
 func (l *rtpStreamLobby) stop() {
+	slog.Info("lobby.rtpStreamLobby: stop", "id", l.Id)
 	select {
 	case <-l.quit:
 		slog.Warn("lobby.rtpStreamLobby: the Lobby was already closed", "id", l.Id)
