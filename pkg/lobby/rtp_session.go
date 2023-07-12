@@ -35,6 +35,7 @@ func (s *rtpSession) run() {
 	for {
 		select {
 		case <-s.quit:
+			// @TODO Take care that's every stream is closed!
 			slog.Info("lobby.rtpSession: close rtp session", "id", s.Id, "user", s.user)
 			return
 		}
