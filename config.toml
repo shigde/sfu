@@ -16,3 +16,31 @@ defaultexpiretime = 604800  # 1 week not implemented et jet
 [metric.prometheus]
 enable = true
 endpoint = "/metrics" # Endpoint where the Prometheus metrics are delivered
+
+[rtp]
+# Setup ice server for turn and stun
+# example
+# iceServer = [
+#    {
+#        urls=["stun:stun.shig.de:19302", "turn:turn.shig.de:19302"],
+#        username="shig_user"
+#        credential="shig_pass"
+#        credentialType=""
+#    },
+#    {
+#       urls=["stun:stun.l.google.com:19302"]
+#    }
+# ]
+# Ice servers are array like:
+# {
+#     urls            []string
+#     username        string`              optional
+#     credentialType  "password" | "oauth" optional
+#     credential      string               optional
+#                     string if credentialType = "password"
+#                     MACKey string | AccessToken string if credentialType = "oauth"
+# }
+#
+# currently a more dynamic credential handling is not implemented
+#
+iceServer = [{urls=["stun:stun.l.google.com:19302"]}]

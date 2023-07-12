@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/shigde/sfu/pkg/rtp"
 	"github.com/shigde/sfu/pkg/sfu"
 	"github.com/spf13/viper"
 )
@@ -48,6 +49,10 @@ func ParseConfig(file string) (*sfu.Config, error) {
 
 	if len(config.MetricConfig.Prometheus.Endpoint) == 0 {
 		return nil, fmt.Errorf("metric.prometheus.endpoint should not be empty")
+	}
+
+	if err := rtp.ValidateRtpConfig(config.RtpConfig); err != nil {
+		return nil, err
 	}
 
 	return config, nil
