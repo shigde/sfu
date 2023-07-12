@@ -40,7 +40,7 @@ func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 			return
 		}
 
-		answer, resourceId, err := space.EnterLobby(offer, liveStream, userId)
+		answer, resourceId, err := space.EnterLobby(r.Context(), offer, liveStream, userId)
 		if err != nil {
 			httpError(w, "error build whip", http.StatusInternalServerError, err)
 			return

@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -8,7 +9,7 @@ import (
 )
 
 type lobbyAccessor interface {
-	AccessLobby(liveStreamId uuid.UUID, userId uuid.UUID, offer *webrtc.SessionDescription) (struct {
+	AccessLobby(ctx context.Context, liveStreamId uuid.UUID, userId uuid.UUID, offer *webrtc.SessionDescription) (struct {
 		Answer       *webrtc.SessionDescription
 		Resource     uuid.UUID
 		RtpSessionId uuid.UUID
@@ -31,9 +32,9 @@ func newSpace(id string, lobby lobbyAccessor, store storage) (*Space, error) {
 	return &Space{Id: id, LiveStreamRepo: repo, lobby: lobby, store: store}, nil
 }
 
-func (s *Space) EnterLobby(sdp *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, string, error) {
+func (s *Space) EnterLobby(ctx context.Context, sdp *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, string, error) {
 	var resource string
-	resourceData, err := s.lobby.AccessLobby(stream.UUID, userId, sdp)
+	resourceData, err := s.lobby.AccessLobby(ctx, stream.UUID, userId, sdp)
 	if err != nil {
 		return nil, resource, fmt.Errorf("accessing lobby: %w", err)
 	}

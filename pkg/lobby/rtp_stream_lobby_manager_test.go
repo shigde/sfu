@@ -1,6 +1,7 @@
 package lobby
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/uuid"
@@ -19,7 +20,9 @@ func TestLobbyManager(t *testing.T) {
 		manager, lobby := testLobbyManagerSetup(t)
 		var offer *webrtc.SessionDescription
 		userId := uuid.New()
-		data, err := manager.AccessLobby(lobby.Id, userId, offer)
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		data, err := manager.AccessLobby(ctx, lobby.Id, userId, offer)
 
 		assert.NotNil(t, data)
 		assert.NoError(t, err)

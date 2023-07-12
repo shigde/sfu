@@ -1,11 +1,15 @@
 package lobby
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 )
+
+var errLobbyRequestTimeout = errors.New("lobby request timeout error")
 
 type RtpStreamLobbyManager struct {
 	lobbies *RtpStreamLobbyRepository
@@ -16,30 +20,26 @@ func NewLobbyManager() *RtpStreamLobbyManager {
 	return &RtpStreamLobbyManager{lobbies}
 }
 
-func (m *RtpStreamLobbyManager) AccessLobby(liveStreamId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
+func (m *RtpStreamLobbyManager) AccessLobby(ctx context.Context, liveStreamId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Resource     uuid.UUID
 	RtpSessionId uuid.UUID
 }, error) {
-	// The error is need for distributed lobbies later
 	errChan := make(chan error)
-	resChan := make(chan *rtpResourceData)
+	resChan := make(chan *joinResponse)
 	defer func() {
 		close(errChan)
 		close(resChan)
 	}()
 
 	lobby := m.lobbies.getOrCreateLobby(liveStreamId)
-
-	// das ist quatsch
-	go func(user uuid.UUID, offer *webrtc.SessionDescription) {
-		resource, err := lobby.Join(user, offer)
-		if err != nil {
-			errChan <- fmt.Errorf("joining lobby %w", err)
-			return
-		}
-		resChan <- resource
-	}(user, offer)
+	joinRequest := &joinRequest{
+		offer:    offer,
+		user:     user,
+		error:    errChan,
+		response: resChan,
+	}
+	lobby.request <- joinRequest
 
 	var data struct {
 		Answer       *webrtc.SessionDescription
@@ -49,12 +49,13 @@ func (m *RtpStreamLobbyManager) AccessLobby(liveStreamId uuid.UUID, user uuid.UU
 
 	select {
 	case err := <-errChan:
-		return data, err
+		return data, fmt.Errorf("joining lobby %w", err)
 	case rtpResourceData := <-resChan:
-		data.Answer = rtpResourceData.Answer
-		data.Resource = rtpResourceData.Resource
+		data.Answer = rtpResourceData.answer
+		data.Resource = rtpResourceData.resource
 		data.RtpSessionId = rtpResourceData.RtpSessionId
 		return data, nil
+	case <-ctx.Done():
+		return data, errLobbyRequestTimeout
 	}
-
 }
