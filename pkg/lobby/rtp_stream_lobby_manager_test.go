@@ -16,15 +16,25 @@ func testLobbyManagerSetup(t *testing.T) (*RtpStreamLobbyManager, *rtpStreamLobb
 	return manager, lobby
 }
 func TestLobbyManager(t *testing.T) {
-	t.Run("Access a Lobby", func(t *testing.T) {
+	t.Run("Access a Lobby with timeout", func(t *testing.T) {
 		manager, lobby := testLobbyManagerSetup(t)
 		var offer *webrtc.SessionDescription
 		userId := uuid.New()
 		ctx, cancel := context.WithCancel(context.Background())
-		cancel()
-		data, err := manager.AccessLobby(ctx, lobby.Id, userId, offer)
+		cancel() // trigger cancel for time out
+		_, err := manager.AccessLobby(ctx, lobby.Id, userId, offer)
+		assert.Error(t, err, errLobbyRequestTimeout)
+	})
 
-		assert.NotNil(t, data)
+	t.Run("Access a Lobby with timeout", func(t *testing.T) {
+		manager, lobby := testLobbyManagerSetup(t)
+		var offer *webrtc.SessionDescription
+		userId := uuid.New()
+		data, err := manager.AccessLobby(context.Background(), lobby.Id, userId, offer)
+
 		assert.NoError(t, err)
+		assert.Nil(t, data.Answer)
+		assert.False(t, uuid.Nil == data.RtpSessionId)
+		assert.False(t, uuid.Nil == data.Resource)
 	})
 }

@@ -1,8 +1,8 @@
 package lobby
 
 import (
+	"context"
 	"fmt"
-	"sync"
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
@@ -59,23 +59,30 @@ func (l *rtpStreamLobby) handleJoin(req *joinRequest) {
 		l.sessions[req.user] = session
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
+	done := make(chan struct{})
 	var answer *webrtc.SessionDescription
 	var err error
-	go func() {
-		answer, err = session.offer(req.offer)
-		wg.Done()
-	}()
 
-	wg.Wait()
-	if err != nil {
-		req.error <- fmt.Errorf("joining rtp session: %w", err)
-	}
-	req.response <- &joinResponse{
-		answer:       answer,
-		resource:     l.resourceId,
-		RtpSessionId: session.Id,
+	go func() {
+		// @TODO: We have to catch the case join gets canceled but session was not already finish offer.
+		// In this case we become a ghosts session!
+		// Pass the context to the session is the best way to do this.
+		answer, err = session.offer(req.offer)
+		done <- struct{}{}
+	}()
+	select {
+	case <-done:
+		if err != nil {
+			req.error <- fmt.Errorf("joining rtp session: %w", err)
+			return
+		}
+		req.response <- &joinResponse{
+			answer:       answer,
+			resource:     l.resourceId,
+			RtpSessionId: session.Id,
+		}
+	case <-req.ctx.Done():
+		req.error <- errLobbyRequestTimeout
 	}
 }
 
@@ -104,6 +111,7 @@ type joinRequest struct {
 	offer    *webrtc.SessionDescription
 	response chan *joinResponse
 	error    chan error
+	ctx      context.Context
 }
 
 type joinResponse struct {
@@ -116,4 +124,5 @@ type leaveRequest struct {
 	user     uuid.UUID
 	response chan bool
 	error    chan error
+	ctx      context.Context
 }

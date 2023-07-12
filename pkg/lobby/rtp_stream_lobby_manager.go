@@ -38,6 +38,7 @@ func (m *RtpStreamLobbyManager) AccessLobby(ctx context.Context, liveStreamId uu
 		user:     user,
 		error:    errChan,
 		response: resChan,
+		ctx:      ctx,
 	}
 	lobby.request <- joinRequest
 
@@ -49,13 +50,11 @@ func (m *RtpStreamLobbyManager) AccessLobby(ctx context.Context, liveStreamId uu
 
 	select {
 	case err := <-errChan:
-		return data, fmt.Errorf("joining lobby %w", err)
+		return data, fmt.Errorf("joining lobby: %w", err)
 	case rtpResourceData := <-resChan:
 		data.Answer = rtpResourceData.answer
 		data.Resource = rtpResourceData.resource
 		data.RtpSessionId = rtpResourceData.RtpSessionId
 		return data, nil
-	case <-ctx.Done():
-		return data, errLobbyRequestTimeout
 	}
 }
