@@ -12,9 +12,9 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
-	"github.com/shigde/sfu/pkg/auth"
-	"github.com/shigde/sfu/pkg/lobby"
-	"github.com/shigde/sfu/pkg/stream"
+	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/lobby"
+	"github.com/shigde/sfu/internal/stream"
 	"github.com/stretchr/testify/assert"
 )
 

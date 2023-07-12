@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/shigde/sfu/pkg/rtp"
-	"github.com/shigde/sfu/pkg/sfu"
+	"github.com/shigde/sfu/internal/rtp"
+	"github.com/shigde/sfu/internal/sfu"
 	"github.com/spf13/viper"
 )
 

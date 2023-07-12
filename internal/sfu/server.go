@@ -7,11 +7,11 @@ import (
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/shigde/sfu/pkg/lobby"
-	"github.com/shigde/sfu/pkg/media"
-	"github.com/shigde/sfu/pkg/metric"
-	"github.com/shigde/sfu/pkg/storage"
-	"github.com/shigde/sfu/pkg/stream"
+	"github.com/shigde/sfu/internal/lobby"
+	"github.com/shigde/sfu/internal/media"
+	"github.com/shigde/sfu/internal/metric"
+	"github.com/shigde/sfu/internal/storage"
+	"github.com/shigde/sfu/internal/stream"
 	"golang.org/x/exp/slog"
 )
 

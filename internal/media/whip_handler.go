@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/shigde/sfu/pkg/auth"
+	"github.com/shigde/sfu/internal/auth"
 )
 
 func whip(spaceManager spaceGetCreator) http.HandlerFunc {

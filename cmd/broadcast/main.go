@@ -8,9 +8,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/shigde/sfu/pkg/config"
-	"github.com/shigde/sfu/pkg/logging"
-	"github.com/shigde/sfu/pkg/sfu"
+	"github.com/shigde/sfu/internal/config"
+	"github.com/shigde/sfu/internal/logging"
+	"github.com/shigde/sfu/internal/sfu"
 )
 
 func main() {

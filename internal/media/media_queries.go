@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/shigde/sfu/pkg/stream"
+	"github.com/shigde/sfu/internal/stream"
 	"golang.org/x/exp/slog"
 )
 

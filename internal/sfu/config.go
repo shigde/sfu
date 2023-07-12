@@ -1,11 +1,11 @@
 package sfu
 
 import (
-	"github.com/shigde/sfu/pkg/auth"
-	"github.com/shigde/sfu/pkg/logging"
-	"github.com/shigde/sfu/pkg/metric"
-	"github.com/shigde/sfu/pkg/rtp"
-	"github.com/shigde/sfu/pkg/storage"
+	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/logging"
+	"github.com/shigde/sfu/internal/metric"
+	"github.com/shigde/sfu/internal/rtp"
+	"github.com/shigde/sfu/internal/storage"
 )
 
 type Config struct {
