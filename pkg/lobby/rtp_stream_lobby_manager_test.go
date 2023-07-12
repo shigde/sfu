@@ -23,7 +23,7 @@ func TestLobbyManager(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // trigger cancel for time out
 		_, err := manager.AccessLobby(ctx, lobby.Id, userId, offer)
-		assert.Error(t, err, errLobbyRequestTimeout)
+		assert.ErrorIs(t, err, errLobbyRequestTimeout)
 	})
 
 	t.Run("Access a new Lobby", func(t *testing.T) {

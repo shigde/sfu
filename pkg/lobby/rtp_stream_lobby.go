@@ -98,6 +98,7 @@ func (l *rtpStreamLobby) handleLeave(req *leaveRequest) {
 		req.response <- true
 		return
 	}
+	req.error <- fmt.Errorf("no session existing for user %s", req.user)
 }
 
 func (l *rtpStreamLobby) stop() {
