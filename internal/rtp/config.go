@@ -2,22 +2,44 @@ package rtp
 
 import (
 	"fmt"
+
+	"github.com/pion/webrtc/v3"
 )
 
 type RtpConfig struct {
-	IceServer []IceServer `mapstructure:"iceServer"`
+	ICEServer []ICEServer `mapstructure:"iceServer"`
 }
 
-type IceServer struct {
+type ICEServer struct {
 	Urls           []string `mapstructure:"urls"`
 	Username       string   `mapstructure:"username"`
 	Credential     string   `mapstructure:"credential"`
 	CredentialType string   `mapstructure:"credentialType"`
 }
 
+func (c *RtpConfig) getIceServer() []webrtc.ICEServer {
+	iceServerList := []webrtc.ICEServer{}
+	for _, server := range c.ICEServer {
+		iceServer := webrtc.ICEServer{}
+		iceServer.URLs = server.Urls
+		iceServer.CredentialType = newICECredentialType(server.CredentialType)
+		iceServer.Username = server.Username
+		iceServer.Credential = server.Credential
+		iceServerList = append(iceServerList, iceServer)
+	}
+
+	return iceServerList
+}
+
+func (c *RtpConfig) getWebrtcConf() webrtc.Configuration {
+	conf := webrtc.Configuration{}
+	conf.ICEServers = c.getIceServer()
+	return conf
+}
+
 func ValidateRtpConfig(config *RtpConfig) error {
-	if len(config.IceServer) != 0 {
-		for n, server := range config.IceServer {
+	if len(config.ICEServer) != 0 {
+		for n, server := range config.ICEServer {
 			if err := validateConfigIceServer(server, n); err != nil {
 				return err
 			}
@@ -27,13 +49,24 @@ func ValidateRtpConfig(config *RtpConfig) error {
 	return nil
 }
 
-func validateConfigIceServer(iceServer IceServer, n int) error {
+func validateConfigIceServer(iceServer ICEServer, n int) error {
 	if iceServer.Urls == nil || len(iceServer.Urls) == 0 {
-		return fmt.Errorf("urls has to be set for ice server, entry %d", n)
+		return fmt.Errorf("rtp.iceServer[]{urls=} has to be set for ice server, entry %d", n)
 	}
 
 	if len(iceServer.CredentialType) != 0 && iceServer.CredentialType != "password" && iceServer.CredentialType != "oauth" {
-		return fmt.Errorf("credential type has to be 'password', 'oauth' ore empty, entry %d", n)
+		return fmt.Errorf("rtp.iceServer[]{credentialType=} has to be 'password', 'oauth' ore empty, entry %d", n)
 	}
 	return nil
+}
+
+func newICECredentialType(raw string) webrtc.ICECredentialType {
+	switch raw {
+	case "oauth":
+		return webrtc.ICECredentialTypePassword
+	case "password":
+		return webrtc.ICECredentialTypeOauth
+	default:
+		return webrtc.ICECredentialType(webrtc.Unknown)
+	}
 }
