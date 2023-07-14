@@ -51,29 +51,14 @@ func NewEngine(rtpConfig *RtpConfig) (*Engine, error) {
 	}, nil
 }
 
-type remoteTrackWriter interface {
-}
-
-type streamWriter interface {
-	Write(source *webrtc.TrackRemote, sink *webrtc.TrackLocal)
-}
-
-func (e Engine) NewConnection(offer webrtc.SessionDescription) (*webrtc.PeerConnection, error) {
+func (e Engine) NewConnection(offer webrtc.SessionDescription) (*Connection, error) {
 	peerConnection, err := e.api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create peer connection: %w ", err)
 	}
-
 	receiver := newReceiver()
-	//streamMapLock.Lock()
-	//defer streamMapLock.Unlock()
-	//stream, err := getStream(streamKey)
-	//if err != nil {
-	//	return "", err
-	//}
-	//
+	sender := newSender()
 
-	// move this to connection struct
 	peerConnection.OnTrack(func(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.RTPReceiver) {
 		if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "audio") {
 			receiver.audioWrite(remoteTrack)
@@ -82,7 +67,6 @@ func (e Engine) NewConnection(offer webrtc.SessionDescription) (*webrtc.PeerConn
 		}
 	})
 
-	// move this to connection struct
 	peerConnection.OnICEConnectionStateChange(func(i webrtc.ICEConnectionState) {
 		if i == webrtc.ICEConnectionStateFailed {
 			if err := peerConnection.Close(); err != nil {
@@ -107,7 +91,10 @@ func (e Engine) NewConnection(offer webrtc.SessionDescription) (*webrtc.PeerConn
 		return nil, err
 	}
 
-	<-gatherComplete
-	//return peerConnection.LocalDescription().SDP, nil
-	return nil, nil
+	return &Connection{
+		pc:             peerConnection,
+		receiver:       receiver,
+		sender:         sender,
+		gatherComplete: gatherComplete,
+	}, nil
 }
