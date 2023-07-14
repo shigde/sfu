@@ -10,7 +10,8 @@ import (
 
 func testRtpStreamLobbyRepositorySetup(t *testing.T) *RtpStreamLobbyRepository {
 	t.Helper()
-	repository := newRtpStreamLobbyRepository()
+	var engine rtpEngine
+	repository := newRtpStreamLobbyRepository(engine)
 
 	return repository
 }

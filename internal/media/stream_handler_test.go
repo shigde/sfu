@@ -13,7 +13,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/internal/auth"
-	"github.com/shigde/sfu/internal/lobby"
 	"github.com/shigde/sfu/internal/stream"
 	"github.com/stretchr/testify/assert"
 )
@@ -23,7 +22,7 @@ func testStreamsReqSetup(t *testing.T) (string, *mux.Router, *stream.LiveStreamR
 	jwt := &auth.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}
 	config := &auth.AuthConfig{JWT: jwt}
 	// Setup space
-	lobbyManager := lobby.NewLobbyManager()
+	lobbyManager := newTestLobbyManager()
 	store := newTestStore()
 	manager, _ := stream.NewSpaceManager(lobbyManager, store)
 	space, _ := manager.GetOrCreateSpace(context.Background(), spaceId)

@@ -10,7 +10,8 @@ import (
 
 func testRtpSessionSetup(t *testing.T) *rtpSession {
 	t.Helper()
-	session := newRtpSession(uuid.New())
+	var engine rtpEngine
+	session := newRtpSession(uuid.New(), engine)
 	return session
 }
 func TestRtpSession(t *testing.T) {

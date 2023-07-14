@@ -12,7 +12,8 @@ import (
 
 func testStreamLobbySetup(t *testing.T) *rtpStreamLobby {
 	t.Helper()
-	lobby := newRtpStreamLobby(uuid.New())
+	var engine rtpEngine
+	lobby := newRtpStreamLobby(uuid.New(), engine)
 	return lobby
 }
 func TestStreamLobby(t *testing.T) {

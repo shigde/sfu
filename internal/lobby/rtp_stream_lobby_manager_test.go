@@ -11,7 +11,8 @@ import (
 
 func testLobbyManagerSetup(t *testing.T) (*RtpStreamLobbyManager, *rtpStreamLobby) {
 	t.Helper()
-	manager := NewLobbyManager()
+	var engine rtpEngine
+	manager := NewLobbyManager(engine)
 	lobby := manager.lobbies.getOrCreateLobby(uuid.New())
 	return manager, lobby
 }
