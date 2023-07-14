@@ -60,8 +60,10 @@ func (w *receiver) videoWrite(remoteTrack *webrtc.TrackRemote) {
 func (w *receiver) stop() {
 }
 
+// @TODO: At the moment I'm not sure if I really need an TrackLocalStaticRTP here or if I can't use the remote track directly. so I make a distinction here.
 type receiverStream struct {
 	audioTrack *webrtc.TrackLocalStaticRTP
+	// @TODO: Change this, because maybe this should be a list of video tracks
 	videoTrack *webrtc.TrackLocalStaticRTP
 }
 
