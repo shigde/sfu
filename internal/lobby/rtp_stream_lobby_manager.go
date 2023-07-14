@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
+	"github.com/shigde/sfu/internal/rtp"
 )
 
 var errLobbyRequestTimeout = errors.New("lobby request timeout error")
@@ -16,6 +17,7 @@ type RtpStreamLobbyManager struct {
 }
 
 type rtpEngine interface {
+	NewConnection(offer webrtc.SessionDescription, _ string) (*rtp.Connection, error)
 }
 
 func NewLobbyManager(e rtpEngine) *RtpStreamLobbyManager {

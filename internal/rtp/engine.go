@@ -51,7 +51,7 @@ func NewEngine(rtpConfig *RtpConfig) (*Engine, error) {
 	}, nil
 }
 
-func (e Engine) NewConnection(offer webrtc.SessionDescription) (*Connection, error) {
+func (e Engine) NewConnection(offer webrtc.SessionDescription, _ string) (*Connection, error) {
 	peerConnection, err := e.api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create peer connection: %w ", err)
