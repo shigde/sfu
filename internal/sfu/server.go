@@ -10,6 +10,7 @@ import (
 	"github.com/shigde/sfu/internal/lobby"
 	"github.com/shigde/sfu/internal/media"
 	"github.com/shigde/sfu/internal/metric"
+	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/storage"
 	"github.com/shigde/sfu/internal/stream"
 	"golang.org/x/exp/slog"
@@ -22,7 +23,11 @@ type Server struct {
 
 func NewServer(config *Config) (*Server, error) {
 	// RTP lobby
-	lobbyManager := lobby.NewLobbyManager()
+	engine, err := rtp.NewEngine(config.RtpConfig)
+	if err != nil {
+		return nil, fmt.Errorf("creating webrtc engine: %w", err)
+	}
+	lobbyManager := lobby.NewLobbyManager(engine)
 
 	// Live streams and space
 	store, err := storage.NewStore(config.StorageConfig)

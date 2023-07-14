@@ -15,8 +15,11 @@ type RtpStreamLobbyManager struct {
 	lobbies *RtpStreamLobbyRepository
 }
 
-func NewLobbyManager() *RtpStreamLobbyManager {
-	lobbies := newRtpStreamLobbyRepository()
+type rtpEngine interface {
+}
+
+func NewLobbyManager(e rtpEngine) *RtpStreamLobbyManager {
+	lobbies := newRtpStreamLobbyRepository(e)
 	return &RtpStreamLobbyManager{lobbies}
 }
 

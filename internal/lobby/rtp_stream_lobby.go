@@ -12,12 +12,13 @@ import (
 type rtpStreamLobby struct {
 	Id         uuid.UUID
 	sessions   map[uuid.UUID]*rtpSession
+	engine     rtpEngine
 	resourceId uuid.UUID
 	quit       chan struct{}
 	request    chan interface{}
 }
 
-func newRtpStreamLobby(id uuid.UUID) *rtpStreamLobby {
+func newRtpStreamLobby(id uuid.UUID, e rtpEngine) *rtpStreamLobby {
 	s := make(map[uuid.UUID]*rtpSession)
 	q := make(chan struct{})
 	r := make(chan interface{})
@@ -56,7 +57,7 @@ func (l *rtpStreamLobby) handleJoin(req *joinRequest) {
 	slog.Info("lobby.rtpStreamLobby: join", "id", l.Id, "user", req.user)
 	session, ok := l.sessions[req.user]
 	if !ok {
-		session = newRtpSession(req.user)
+		session = newRtpSession(req.user, l.engine)
 		l.sessions[req.user] = session
 	}
 

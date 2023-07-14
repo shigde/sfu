@@ -11,20 +11,22 @@ import (
 var errRtpSessionAlreadyClosed = errors.New("the rtp session was already closed")
 
 type rtpSession struct {
-	Id      uuid.UUID
-	user    uuid.UUID
-	streams *rtpStreamRepository
-	quit    chan struct{}
+	Id        uuid.UUID
+	user      uuid.UUID
+	streams   *rtpStreamRepository
+	rtpEngine rtpEngine
+	quit      chan struct{}
 }
 
-func newRtpSession(user uuid.UUID) *rtpSession {
+func newRtpSession(user uuid.UUID, e rtpEngine) *rtpSession {
 	repo := newRtpStreamRepository()
 	q := make(chan struct{})
 	session := &rtpSession{
-		Id:      uuid.New(),
-		user:    user,
-		streams: repo,
-		quit:    q,
+		Id:        uuid.New(),
+		user:      user,
+		streams:   repo,
+		rtpEngine: e,
+		quit:      q,
 	}
 	go session.run()
 	return session
