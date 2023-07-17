@@ -30,22 +30,10 @@ func (m *RtpStreamLobbyManager) AccessLobby(ctx context.Context, liveStreamId uu
 	Resource     uuid.UUID
 	RtpSessionId uuid.UUID
 }, error) {
-	errChan := make(chan error)
-	resChan := make(chan *joinResponse)
-	defer func() {
-		close(errChan)
-		close(resChan)
-	}()
-
 	lobby := m.lobbies.getOrCreateLobby(liveStreamId)
-	joinRequest := &joinRequest{
-		offer:    offer,
-		user:     user,
-		error:    errChan,
-		response: resChan,
-		ctx:      ctx,
-	}
-	lobby.request <- joinRequest
+	joinRequest := newJoinRequest(ctx, user, offer)
+
+	go lobby.runJoin(joinRequest)
 
 	var data struct {
 		Answer       *webrtc.SessionDescription
@@ -54,9 +42,9 @@ func (m *RtpStreamLobbyManager) AccessLobby(ctx context.Context, liveStreamId uu
 	}
 
 	select {
-	case err := <-errChan:
+	case err := <-joinRequest.err:
 		return data, fmt.Errorf("joining lobby: %w", err)
-	case rtpResourceData := <-resChan:
+	case rtpResourceData := <-joinRequest.response:
 		data.Answer = rtpResourceData.answer
 		data.Resource = rtpResourceData.resource
 		data.RtpSessionId = rtpResourceData.RtpSessionId

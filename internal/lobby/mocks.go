@@ -18,6 +18,12 @@ func (e *rtpEngineMock) NewConnection(_ webrtc.SessionDescription, _ string) (*r
 	return e.conn, e.err
 }
 
+func mockRtpEngineForOffer(answer *webrtc.SessionDescription) *rtpEngineMock {
+	engine := newRtpEngineMock()
+	engine.conn = mockConnection(answer)
+	return engine
+}
+
 func mockConnection(answer *webrtc.SessionDescription) *rtp.Connection {
 	ops := rtp.MockConnectionOps{
 		Answer:         answer,
@@ -26,3 +32,6 @@ func mockConnection(answer *webrtc.SessionDescription) *rtp.Connection {
 	close(ops.GatherComplete)
 	return rtp.NewMockConnection(ops)
 }
+
+var mockedAnswer = &webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: "--a--"}
+var mockedOffer = &webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: "--o--"}

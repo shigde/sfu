@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pion/webrtc/v3"
+	"github.com/shigde/sfu/internal/logging"
 	"github.com/stretchr/testify/assert"
 )
 
 func testStreamLobbySetup(t *testing.T) *rtpStreamLobby {
 	t.Helper()
-	var engine rtpEngine
+	logging.SetupDebugLogger()
+	engine := mockRtpEngineForOffer(mockedAnswer)
 	lobby := newRtpStreamLobby(uuid.New(), engine)
 	return lobby
 }
@@ -22,20 +23,13 @@ func TestStreamLobby(t *testing.T) {
 		lobby := testStreamLobbySetup(t)
 		defer lobby.stop()
 
-		var offer *webrtc.SessionDescription
-		jR := &joinRequest{
-			offer:    offer,
-			user:     uuid.New(),
-			error:    make(chan error),
-			response: make(chan *joinResponse),
-			ctx:      context.Background(),
-		}
+		joinRequest := newJoinRequest(context.Background(), uuid.New(), mockedOffer)
 
-		lobby.request <- jR
+		go lobby.runJoin(joinRequest)
 
 		select {
-		case data := <-jR.response:
-			assert.Nil(t, data.answer)
+		case data := <-joinRequest.response:
+			assert.Equal(t, mockedAnswer, data.answer)
 			assert.False(t, uuid.Nil == data.resource)
 			assert.False(t, uuid.Nil == data.RtpSessionId)
 		case <-time.After(time.Second * 3):
@@ -48,20 +42,13 @@ func TestStreamLobby(t *testing.T) {
 		defer lobby.stop()
 
 		ctx, cancel := context.WithCancel(context.Background())
-		var offer *webrtc.SessionDescription
-		jR := &joinRequest{
-			offer:    offer,
-			user:     uuid.New(),
-			error:    make(chan error),
-			response: make(chan *joinResponse),
-			ctx:      ctx,
-		}
+		joinRequest := newJoinRequest(ctx, uuid.New(), mockedOffer)
 
 		cancel()
-		lobby.request <- jR
+		go lobby.runJoin(joinRequest)
 
 		select {
-		case err := <-jR.error:
+		case err := <-joinRequest.err:
 			assert.ErrorIs(t, err, errLobbyRequestTimeout)
 		case <-time.After(time.Second * 3):
 			t.Fail()

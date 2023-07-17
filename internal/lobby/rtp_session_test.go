@@ -13,7 +13,7 @@ import (
 func testRtpSessionSetup(t *testing.T) (*rtpSession, *rtpEngineMock) {
 	t.Helper()
 	logging.SetupDebugLogger()
-	engine := newRtpEngineMock()
+	engine := mockRtpEngineForOffer(mockedAnswer)
 
 	session := newRtpSession(uuid.New(), engine)
 	return session, engine
@@ -38,18 +38,14 @@ func TestRtpSessionOffer(t *testing.T) {
 	})
 
 	t.Run("offer a session and receive an answer", func(t *testing.T) {
-		offer := &webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: "--o--"}
-		answer := &webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: "--a--"}
-		session, engine := testRtpSessionSetup(t)
-		engine.conn = mockConnection(answer)
-
-		offerReq := newOfferRequest(context.Background(), offer)
+		session, _ := testRtpSessionSetup(t)
+		offerReq := newOfferRequest(context.Background(), mockedOffer)
 		go func() {
 			session.runOffer(offerReq)
 		}()
 		select {
 		case res := <-offerReq.answer:
-			assert.Equal(t, res, answer)
+			assert.Equal(t, res, mockedAnswer)
 		case <-offerReq.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case <-offerReq.err:
