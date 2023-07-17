@@ -18,6 +18,11 @@ func (e *rtpEngineMock) NewConnection(_ webrtc.SessionDescription, _ string) (*r
 	return e.conn, e.err
 }
 
-func mockConnectionWithAnswer(answer *webrtc.SessionDescription) *rtp.Connection {
-	return rtp.MockConnectionWithAnswer(answer)
+func mockConnection(answer *webrtc.SessionDescription) *rtp.Connection {
+	ops := rtp.MockConnectionOps{
+		Answer:         answer,
+		GatherComplete: make(chan struct{}),
+	}
+	close(ops.GatherComplete)
+	return rtp.NewMockConnection(ops)
 }
