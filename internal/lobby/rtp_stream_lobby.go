@@ -82,11 +82,6 @@ func (l *rtpStreamLobby) handleJoin(joinReq *joinRequest) {
 	offerReq := newOfferRequest(joinReq.ctx, joinReq.offer)
 
 	go func() {
-		// @TODO: We have to catch the case join gets canceled but session was not already finish offer.
-		// In this case we become a ghosts session!
-		// Pass the context to the session is the best way to do this.
-		// @TODO Here we hav a race condition. I will change this in a way that an offer will not be faster as an run session.
-		// answer, err = session.offer(joinReq.offer)
 		slog.Info("lobby.rtpStreamLobby: create offer request", "id", l.Id)
 		session.runOffer(offerReq)
 	}()
