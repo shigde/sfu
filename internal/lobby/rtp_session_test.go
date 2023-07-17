@@ -37,14 +37,13 @@ func TestRtpSessionOffer(t *testing.T) {
 		}
 	})
 
-	t.Run("offer a session and cancel request", func(t *testing.T) {
+	t.Run("offer a session and receive an answer", func(t *testing.T) {
 		offer := &webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: "--o--"}
 		answer := &webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: "--a--"}
 		session, engine := testRtpSessionSetup(t)
 		engine.conn = mockConnection(answer)
 
 		offerReq := newOfferRequest(context.Background(), offer)
-		// cancel()
 		go func() {
 			session.runOffer(offerReq)
 		}()
