@@ -92,7 +92,7 @@ func (e Engine) NewConnection(offer webrtc.SessionDescription, _ string) (*Conne
 	}
 
 	return &Connection{
-		pc:             peerConnection,
+		peerConnector:  peerConnection,
 		receiver:       receiver,
 		sender:         sender,
 		gatherComplete: gatherComplete,
