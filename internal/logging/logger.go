@@ -65,3 +65,9 @@ func (l *Log) Close() {
 		_ = l.file.Close()
 	}
 }
+
+func SetupDebugLogger() {
+	opts := slog.HandlerOptions{Level: slog.LevelDebug}
+	h := opts.NewTextHandler(os.Stderr)
+	slog.SetDefault(slog.New(h))
+}

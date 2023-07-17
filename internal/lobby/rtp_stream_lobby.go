@@ -2,12 +2,15 @@ package lobby
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"golang.org/x/exp/slog"
 )
+
+var errLobbyStopped = errors.New("error because lobby stopped")
 
 type rtpStreamLobby struct {
 	Id         uuid.UUID
@@ -38,13 +41,13 @@ func (l *rtpStreamLobby) run() {
 	for {
 		select {
 		case req := <-l.request:
-			switch v := req.(type) {
+			switch requestType := req.(type) {
 			case *joinRequest:
-				l.handleJoin(v)
+				l.handleJoin(requestType)
 			case *leaveRequest:
-				l.handleLeave(v)
+				l.handleLeave(requestType)
 			default:
-				slog.Error("lobby.rtpStreamLobby: not supported request type in Lobby", "type", v)
+				slog.Error("lobby.rtpStreamLobby: not supported request type in Lobby", "type", requestType)
 			}
 		case <-l.quit:
 			slog.Info("lobby.rtpStreamLobby: close Lobby", "id", l.Id)
@@ -53,13 +56,16 @@ func (l *rtpStreamLobby) run() {
 	}
 }
 
-func (l *rtpStreamLobby) handleJoin(req *joinRequest) {
-	slog.Info("lobby.rtpStreamLobby: join", "id", l.Id, "user", req.user)
-	session, ok := l.sessions[req.user]
+func (l *rtpStreamLobby) handleJoin(joinReq *joinRequest) {
+	slog.Info("lobby.rtpStreamLobby: join", "id", l.Id, "user", joinReq.user)
+	session, ok := l.sessions[joinReq.user]
 	if !ok {
-		session = newRtpSession(req.user, l.engine)
-		l.sessions[req.user] = session
+		session = newRtpSession(joinReq.user, l.engine)
+		l.sessions[joinReq.user] = session
 	}
+	var cancel context.CancelFunc
+	joinReq.ctx, cancel = context.WithCancel(joinReq.ctx)
+	defer cancel()
 
 	done := make(chan struct{})
 	var answer *webrtc.SessionDescription
@@ -70,22 +76,35 @@ func (l *rtpStreamLobby) handleJoin(req *joinRequest) {
 		// In this case we become a ghosts session!
 		// Pass the context to the session is the best way to do this.
 		// @TODO Here we hav a race condition. I will change this in a way that an offer will not be faster as an run session.
-		answer, err = session.offer(req.offer)
+		// answer, err = session.offer(joinReq.offer)
+		slog.Info("lobby.rtpStreamLobby: create offer request", "id", l.Id)
+		defer cancel()
+		offerReq := newOfferRequest(joinReq.ctx, joinReq.offer)
+
+		select {
+		case session.offerChan <- offerReq:
+		case <-offerReq.ctx.Done():
+			slog.Warn("lobby.rtpStreamLobby: offer interrupted before creating connection", "id", l.Id)
+		}
+
 		done <- struct{}{}
 	}()
 	select {
 	case <-done:
 		if err != nil {
-			req.error <- fmt.Errorf("joining rtp session: %w", err)
+			joinReq.error <- fmt.Errorf("joining rtp session: %w", err)
 			return
 		}
-		req.response <- &joinResponse{
+		joinReq.response <- &joinResponse{
 			answer:       answer,
 			resource:     l.resourceId,
 			RtpSessionId: session.Id,
 		}
-	case <-req.ctx.Done():
-		req.error <- errLobbyRequestTimeout
+	case <-joinReq.ctx.Done():
+		joinReq.error <- errLobbyRequestTimeout
+	case <-l.quit:
+		joinReq.error <- errLobbyStopped
+
 	}
 }
 

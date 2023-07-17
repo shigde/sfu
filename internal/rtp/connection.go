@@ -8,7 +8,7 @@ import (
 )
 
 type Connection struct {
-	pc             *webrtc.PeerConnection
+	peerConnector  peerConnector
 	receiver       *receiver
 	sender         *sender
 	gatherComplete <-chan struct{}
@@ -20,8 +20,12 @@ func (c *Connection) GetAnswer(ctx context.Context) (*webrtc.SessionDescription,
 	// all ice candidates should be part of the answer
 	select {
 	case <-c.gatherComplete:
-		return c.pc.LocalDescription(), nil
+		return c.peerConnector.LocalDescription(), nil
 	case <-ctx.Done():
 		return nil, errors.New("getting answer get interrupted")
 	}
+}
+
+type peerConnector interface {
+	LocalDescription() *webrtc.SessionDescription
 }
