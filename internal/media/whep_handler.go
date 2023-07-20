@@ -2,11 +2,13 @@ package media
 
 import (
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/stream"
 )
 
 func whep(spaceManager spaceGetCreator) http.HandlerFunc {
@@ -40,7 +42,12 @@ func whep(spaceManager spaceGetCreator) http.HandlerFunc {
 			return
 		}
 
-		answer, resourceId, err := space.ListenLobby(r.Context(), offer, liveStream, userId)
+		answer, err := space.ListenLobby(r.Context(), offer, liveStream, userId)
+		if err != nil && errors.Is(err, stream.ErrLobbyNotActive) {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
 		if err != nil {
 			httpError(w, "error build whip", http.StatusInternalServerError, err)
 			return
@@ -58,6 +65,5 @@ func whep(spaceManager spaceGetCreator) http.HandlerFunc {
 
 		w.Header().Set("etag", fmt.Sprintf("%x", hash))
 		w.Header().Set("Content-Length", strconv.Itoa(contentLen))
-		w.Header().Set("Location", "resource/"+resourceId)
 	}
 }

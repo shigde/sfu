@@ -35,7 +35,6 @@ func testWhepReqSetup(t *testing.T) (*mux.Router, string) {
 
 func TestWhepReq(t *testing.T) {
 	router, streamId := testWhepReqSetup(t)
-	resourceRxp := fmt.Sprintf("^resource/%s", resourceID)
 	offer := []byte(testOffer)
 	body := bytes.NewBuffer(offer)
 
@@ -48,7 +47,6 @@ func TestWhepReq(t *testing.T) {
 	assert.Equal(t, testAnswerETag, rr.Header().Get("ETag"))
 	assert.Equal(t, "application/sdp", rr.Header().Get("Content-Type"))
 	assert.Equal(t, strconv.Itoa(len([]byte(testAnswer))), rr.Header().Get("Content-Length"))
-	assert.Regexp(t, resourceRxp, rr.Header().Get("Location"))
 	assert.Regexp(t, "^session.id=[a-zA-z0-9]+", rr.Header().Get("Set-Cookie"))
 	assert.Equal(t, testAnswer, rr.Body.String())
 }

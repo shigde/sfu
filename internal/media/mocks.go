@@ -53,16 +53,16 @@ func (l *testLobbyManager) AccessLobby(_ context.Context, _ uuid.UUID, _ uuid.UU
 
 func (l *testLobbyManager) ListenLobby(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
-	Resource     uuid.UUID
+	Active       bool
 	RtpSessionId uuid.UUID
 }, error) {
 	var data struct {
 		Answer       *webrtc.SessionDescription
-		Resource     uuid.UUID
+		Active       bool
 		RtpSessionId uuid.UUID
 	}
 	data.Answer = &webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: testAnswer}
-	data.Resource, _ = uuid.Parse(resourceID)
+	data.Active = true
 	data.RtpSessionId, _ = uuid.Parse(rtpSessionId)
 	return data, nil
 }

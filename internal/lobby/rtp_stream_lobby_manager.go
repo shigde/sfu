@@ -11,7 +11,6 @@ import (
 )
 
 var errLobbyRequestTimeout = errors.New("lobby request timeout error")
-var errLobbyNotExists = errors.New("lobby not exists")
 
 type RtpStreamLobbyManager struct {
 	lobbies *RtpStreamLobbyRepository
@@ -55,13 +54,13 @@ func (m *RtpStreamLobbyManager) AccessLobby(ctx context.Context, liveStreamId uu
 
 func (m *RtpStreamLobbyManager) ListenLobby(ctx context.Context, liveStreamId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
-	Resource     uuid.UUID
+	Active       bool
 	RtpSessionId uuid.UUID
 }, error) {
 
 	var data struct {
 		Answer       *webrtc.SessionDescription
-		Resource     uuid.UUID
+		Active       bool
 		RtpSessionId uuid.UUID
 	}
 
@@ -72,7 +71,7 @@ func (m *RtpStreamLobbyManager) ListenLobby(ctx context.Context, liveStreamId uu
 
 		var data struct {
 			Answer       *webrtc.SessionDescription
-			Resource     uuid.UUID
+			Active       bool
 			RtpSessionId uuid.UUID
 		}
 
@@ -81,11 +80,11 @@ func (m *RtpStreamLobbyManager) ListenLobby(ctx context.Context, liveStreamId uu
 			return data, fmt.Errorf("joining lobby: %w", err)
 		case rtpResourceData := <-joinRequest.response:
 			data.Answer = rtpResourceData.answer
-			data.Resource = rtpResourceData.resource
+			data.Active = true
 			data.RtpSessionId = rtpResourceData.RtpSessionId
 			return data, nil
 		}
 	}
-
-	return data, errLobbyNotExists
+	data.Active = false
+	return data, nil
 }

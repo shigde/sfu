@@ -2,11 +2,14 @@ package stream
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 )
+
+var ErrLobbyNotActive = errors.New("lobby not active")
 
 type lobbyListenAccessor interface {
 	AccessLobby(ctx context.Context, liveStreamId uuid.UUID, userId uuid.UUID, offer *webrtc.SessionDescription) (struct {
@@ -17,7 +20,7 @@ type lobbyListenAccessor interface {
 
 	ListenLobby(ctx context.Context, liveStreamId uuid.UUID, userId uuid.UUID, offer *webrtc.SessionDescription) (struct {
 		Answer       *webrtc.SessionDescription
-		Resource     uuid.UUID
+		Active       bool
 		RtpSessionId uuid.UUID
 	}, error)
 }
@@ -48,12 +51,13 @@ func (s *Space) EnterLobby(ctx context.Context, sdp *webrtc.SessionDescription, 
 	return resourceData.Answer, resource, nil
 }
 
-func (s *Space) ListenLobby(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, id uuid.UUID) (*webrtc.SessionDescription, string, error) {
-	var resource string
+func (s *Space) ListenLobby(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, id uuid.UUID) (*webrtc.SessionDescription, error) {
 	resourceData, err := s.lobby.ListenLobby(ctx, stream.UUID, id, offer)
 	if err != nil {
-		return nil, resource, fmt.Errorf("accessing lobby: %w", err)
+		return nil, fmt.Errorf("accessing lobby: %w", err)
 	}
-	resource = resourceData.Resource.String()
-	return resourceData.Answer, resource, nil
+	if !resourceData.Active {
+		return nil, ErrLobbyNotActive
+	}
+	return resourceData.Answer, nil
 }
