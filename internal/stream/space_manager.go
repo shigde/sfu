@@ -7,10 +7,10 @@ import (
 
 type SpaceManager struct {
 	spaces *SpaceRepository
-	lobby  lobbyAccessor
+	lobby  lobbyListenAccessor
 }
 
-func NewSpaceManager(lobby lobbyAccessor, store storage) (*SpaceManager, error) {
+func NewSpaceManager(lobby lobbyListenAccessor, store storage) (*SpaceManager, error) {
 	spaces, err := newSpaceRepository(lobby, store)
 	if err != nil {
 		return nil, fmt.Errorf("creating space repository: %w", err)

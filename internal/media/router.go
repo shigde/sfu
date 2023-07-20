@@ -21,6 +21,7 @@ func NewRouter(
 	router.HandleFunc("/space/{space}/stream/{id}", auth.HttpMiddleware(config, deleteStream(spaceManager))).Methods("DELETE")
 	// Lobby
 	router.HandleFunc("/space/{space}/stream/{id}/whip", auth.HttpMiddleware(config, whip(spaceManager))).Methods("POST")
+	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.HttpMiddleware(config, whep(spaceManager))).Methods("POST")
 	return router
 }
 

@@ -14,10 +14,10 @@ var ErrSpaceNotFound = errors.New("reading unknown space in store")
 type SpaceRepository struct {
 	locker *sync.RWMutex
 	store  storage
-	lobby  lobbyAccessor
+	lobby  lobbyListenAccessor
 }
 
-func newSpaceRepository(lobby lobbyAccessor, store storage) (*SpaceRepository, error) {
+func newSpaceRepository(lobby lobbyListenAccessor, store storage) (*SpaceRepository, error) {
 	db := store.GetDatabase()
 	if err := db.AutoMigrate(&Space{}); err != nil {
 		return nil, fmt.Errorf("migrating the space schema: %w", err)

@@ -13,7 +13,7 @@ import (
 
 func testSpaceRepositorySetup(t *testing.T) *SpaceRepository {
 	t.Helper()
-	var lobby lobbyAccessor
+	var lobby lobbyListenAccessor
 	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	store := &testStore{db}
 	repository, _ := newSpaceRepository(lobby, store)
