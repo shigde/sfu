@@ -20,6 +20,7 @@ main
 /bin/
 /api/
 /endpoints/
+/web/
 /doc/
 /mon/dev/log/
 Links.md

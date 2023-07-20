@@ -22,7 +22,7 @@ func newReceiver() *receiver {
 func (w *receiver) audioWrite(remoteTrack *webrtc.TrackRemote) {
 	rtpBuf := make([]byte, rtpBufferSize)
 	for {
-		rtpRead, _, err := remoteTrack.Read(rtpBuf)
+		_, _, err := remoteTrack.Read(rtpBuf)
 		switch {
 		case errors.Is(err, io.EOF):
 			return
@@ -31,17 +31,17 @@ func (w *receiver) audioWrite(remoteTrack *webrtc.TrackRemote) {
 			return
 		}
 
-		if _, writeErr := w.stream.audioTrack.Write(rtpBuf[:rtpRead]); writeErr != nil && !errors.Is(writeErr, io.ErrClosedPipe) {
-			log.Println(writeErr)
-			return
-		}
+		//if _, writeErr := w.stream.audioTrack.Write(rtpBuf[:rtpRead]); writeErr != nil && !errors.Is(writeErr, io.ErrClosedPipe) {
+		//	log.Println(writeErr)
+		//	return
+		//}
 	}
 }
 
 func (w *receiver) videoWrite(remoteTrack *webrtc.TrackRemote) {
 	rtpBuf := make([]byte, rtpBufferSize)
 	for {
-		rtpRead, _, err := remoteTrack.Read(rtpBuf)
+		_, _, err := remoteTrack.Read(rtpBuf)
 		switch {
 		case errors.Is(err, io.EOF):
 			return
@@ -50,10 +50,10 @@ func (w *receiver) videoWrite(remoteTrack *webrtc.TrackRemote) {
 			return
 		}
 
-		if _, writeErr := w.stream.audioTrack.Write(rtpBuf[:rtpRead]); writeErr != nil && !errors.Is(writeErr, io.ErrClosedPipe) {
-			log.Println(writeErr)
-			return
-		}
+		//if _, writeErr := w.stream.audioTrack.Write(rtpBuf[:rtpRead]); writeErr != nil && !errors.Is(writeErr, io.ErrClosedPipe) {
+		//	log.Println(writeErr)
+		//	return
+		//}
 	}
 }
 
