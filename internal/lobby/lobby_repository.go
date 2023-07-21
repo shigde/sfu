@@ -6,22 +6,22 @@ import (
 	"github.com/google/uuid"
 )
 
-type RtpStreamLobbyRepository struct {
+type lobbyRepository struct {
 	locker    *sync.RWMutex
 	lobbies   map[uuid.UUID]*lobby
 	rtpEngine rtpEngine
 }
 
-func newRtpStreamLobbyRepository(rtpEngine rtpEngine) *RtpStreamLobbyRepository {
+func newLobbyRepository(rtpEngine rtpEngine) *lobbyRepository {
 	lobbies := make(map[uuid.UUID]*lobby)
-	return &RtpStreamLobbyRepository{
+	return &lobbyRepository{
 		&sync.RWMutex{},
 		lobbies,
 		rtpEngine,
 	}
 }
 
-func (r *RtpStreamLobbyRepository) getOrCreateLobby(id uuid.UUID) *lobby {
+func (r *lobbyRepository) getOrCreateLobby(id uuid.UUID) *lobby {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	currentLobby, ok := r.lobbies[id]
@@ -33,14 +33,14 @@ func (r *RtpStreamLobbyRepository) getOrCreateLobby(id uuid.UUID) *lobby {
 	return currentLobby
 }
 
-func (r *RtpStreamLobbyRepository) getLobby(id uuid.UUID) (*lobby, bool) {
+func (r *lobbyRepository) getLobby(id uuid.UUID) (*lobby, bool) {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	currentLobby, ok := r.lobbies[id]
 	return currentLobby, ok
 }
 
-func (r *RtpStreamLobbyRepository) Delete(id uuid.UUID) bool {
+func (r *lobbyRepository) Delete(id uuid.UUID) bool {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	if _, ok := r.lobbies[id]; ok {
@@ -50,7 +50,7 @@ func (r *RtpStreamLobbyRepository) Delete(id uuid.UUID) bool {
 	return false
 }
 
-func (r *RtpStreamLobbyRepository) Len() int {
+func (r *lobbyRepository) Len() int {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 	return len(r.lobbies)

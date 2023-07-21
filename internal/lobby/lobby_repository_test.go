@@ -8,10 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testRtpStreamLobbyRepositorySetup(t *testing.T) *RtpStreamLobbyRepository {
+func testRtpStreamLobbyRepositorySetup(t *testing.T) *lobbyRepository {
 	t.Helper()
 	var engine rtpEngine
-	repository := newRtpStreamLobbyRepository(engine)
+	repository := newLobbyRepository(engine)
 
 	return repository
 }

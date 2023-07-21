@@ -13,7 +13,7 @@ import (
 var errLobbyRequestTimeout = errors.New("lobby request timeout error")
 
 type LobbyManager struct {
-	lobbies *RtpStreamLobbyRepository
+	lobbies *lobbyRepository
 }
 
 type rtpEngine interface {
@@ -21,7 +21,7 @@ type rtpEngine interface {
 }
 
 func NewLobbyManager(e rtpEngine) *LobbyManager {
-	lobbies := newRtpStreamLobbyRepository(e)
+	lobbies := newLobbyRepository(e)
 	return &LobbyManager{lobbies}
 }
 
