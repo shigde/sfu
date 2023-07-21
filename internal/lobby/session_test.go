@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testRtpSessionSetup(t *testing.T) (*rtpSession, *rtpEngineMock) {
+func testRtpSessionSetup(t *testing.T) (*session, *rtpEngineMock) {
 	t.Helper()
 	logging.SetupDebugLogger()
 	engine := mockRtpEngineForOffer(mockedAnswer)

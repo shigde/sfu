@@ -16,7 +16,7 @@ var errOfferInterrupted = errors.New("request an offer get interrupted")
 
 var sessionReqTimeout = 3 * time.Second
 
-type rtpSession struct {
+type session struct {
 	Id        uuid.UUID
 	user      uuid.UUID
 	streams   *rtpStreamRepository
@@ -25,11 +25,11 @@ type rtpSession struct {
 	quit      chan struct{}
 }
 
-func newRtpSession(user uuid.UUID, e rtpEngine) *rtpSession {
+func newRtpSession(user uuid.UUID, e rtpEngine) *session {
 	repo := newRtpStreamRepository()
 	q := make(chan struct{})
 	o := make(chan *offerRequest)
-	session := &rtpSession{
+	session := &session{
 		Id:        uuid.New(),
 		user:      user,
 		streams:   repo,
@@ -42,35 +42,35 @@ func newRtpSession(user uuid.UUID, e rtpEngine) *rtpSession {
 	return session
 }
 
-func (s *rtpSession) run() {
-	slog.Info("lobby.rtpSession: run", "id", s.Id, "user", s.user)
+func (s *session) run() {
+	slog.Info("lobby.session: run", "id", s.Id, "user", s.user)
 	for {
 		select {
 		case offer := <-s.offerChan:
 			s.handleOffer(offer)
 		case <-s.quit:
 			// @TODO Take care that's every stream is closed!
-			slog.Info("lobby.rtpSession: stop running", "id", s.Id, "user", s.user)
+			slog.Info("lobby.session: stop running", "id", s.Id, "user", s.user)
 			return
 		}
 	}
 }
 
-func (s *rtpSession) runOffer(offerReq *offerRequest) {
-	slog.Debug("lobby.rtpSession: offer", "id", s.Id, "user", s.user)
+func (s *session) runOffer(offerReq *offerRequest) {
+	slog.Debug("lobby.session: offer", "id", s.Id, "user", s.user)
 	select {
 	case s.offerChan <- offerReq:
-		slog.Debug("lobby.rtpSession: offer - offer requested", "id", s.Id, "user", s.user)
+		slog.Debug("lobby.session: offer - offer requested", "id", s.Id, "user", s.user)
 	case <-s.quit:
 		offerReq.err <- errRtpSessionAlreadyClosed
-		slog.Debug("lobby.rtpSession: offer - interrupted because session closed", "id", s.Id, "user", s.user)
+		slog.Debug("lobby.session: offer - interrupted because session closed", "id", s.Id, "user", s.user)
 	case <-time.After(sessionReqTimeout):
-		slog.Error("lobby.rtpSession: offer - interrupted because request timeout", "id", s.Id, "user", s.user)
+		slog.Error("lobby.session: offer - interrupted because request timeout", "id", s.Id, "user", s.user)
 	}
 }
 
-func (s *rtpSession) handleOffer(offerReq *offerRequest) {
-	slog.Info("lobby.rtpSession: handle offer", "id", s.Id, "user", s.user)
+func (s *session) handleOffer(offerReq *offerRequest) {
+	slog.Info("lobby.session: handle offer", "id", s.Id, "user", s.user)
 	stream := newRtpStream()
 	s.streams.Add(stream)
 	conn, err := s.rtpEngine.NewConnection(*offerReq.offer, stream.Id)
@@ -87,15 +87,15 @@ func (s *rtpSession) handleOffer(offerReq *offerRequest) {
 	offerReq.answer <- answer
 }
 
-func (s *rtpSession) stop() error {
-	slog.Info("lobby.rtpSession: stop", "id", s.Id, "user", s.user)
+func (s *session) stop() error {
+	slog.Info("lobby.session: stop", "id", s.Id, "user", s.user)
 	select {
 	case <-s.quit:
-		slog.Error("lobby.rtpSession: the rtp session was already closed", "id", s.Id, "user", s.user)
+		slog.Error("lobby.session: the rtp session was already closed", "id", s.Id, "user", s.user)
 		return errRtpSessionAlreadyClosed
 	default:
 		close(s.quit)
-		slog.Info("lobby.rtpSession: stopped was triggered", "id", s.Id, "user", s.user)
+		slog.Info("lobby.session: stopped was triggered", "id", s.Id, "user", s.user)
 	}
 	return nil
 }

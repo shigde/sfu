@@ -16,7 +16,7 @@ var lobbyReqTimeout = 3 * time.Second
 
 type lobby struct {
 	Id         uuid.UUID
-	sessions   map[uuid.UUID]*rtpSession
+	sessions   map[uuid.UUID]*session
 	rtpEngine  rtpEngine
 	resourceId uuid.UUID
 	quit       chan struct{}
@@ -24,7 +24,7 @@ type lobby struct {
 }
 
 func newRtpStreamLobby(id uuid.UUID, rtpEngine rtpEngine) *lobby {
-	sessions := make(map[uuid.UUID]*rtpSession)
+	sessions := make(map[uuid.UUID]*session)
 	quitChan := make(chan struct{})
 	reqChan := make(chan interface{})
 	lobby := &lobby{
