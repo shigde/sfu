@@ -12,7 +12,7 @@ import (
 
 var errLobbyRequestTimeout = errors.New("lobby request timeout error")
 
-type RtpStreamLobbyManager struct {
+type LobbyManager struct {
 	lobbies *RtpStreamLobbyRepository
 }
 
@@ -20,12 +20,12 @@ type rtpEngine interface {
 	NewConnection(offer webrtc.SessionDescription, _ string) (*rtp.Connection, error)
 }
 
-func NewLobbyManager(e rtpEngine) *RtpStreamLobbyManager {
+func NewLobbyManager(e rtpEngine) *LobbyManager {
 	lobbies := newRtpStreamLobbyRepository(e)
-	return &RtpStreamLobbyManager{lobbies}
+	return &LobbyManager{lobbies}
 }
 
-func (m *RtpStreamLobbyManager) AccessLobby(ctx context.Context, liveStreamId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
+func (m *LobbyManager) AccessLobby(ctx context.Context, liveStreamId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Resource     uuid.UUID
 	RtpSessionId uuid.UUID
@@ -52,7 +52,7 @@ func (m *RtpStreamLobbyManager) AccessLobby(ctx context.Context, liveStreamId uu
 	}
 }
 
-func (m *RtpStreamLobbyManager) ListenLobby(ctx context.Context, liveStreamId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
+func (m *LobbyManager) ListenLobby(ctx context.Context, liveStreamId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Active       bool
 	RtpSessionId uuid.UUID
