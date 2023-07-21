@@ -15,11 +15,11 @@ func testRtpSessionSetup(t *testing.T) (*session, *rtpEngineMock) {
 	logging.SetupDebugLogger()
 	engine := mockRtpEngineForOffer(mockedAnswer)
 
-	session := newRtpSession(uuid.New(), engine)
+	session := newSession(uuid.New(), engine)
 	return session, engine
 }
 func TestRtpSessionOffer(t *testing.T) {
-	t.Run("offer a session after session was stopped", func(t *testing.T) {
+	t.Run("offer a sessions after sessions was stopped", func(t *testing.T) {
 		var offer *webrtc.SessionDescription
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
@@ -37,7 +37,7 @@ func TestRtpSessionOffer(t *testing.T) {
 		}
 	})
 
-	t.Run("offer a session and receive an answer", func(t *testing.T) {
+	t.Run("offer a sessions and receive an answer", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		offerReq := newOfferRequest(context.Background(), mockedOffer)
 		go func() {
@@ -55,13 +55,13 @@ func TestRtpSessionOffer(t *testing.T) {
 }
 
 func TestRtpSessionStop(t *testing.T) {
-	t.Run("stop session right after start session", func(t *testing.T) {
+	t.Run("stop sessions right after start sessions", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		err := session.stop()
 		assert.NoError(t, err)
 	})
 
-	t.Run("stop session twice time not possible", func(t *testing.T) {
+	t.Run("stop sessions twice time not possible", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		err := session.stop()
 		assert.NoError(t, err)

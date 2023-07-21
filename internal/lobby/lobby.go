@@ -76,7 +76,7 @@ func (l *lobby) handleJoin(joinReq *joinRequest) {
 	slog.Info("lobby.lobby: handle join", "id", l.Id, "user", joinReq.user)
 	session, ok := l.sessions[joinReq.user]
 	if !ok {
-		session = newRtpSession(joinReq.user, l.rtpEngine)
+		session = newSession(joinReq.user, l.rtpEngine)
 		l.sessions[joinReq.user] = session
 	}
 	offerReq := newOfferRequest(joinReq.ctx, joinReq.offer)
