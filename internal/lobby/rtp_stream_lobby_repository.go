@@ -8,12 +8,12 @@ import (
 
 type RtpStreamLobbyRepository struct {
 	locker    *sync.RWMutex
-	lobbies   map[uuid.UUID]*rtpStreamLobby
+	lobbies   map[uuid.UUID]*lobby
 	rtpEngine rtpEngine
 }
 
 func newRtpStreamLobbyRepository(rtpEngine rtpEngine) *RtpStreamLobbyRepository {
-	lobbies := make(map[uuid.UUID]*rtpStreamLobby)
+	lobbies := make(map[uuid.UUID]*lobby)
 	return &RtpStreamLobbyRepository{
 		&sync.RWMutex{},
 		lobbies,
@@ -21,7 +21,7 @@ func newRtpStreamLobbyRepository(rtpEngine rtpEngine) *RtpStreamLobbyRepository 
 	}
 }
 
-func (r *RtpStreamLobbyRepository) getOrCreateLobby(id uuid.UUID) *rtpStreamLobby {
+func (r *RtpStreamLobbyRepository) getOrCreateLobby(id uuid.UUID) *lobby {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	currentLobby, ok := r.lobbies[id]
@@ -33,7 +33,7 @@ func (r *RtpStreamLobbyRepository) getOrCreateLobby(id uuid.UUID) *rtpStreamLobb
 	return currentLobby
 }
 
-func (r *RtpStreamLobbyRepository) getLobby(id uuid.UUID) (*rtpStreamLobby, bool) {
+func (r *RtpStreamLobbyRepository) getLobby(id uuid.UUID) (*lobby, bool) {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	currentLobby, ok := r.lobbies[id]

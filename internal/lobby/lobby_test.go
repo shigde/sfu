@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testStreamLobbySetup(t *testing.T) *rtpStreamLobby {
+func testStreamLobbySetup(t *testing.T) *lobby {
 	t.Helper()
 	logging.SetupDebugLogger()
 	engine := mockRtpEngineForOffer(mockedAnswer)

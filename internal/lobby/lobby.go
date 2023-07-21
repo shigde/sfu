@@ -14,7 +14,7 @@ import (
 var errLobbyStopped = errors.New("error because lobby stopped")
 var lobbyReqTimeout = 3 * time.Second
 
-type rtpStreamLobby struct {
+type lobby struct {
 	Id         uuid.UUID
 	sessions   map[uuid.UUID]*rtpSession
 	rtpEngine  rtpEngine
@@ -23,11 +23,11 @@ type rtpStreamLobby struct {
 	reqChan    chan interface{}
 }
 
-func newRtpStreamLobby(id uuid.UUID, rtpEngine rtpEngine) *rtpStreamLobby {
+func newRtpStreamLobby(id uuid.UUID, rtpEngine rtpEngine) *lobby {
 	sessions := make(map[uuid.UUID]*rtpSession)
 	quitChan := make(chan struct{})
 	reqChan := make(chan interface{})
-	lobby := &rtpStreamLobby{
+	lobby := &lobby{
 		Id:         id,
 		resourceId: uuid.New(),
 		rtpEngine:  rtpEngine,
@@ -39,8 +39,8 @@ func newRtpStreamLobby(id uuid.UUID, rtpEngine rtpEngine) *rtpStreamLobby {
 	return lobby
 }
 
-func (l *rtpStreamLobby) run() {
-	slog.Info("lobby.rtpStreamLobby: run", "id", l.Id)
+func (l *lobby) run() {
+	slog.Info("lobby.lobby: run", "id", l.Id)
 	for {
 		select {
 		case req := <-l.reqChan:
@@ -50,30 +50,30 @@ func (l *rtpStreamLobby) run() {
 			case *leaveRequest:
 				l.handleLeave(requestType)
 			default:
-				slog.Error("lobby.rtpStreamLobby: not supported request type in Lobby", "type", requestType)
+				slog.Error("lobby.lobby: not supported request type in Lobby", "type", requestType)
 			}
 		case <-l.quit:
-			slog.Info("lobby.rtpStreamLobby: close Lobby", "id", l.Id)
+			slog.Info("lobby.lobby: close Lobby", "id", l.Id)
 			return
 		}
 	}
 }
 
-func (l *rtpStreamLobby) runJoin(joinReq *joinRequest) {
-	slog.Debug("lobby.rtpStreamLobby: join", "id", l.Id)
+func (l *lobby) runJoin(joinReq *joinRequest) {
+	slog.Debug("lobby.lobby: join", "id", l.Id)
 	select {
 	case l.reqChan <- joinReq:
-		slog.Debug("lobby.rtpStreamLobby: join - join requested", "id", l.Id)
+		slog.Debug("lobby.lobby: join - join requested", "id", l.Id)
 	case <-l.quit:
 		joinReq.err <- errRtpSessionAlreadyClosed
-		slog.Debug("lobby.rtpStreamLobby: join - interrupted because lobby closed", "id", l.Id)
+		slog.Debug("lobby.lobby: join - interrupted because lobby closed", "id", l.Id)
 	case <-time.After(lobbyReqTimeout):
-		slog.Error("lobby.rtpStreamLobby: join - interrupted because request timeout", "id", l.Id)
+		slog.Error("lobby.lobby: join - interrupted because request timeout", "id", l.Id)
 	}
 }
 
-func (l *rtpStreamLobby) handleJoin(joinReq *joinRequest) {
-	slog.Info("lobby.rtpStreamLobby: handle join", "id", l.Id, "user", joinReq.user)
+func (l *lobby) handleJoin(joinReq *joinRequest) {
+	slog.Info("lobby.lobby: handle join", "id", l.Id, "user", joinReq.user)
 	session, ok := l.sessions[joinReq.user]
 	if !ok {
 		session = newRtpSession(joinReq.user, l.rtpEngine)
@@ -82,7 +82,7 @@ func (l *rtpStreamLobby) handleJoin(joinReq *joinRequest) {
 	offerReq := newOfferRequest(joinReq.ctx, joinReq.offer)
 
 	go func() {
-		slog.Info("lobby.rtpStreamLobby: create offer request", "id", l.Id)
+		slog.Info("lobby.lobby: create offer request", "id", l.Id)
 		session.runOffer(offerReq)
 	}()
 	select {
@@ -101,8 +101,8 @@ func (l *rtpStreamLobby) handleJoin(joinReq *joinRequest) {
 	}
 }
 
-func (l *rtpStreamLobby) handleLeave(req *leaveRequest) {
-	slog.Info("lobby.rtpStreamLobby: leave", "id", l.Id, "user", req.user)
+func (l *lobby) handleLeave(req *leaveRequest) {
+	slog.Info("lobby.lobby: leave", "id", l.Id, "user", req.user)
 	if session, ok := l.sessions[req.user]; ok {
 		if err := session.stop(); err != nil {
 			req.err <- fmt.Errorf("stopping rtp session %s for user %s: %w", session.Id, req.user, err)
@@ -114,14 +114,14 @@ func (l *rtpStreamLobby) handleLeave(req *leaveRequest) {
 	req.err <- fmt.Errorf("no session existing for user %s", req.user)
 }
 
-func (l *rtpStreamLobby) stop() {
-	slog.Info("lobby.rtpStreamLobby: stop", "id", l.Id)
+func (l *lobby) stop() {
+	slog.Info("lobby.lobby: stop", "id", l.Id)
 	select {
 	case <-l.quit:
-		slog.Warn("lobby.rtpStreamLobby: the Lobby was already closed", "id", l.Id)
+		slog.Warn("lobby.lobby: the Lobby was already closed", "id", l.Id)
 	default:
 		close(l.quit)
-		slog.Info("lobby.rtpStreamLobby: stopped was triggered", "id", l.Id)
+		slog.Info("lobby.lobby: stopped was triggered", "id", l.Id)
 	}
 }
 
