@@ -16,7 +16,7 @@ var lobbyReqTimeout = 3 * time.Second
 
 type lobby struct {
 	Id         uuid.UUID
-	sessions   map[uuid.UUID]*session
+	sessions   *sessionRepository
 	rtpEngine  rtpEngine
 	resourceId uuid.UUID
 	quit       chan struct{}
@@ -24,7 +24,7 @@ type lobby struct {
 }
 
 func newLobby(id uuid.UUID, rtpEngine rtpEngine) *lobby {
-	sessions := make(map[uuid.UUID]*session)
+	sessions := newSessionRepository()
 	quitChan := make(chan struct{})
 	reqChan := make(chan interface{})
 	lobby := &lobby{
@@ -74,10 +74,10 @@ func (l *lobby) runJoin(joinReq *joinRequest) {
 
 func (l *lobby) handleJoin(joinReq *joinRequest) {
 	slog.Info("lobby.lobby: handle join", "id", l.Id, "user", joinReq.user)
-	session, ok := l.sessions[joinReq.user]
+	session, ok := l.sessions.FindByUserId(joinReq.user)
 	if !ok {
 		session = newSession(joinReq.user, l.rtpEngine)
-		l.sessions[joinReq.user] = session
+		l.sessions.Add(session)
 	}
 	offerReq := newOfferRequest(joinReq.ctx, joinReq.offer)
 
@@ -103,12 +103,11 @@ func (l *lobby) handleJoin(joinReq *joinRequest) {
 
 func (l *lobby) handleLeave(req *leaveRequest) {
 	slog.Info("lobby.lobby: leave", "id", l.Id, "user", req.user)
-	if session, ok := l.sessions[req.user]; ok {
+	if session, ok := l.sessions.FindByUserId(req.user); ok {
 		if err := session.stop(); err != nil {
 			req.err <- fmt.Errorf("stopping rtp session %s for user %s: %w", session.Id, req.user, err)
 		}
-		delete(l.sessions, req.user)
-		req.response <- true
+		req.response <- l.sessions.Delete(session.Id)
 		return
 	}
 	req.err <- fmt.Errorf("no session existing for user %s", req.user)
