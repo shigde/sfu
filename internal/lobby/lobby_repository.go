@@ -26,7 +26,7 @@ func (r *lobbyRepository) getOrCreateLobby(id uuid.UUID) *lobby {
 	defer r.locker.Unlock()
 	currentLobby, ok := r.lobbies[id]
 	if !ok {
-		lobby := newRtpStreamLobby(id, r.rtpEngine)
+		lobby := newLobby(id, r.rtpEngine)
 		r.lobbies[id] = lobby
 		return lobby
 	}

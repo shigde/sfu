@@ -14,7 +14,7 @@ func testStreamLobbySetup(t *testing.T) *lobby {
 	t.Helper()
 	logging.SetupDebugLogger()
 	engine := mockRtpEngineForOffer(mockedAnswer)
-	lobby := newRtpStreamLobby(uuid.New(), engine)
+	lobby := newLobby(uuid.New(), engine)
 	return lobby
 }
 func TestStreamLobby(t *testing.T) {

@@ -23,7 +23,7 @@ type lobby struct {
 	reqChan    chan interface{}
 }
 
-func newRtpStreamLobby(id uuid.UUID, rtpEngine rtpEngine) *lobby {
+func newLobby(id uuid.UUID, rtpEngine rtpEngine) *lobby {
 	sessions := make(map[uuid.UUID]*session)
 	quitChan := make(chan struct{})
 	reqChan := make(chan interface{})
