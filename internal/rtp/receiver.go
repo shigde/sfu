@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"sync"
 
 	"github.com/pion/webrtc/v3"
 )
@@ -11,12 +12,14 @@ import (
 const rtpBufferSize = 1500
 
 type receiver struct {
-	stream *receiverStream
+	sync.RWMutex
+	senders []*sender
+	stream  *receiverStream
 }
 
-func newReceiver() *receiver {
+func newReceiver(senders []*sender) *receiver {
 	stream := newReceiverStream()
-	return &receiver{stream}
+	return &receiver{sync.RWMutex{}, senders, stream}
 }
 
 func (w *receiver) audioWrite(remoteTrack *webrtc.TrackRemote) {
