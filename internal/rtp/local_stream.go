@@ -23,7 +23,7 @@ func newLocalStream(remoteId string) *localStream {
 	return &localStream{id: uuid.New(), remoteId: remoteId}
 }
 
-func (s *localStream) writeAudioRtp(track *webrtc.TrackRemote, dispatch chan *webrtc.TrackLocalStaticRTP) error {
+func (s *localStream) writeAudioRtp(track *webrtc.TrackRemote, dispatch chan<- *webrtc.TrackLocalStaticRTP) error {
 	if err := s.addAudioTrack(track); err != nil {
 		return fmt.Errorf("adding audio remote track (%s:%s) to local stream: %w", track.ID(), track.StreamID(), err)
 	}
@@ -46,7 +46,7 @@ func (s *localStream) addAudioTrack(remoteTrack *webrtc.TrackRemote) error {
 	return nil
 }
 
-func (s *localStream) writeVideoRtp(track *webrtc.TrackRemote, dispatch chan *webrtc.TrackLocalStaticRTP) error {
+func (s *localStream) writeVideoRtp(track *webrtc.TrackRemote, dispatch chan<- *webrtc.TrackLocalStaticRTP) error {
 	if err := s.addAudioTrack(track); err != nil {
 		return fmt.Errorf("adding video remote track (%s:%s) to local stream: %w", track.ID(), track.StreamID(), err)
 	}

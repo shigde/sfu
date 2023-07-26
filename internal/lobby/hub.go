@@ -47,7 +47,7 @@ func (h *hub) stop() error {
 		slog.Error("lobby.sessions: the hub was already closed")
 		return errHubAlreadyClosed
 	default:
-		close(s.quit)
+		close(h.quit)
 		slog.Info("lobby.hub: stopped was triggered")
 	}
 	return nil

@@ -24,18 +24,22 @@ type session struct {
 	connSend      *rtp.Connection
 	offerChan     chan *offerRequest
 	onRemoteTrack chan *webrtc.TrackLocalStaticRTP
+	onLocalTrack  chan<- *webrtc.TrackLocalStaticRTP
 	quit          chan struct{}
 }
 
-func newSession(user uuid.UUID, e rtpEngine) *session {
-	q := make(chan struct{})
-	o := make(chan *offerRequest)
+func newSession(user uuid.UUID, onLocalTrack chan<- *webrtc.TrackLocalStaticRTP, engine rtpEngine) *session {
+	quit := make(chan struct{})
+	offerChan := make(chan *offerRequest)
+	onRemoteTrack := make(chan *webrtc.TrackLocalStaticRTP)
 	session := &session{
-		Id:        uuid.New(),
-		user:      user,
-		rtpEngine: e,
-		offerChan: o,
-		quit:      q,
+		Id:            uuid.New(),
+		user:          user,
+		rtpEngine:     engine,
+		offerChan:     offerChan,
+		onRemoteTrack: onRemoteTrack,
+		onLocalTrack:  onLocalTrack,
+		quit:          quit,
 	}
 
 	go session.run()
@@ -73,7 +77,7 @@ func (s *session) runOfferRequest(offerReq *offerRequest) {
 
 func (s *session) handleOffer(offerReq *offerRequest) {
 	slog.Info("lobby.sessions: handle offer", "id", s.Id, "user", s.user)
-	conn, err := s.rtpEngine.NewConnection(*offerReq.offer, "")
+	conn, err := s.rtpEngine.NewConnection(*offerReq.offer, s.onLocalTrack)
 
 	if err != nil {
 		offerReq.err <- fmt.Errorf("create rtp connection: %w", err)

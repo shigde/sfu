@@ -14,12 +14,8 @@ func newRtpEngineMock() *rtpEngineMock {
 	return &rtpEngineMock{}
 }
 
-func (e *rtpEngineMock) NewConnection(_ webrtc.SessionDescription, _ string) (*rtp.Connection, error) {
+func (e *rtpEngineMock) NewConnection(_ webrtc.SessionDescription, _ chan<- *webrtc.TrackLocalStaticRTP) (*rtp.Connection, error) {
 	return e.conn, e.err
-}
-
-func (e *rtpEngineMock) NewHub() *Hub {
-	return &Hub{}
 }
 
 func mockRtpEngineForOffer(answer *webrtc.SessionDescription) *rtpEngineMock {

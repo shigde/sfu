@@ -12,10 +12,10 @@ type receiver struct {
 	sync.RWMutex
 	// senders []*sender
 	streams  map[string]*localStream
-	newTrack chan *webrtc.TrackLocalStaticRTP
+	newTrack chan<- *webrtc.TrackLocalStaticRTP
 }
 
-func newReceiver(newTrack chan *webrtc.TrackLocalStaticRTP) *receiver {
+func newReceiver(newTrack chan<- *webrtc.TrackLocalStaticRTP) *receiver {
 	streams := make(map[string]*localStream)
 	return &receiver{sync.RWMutex{}, streams, newTrack}
 }
