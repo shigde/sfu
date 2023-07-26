@@ -3,7 +3,6 @@ package rtp
 import (
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/pion/interceptor"
 	"github.com/pion/interceptor/pkg/intervalpli"
@@ -51,21 +50,15 @@ func NewEngine(rtpConfig *RtpConfig) (*Engine, error) {
 	}, nil
 }
 
-func (e Engine) NewConnection(offer webrtc.SessionDescription, senders []*sender) (*Connection, error) {
+func (e Engine) NewConnection(offer webrtc.SessionDescription) (*Connection, error) {
 	peerConnection, err := e.api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create peer connection: %w ", err)
 	}
-	receiver := newReceiver(senders)
+	receiver := newReceiver()
 	sender := newSender()
 
-	peerConnection.OnTrack(func(remoteTrack *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
-		if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "audio") {
-			receiver.audioWrite(remoteTrack)
-		} else {
-			receiver.videoWrite(remoteTrack)
-		}
-	})
+	peerConnection.OnTrack(receiver.onTrack)
 
 	peerConnection.OnICEConnectionStateChange(func(i webrtc.ICEConnectionState) {
 		if i == webrtc.ICEConnectionStateFailed {

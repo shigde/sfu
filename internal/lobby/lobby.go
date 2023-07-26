@@ -1,13 +1,11 @@
 package lobby
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pion/webrtc/v3"
 	"golang.org/x/exp/slog"
 )
 
@@ -83,7 +81,7 @@ func (l *lobby) handleJoin(joinReq *joinRequest) {
 
 	go func() {
 		slog.Info("lobby.lobby: create offer request", "id", l.Id)
-		session.runOffer(offerReq)
+		session.runOfferRequest(offerReq)
 	}()
 	select {
 	case answer := <-offerReq.answer:
@@ -122,38 +120,4 @@ func (l *lobby) stop() {
 		close(l.quit)
 		slog.Info("lobby.lobby: stopped was triggered", "id", l.Id)
 	}
-}
-
-type joinRequest struct {
-	user     uuid.UUID
-	offer    *webrtc.SessionDescription
-	response chan *joinResponse
-	err      chan error
-	ctx      context.Context
-}
-
-func newJoinRequest(ctx context.Context, user uuid.UUID, offer *webrtc.SessionDescription) *joinRequest {
-	errChan := make(chan error)
-	resChan := make(chan *joinResponse)
-
-	return &joinRequest{
-		offer:    offer,
-		user:     user,
-		err:      errChan,
-		response: resChan,
-		ctx:      ctx,
-	}
-}
-
-type joinResponse struct {
-	answer       *webrtc.SessionDescription
-	resource     uuid.UUID
-	RtpSessionId uuid.UUID
-}
-
-type leaveRequest struct {
-	user     uuid.UUID
-	response chan bool
-	err      chan error
-	ctx      context.Context
 }

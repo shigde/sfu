@@ -18,6 +18,10 @@ func (e *rtpEngineMock) NewConnection(_ webrtc.SessionDescription, _ string) (*r
 	return e.conn, e.err
 }
 
+func (e *rtpEngineMock) NewHub() *Hub {
+	return &Hub{}
+}
+
 func mockRtpEngineForOffer(answer *webrtc.SessionDescription) *rtpEngineMock {
 	engine := newRtpEngineMock()
 	engine.conn = mockConnection(answer)

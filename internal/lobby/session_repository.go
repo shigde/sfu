@@ -84,3 +84,12 @@ func (r *sessionRepository) Len() int {
 	defer r.locker.RUnlock()
 	return len(r.sessions)
 }
+
+func (r *sessionRepository) Iter(routine func(*session)) {
+	r.locker.Lock()
+	defer r.locker.Unlock()
+
+	for _, session := range r.sessions {
+		routine(session)
+	}
+}

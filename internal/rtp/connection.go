@@ -29,3 +29,8 @@ func (c *Connection) GetAnswer(ctx context.Context) (*webrtc.SessionDescription,
 type peerConnector interface {
 	LocalDescription() *webrtc.SessionDescription
 }
+
+type ReceiverConnection struct {
+	Connection
+	receiver
+}

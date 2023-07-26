@@ -25,7 +25,7 @@ func TestRtpSessionOffer(t *testing.T) {
 		ctx := context.Background()
 		offerReq := newOfferRequest(ctx, offer)
 		_ = session.stop()
-		go session.runOffer(offerReq)
+		go session.runOfferRequest(offerReq)
 
 		select {
 		case <-offerReq.answer:
@@ -41,7 +41,7 @@ func TestRtpSessionOffer(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		offerReq := newOfferRequest(context.Background(), mockedOffer)
 		go func() {
-			session.runOffer(offerReq)
+			session.runOfferRequest(offerReq)
 		}()
 		select {
 		case res := <-offerReq.answer:

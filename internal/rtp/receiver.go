@@ -1,75 +1,63 @@
 package rtp
 
 import (
-	"errors"
-	"io"
-	"log"
+	"strings"
 	"sync"
 
 	"github.com/pion/webrtc/v3"
+	"golang.org/x/exp/slog"
 )
-
-const rtpBufferSize = 1500
 
 type receiver struct {
 	sync.RWMutex
-	senders []*sender
-	stream  *receiverStream
+	// senders []*sender
+	streams  map[string]*localStream
+	newTrack chan *webrtc.TrackLocalStaticRTP
 }
 
-func newReceiver(senders []*sender) *receiver {
-	stream := newReceiverStream()
-	return &receiver{sync.RWMutex{}, senders, stream}
+func newReceiver(newTrack chan *webrtc.TrackLocalStaticRTP) *receiver {
+	streams := make(map[string]*localStream)
+	return &receiver{sync.RWMutex{}, streams, newTrack}
 }
 
-func (w *receiver) audioWrite(remoteTrack *webrtc.TrackRemote) {
-	rtpBuf := make([]byte, rtpBufferSize)
-	for {
-		_, _, err := remoteTrack.Read(rtpBuf)
-		switch {
-		case errors.Is(err, io.EOF):
-			return
-		case err != nil:
-			log.Println(err)
+func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.RTPReceiver) {
+	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "audio") {
+		if err := r.onAudioTrack(remoteTrack, rtpReceiver); err != nil {
+			slog.Error("rtp.receiver: on audio track", "err", err)
+			// stop handler goroutine
 			return
 		}
+	}
 
-		//if _, writeErr := w.stream.audioTrack.Write(rtpBuf[:rtpRead]); writeErr != nil && !errors.Is(writeErr, io.ErrClosedPipe) {
-		//	log.Println(writeErr)
-		//	return
-		//}
+	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "video") {
+		if err := r.onVideoTrack(remoteTrack, rtpReceiver); err != nil {
+			slog.Error("rtp.receiver: on video track", "err", err)
+			// stop handler goroutine
+			return
+		}
 	}
 }
 
-func (w *receiver) videoWrite(remoteTrack *webrtc.TrackRemote) {
-	rtpBuf := make([]byte, rtpBufferSize)
-	for {
-		_, _, err := remoteTrack.Read(rtpBuf)
-		switch {
-		case errors.Is(err, io.EOF):
-			return
-		case err != nil:
-			log.Println(err)
-			return
-		}
+func (r *receiver) onAudioTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.RTPReceiver) error {
+	stream := r.getStream(remoteTrack.StreamID())
+	return stream.writeAudioRtp(remoteTrack, r.newTrack)
+}
 
-		//if _, writeErr := w.stream.audioTrack.Write(rtpBuf[:rtpRead]); writeErr != nil && !errors.Is(writeErr, io.ErrClosedPipe) {
-		//	log.Println(writeErr)
-		//	return
-		//}
+func (r *receiver) onVideoTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.RTPReceiver) error {
+	stream := r.getStream(remoteTrack.StreamID())
+	return stream.writeVideoRtp(remoteTrack, r.newTrack)
+}
+
+func (r *receiver) getStream(id string) *localStream {
+	r.Unlock()
+	defer r.Unlock()
+	stream, ok := r.streams[id]
+	if !ok {
+		stream = newLocalStream(id)
+		r.streams[id] = stream
 	}
+	return stream
 }
 
-func (w *receiver) stop() {
-}
-
-// @TODO: At the moment I'm not sure if I really need an TrackLocalStaticRTP here or if I can't use the remote track directly. so I make a distinction here.
-type receiverStream struct {
-	audioTrack *webrtc.TrackLocalStaticRTP
-	// @TODO: Change this, because maybe this should be a list of video tracks
-	videoTrack *webrtc.TrackLocalStaticRTP
-}
-
-func newReceiverStream() *receiverStream {
-	return &receiverStream{}
+func (r *receiver) stop() {
 }

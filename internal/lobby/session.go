@@ -1,13 +1,13 @@
 package lobby
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
+	"github.com/shigde/sfu/internal/rtp"
 	"golang.org/x/exp/slog"
 )
 
@@ -17,11 +17,14 @@ var errOfferInterrupted = errors.New("request an offer get interrupted")
 var sessionReqTimeout = 3 * time.Second
 
 type session struct {
-	Id        uuid.UUID
-	user      uuid.UUID
-	rtpEngine rtpEngine
-	offerChan chan *offerRequest
-	quit      chan struct{}
+	Id            uuid.UUID
+	user          uuid.UUID
+	rtpEngine     rtpEngine
+	connReceive   *rtp.Connection
+	connSend      *rtp.Connection
+	offerChan     chan *offerRequest
+	onRemoteTrack chan *webrtc.TrackLocalStaticRTP
+	quit          chan struct{}
 }
 
 func newSession(user uuid.UUID, e rtpEngine) *session {
@@ -45,6 +48,8 @@ func (s *session) run() {
 		select {
 		case offer := <-s.offerChan:
 			s.handleOffer(offer)
+		case track := <-s.onRemoteTrack:
+			s.handleRemoteTrack(track)
 		case <-s.quit:
 			// @TODO Take care that's every stream is closed!
 			slog.Info("lobby.sessions: stop running", "id", s.Id, "user", s.user)
@@ -53,7 +58,7 @@ func (s *session) run() {
 	}
 }
 
-func (s *session) runOffer(offerReq *offerRequest) {
+func (s *session) runOfferRequest(offerReq *offerRequest) {
 	slog.Debug("lobby.sessions: offer", "id", s.Id, "user", s.user)
 	select {
 	case s.offerChan <- offerReq:
@@ -69,6 +74,7 @@ func (s *session) runOffer(offerReq *offerRequest) {
 func (s *session) handleOffer(offerReq *offerRequest) {
 	slog.Info("lobby.sessions: handle offer", "id", s.Id, "user", s.user)
 	conn, err := s.rtpEngine.NewConnection(*offerReq.offer, "")
+
 	if err != nil {
 		offerReq.err <- fmt.Errorf("create rtp connection: %w", err)
 		return
@@ -79,7 +85,14 @@ func (s *session) handleOffer(offerReq *offerRequest) {
 		offerReq.err <- fmt.Errorf("create rtp answer: %w", err)
 		return
 	}
+	s.connReceive = conn
 	offerReq.answer <- answer
+}
+
+func (s *session) handleRemoteTrack(track *webrtc.TrackLocalStaticRTP) {
+	if s.connSend != nil {
+		//s.connSend.sender.addTrack(track)
+	}
 }
 
 func (s *session) stop() error {
@@ -93,20 +106,4 @@ func (s *session) stop() error {
 		slog.Info("lobby.sessions: stopped was triggered", "id", s.Id, "user", s.user)
 	}
 	return nil
-}
-
-type offerRequest struct {
-	offer  *webrtc.SessionDescription
-	answer chan *webrtc.SessionDescription
-	err    chan error
-	ctx    context.Context
-}
-
-func newOfferRequest(ctx context.Context, offer *webrtc.SessionDescription) *offerRequest {
-	return &offerRequest{
-		offer:  offer,
-		answer: make(chan *webrtc.SessionDescription),
-		err:    make(chan error),
-		ctx:    ctx,
-	}
 }
