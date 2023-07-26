@@ -14,8 +14,8 @@ func testRtpSessionSetup(t *testing.T) (*session, *rtpEngineMock) {
 	t.Helper()
 	logging.SetupDebugLogger()
 	engine := mockRtpEngineForOffer(mockedAnswer)
-
-	session := newSession(uuid.New(), engine)
+	localTrackChan := make(chan *webrtc.TrackLocalStaticRTP)
+	session := newSession(uuid.New(), localTrackChan, engine)
 	return session, engine
 }
 func TestRtpSessionOffer(t *testing.T) {

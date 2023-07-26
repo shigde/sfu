@@ -15,6 +15,7 @@ var lobbyReqTimeout = 3 * time.Second
 type lobby struct {
 	Id         uuid.UUID
 	sessions   *sessionRepository
+	hub        *hub
 	rtpEngine  rtpEngine
 	resourceId uuid.UUID
 	quit       chan struct{}
@@ -25,11 +26,13 @@ func newLobby(id uuid.UUID, rtpEngine rtpEngine) *lobby {
 	sessions := newSessionRepository()
 	quitChan := make(chan struct{})
 	reqChan := make(chan interface{})
+	hub := newHub(sessions)
 	lobby := &lobby{
 		Id:         id,
 		resourceId: uuid.New(),
 		rtpEngine:  rtpEngine,
 		sessions:   sessions,
+		hub:        hub,
 		quit:       quitChan,
 		reqChan:    reqChan,
 	}
@@ -74,7 +77,7 @@ func (l *lobby) handleJoin(joinReq *joinRequest) {
 	slog.Info("lobby.lobby: handle join", "id", l.Id, "user", joinReq.user)
 	session, ok := l.sessions.FindByUserId(joinReq.user)
 	if !ok {
-		session = newSession(joinReq.user, l.rtpEngine)
+		session = newSession(joinReq.user, l.hub.onTrack, l.rtpEngine)
 		l.sessions.Add(session)
 	}
 	offerReq := newOfferRequest(joinReq.ctx, joinReq.offer)
