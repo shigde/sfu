@@ -23,7 +23,7 @@ func newHub(sessionRepo *sessionRepository) *hub {
 		onTrack,
 		quit,
 	}
-	hub.run()
+	go hub.run()
 	return hub
 }
 
