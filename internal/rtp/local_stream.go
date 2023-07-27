@@ -47,7 +47,7 @@ func (s *localStream) addAudioTrack(remoteTrack *webrtc.TrackRemote) error {
 }
 
 func (s *localStream) writeVideoRtp(track *webrtc.TrackRemote, dispatch chan<- *webrtc.TrackLocalStaticRTP) error {
-	if err := s.addAudioTrack(track); err != nil {
+	if err := s.addVideoTrack(track); err != nil {
 		return fmt.Errorf("adding video remote track (%s:%s) to local stream: %w", track.ID(), track.StreamID(), err)
 	}
 

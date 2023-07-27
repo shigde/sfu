@@ -14,8 +14,8 @@ func testRtpSessionSetup(t *testing.T) (*session, *rtpEngineMock) {
 	t.Helper()
 	logging.SetupDebugLogger()
 	engine := mockRtpEngineForOffer(mockedAnswer)
-	localTrackChan := make(chan *webrtc.TrackLocalStaticRTP)
-	session := newSession(uuid.New(), localTrackChan, engine)
+
+	session := newSession(uuid.New(), &hub{}, engine)
 	return session, engine
 }
 func TestRtpSessionOffer(t *testing.T) {
@@ -23,7 +23,7 @@ func TestRtpSessionOffer(t *testing.T) {
 		var offer *webrtc.SessionDescription
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
-		offerReq := newOfferRequest(ctx, offer)
+		offerReq := newOfferRequest(ctx, offer, offerTypeReceving)
 		_ = session.stop()
 		go session.runOfferRequest(offerReq)
 
@@ -39,7 +39,7 @@ func TestRtpSessionOffer(t *testing.T) {
 
 	t.Run("offer a sessions and receive an answer", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		offerReq := newOfferRequest(context.Background(), mockedOffer)
+		offerReq := newOfferRequest(context.Background(), mockedOffer, offerTypeReceving)
 		go func() {
 			session.runOfferRequest(offerReq)
 		}()

@@ -49,7 +49,7 @@ func (r *receiver) onVideoTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *we
 }
 
 func (r *receiver) getStream(id string) *localStream {
-	r.Unlock()
+	r.Lock()
 	defer r.Unlock()
 	stream, ok := r.streams[id]
 	if !ok {
