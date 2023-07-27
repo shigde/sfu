@@ -126,7 +126,7 @@ func (l *lobby) handleListen(req *lobbyRequest) {
 			RtpSessionId: session.Id,
 		}
 	case err := <-offerReq.err:
-		req.err <- fmt.Errorf("start session for joing: %w", err)
+		req.err <- fmt.Errorf("start session for listening: %w", err)
 	case <-req.ctx.Done():
 		req.err <- errLobbyRequestTimeout
 	case <-l.quit:

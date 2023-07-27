@@ -49,7 +49,7 @@ func whep(spaceManager spaceGetCreator) http.HandlerFunc {
 		}
 
 		if err != nil {
-			httpError(w, "error build whip", http.StatusInternalServerError, err)
+			httpError(w, "error build whep", http.StatusInternalServerError, err)
 			return
 		}
 

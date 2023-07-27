@@ -45,7 +45,7 @@ func (m *LobbyManager) AccessLobby(ctx context.Context, liveStreamId uuid.UUID, 
 
 	select {
 	case err := <-request.err:
-		return answerData, fmt.Errorf("joining lobby: %w", err)
+		return answerData, fmt.Errorf("requesting joining lobby: %w", err)
 	case rtpResourceData := <-joinData.response:
 		answerData.Answer = rtpResourceData.answer
 		answerData.Resource = rtpResourceData.resource
@@ -81,7 +81,7 @@ func (m *LobbyManager) ListenLobby(ctx context.Context, liveStreamId uuid.UUID, 
 
 		select {
 		case err := <-request.err:
-			return data, fmt.Errorf("joining lobby: %w", err)
+			return data, fmt.Errorf("requesting listening lobby: %w", err)
 		case rtpResourceData := <-listenData.response:
 			data.Answer = rtpResourceData.answer
 			data.Active = true
