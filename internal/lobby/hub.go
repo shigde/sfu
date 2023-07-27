@@ -34,7 +34,7 @@ func (h *hub) run() {
 		case track := <-h.onTrack:
 			h.addTrackToSessions(track)
 		case <-h.quit:
-			slog.Info("lobby.hub: close hub")
+			slog.Info("lobby.hub: closed hub")
 			return
 		}
 	}
@@ -49,6 +49,7 @@ func (h *hub) stop() error {
 	default:
 		close(h.quit)
 		slog.Info("lobby.hub: stopped was triggered")
+		<-h.quit
 	}
 	return nil
 }
