@@ -31,24 +31,26 @@ func (m *LobbyManager) AccessLobby(ctx context.Context, liveStreamId uuid.UUID, 
 	RtpSessionId uuid.UUID
 }, error) {
 	lobby := m.lobbies.getOrCreateLobby(liveStreamId)
-	joinRequest := newJoinRequest(ctx, user, offer)
+	request := newLobbyRequest(ctx, user)
+	joinData := newJoinData(offer)
+	request.data = joinData
 
-	go lobby.runJoin(joinRequest)
+	go lobby.runRequest(request)
 
-	var data struct {
+	var answerData struct {
 		Answer       *webrtc.SessionDescription
 		Resource     uuid.UUID
 		RtpSessionId uuid.UUID
 	}
 
 	select {
-	case err := <-joinRequest.err:
-		return data, fmt.Errorf("joining lobby: %w", err)
-	case rtpResourceData := <-joinRequest.response:
-		data.Answer = rtpResourceData.answer
-		data.Resource = rtpResourceData.resource
-		data.RtpSessionId = rtpResourceData.RtpSessionId
-		return data, nil
+	case err := <-request.err:
+		return answerData, fmt.Errorf("joining lobby: %w", err)
+	case rtpResourceData := <-joinData.response:
+		answerData.Answer = rtpResourceData.answer
+		answerData.Resource = rtpResourceData.resource
+		answerData.RtpSessionId = rtpResourceData.RtpSessionId
+		return answerData, nil
 	}
 }
 
@@ -58,16 +60,18 @@ func (m *LobbyManager) ListenLobby(ctx context.Context, liveStreamId uuid.UUID, 
 	RtpSessionId uuid.UUID
 }, error) {
 
-	var data struct {
+	var answerData struct {
 		Answer       *webrtc.SessionDescription
 		Active       bool
 		RtpSessionId uuid.UUID
 	}
 
 	if lobby, hasLobby := m.lobbies.getLobby(liveStreamId); hasLobby {
-		joinRequest := newJoinRequest(ctx, user, offer)
+		request := newLobbyRequest(ctx, user)
+		listenData := newListenData(offer)
+		request.data = listenData
 
-		go lobby.runJoin(joinRequest)
+		go lobby.runRequest(request)
 
 		var data struct {
 			Answer       *webrtc.SessionDescription
@@ -76,15 +80,15 @@ func (m *LobbyManager) ListenLobby(ctx context.Context, liveStreamId uuid.UUID, 
 		}
 
 		select {
-		case err := <-joinRequest.err:
+		case err := <-request.err:
 			return data, fmt.Errorf("joining lobby: %w", err)
-		case rtpResourceData := <-joinRequest.response:
+		case rtpResourceData := <-listenData.response:
 			data.Answer = rtpResourceData.answer
 			data.Active = true
 			data.RtpSessionId = rtpResourceData.RtpSessionId
 			return data, nil
 		}
 	}
-	data.Active = false
-	return data, nil
+	answerData.Active = false
+	return answerData, nil
 }

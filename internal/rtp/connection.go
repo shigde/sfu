@@ -11,6 +11,7 @@ type Connection struct {
 	peerConnector  peerConnector
 	receiver       *receiver
 	sender         *sender
+	AddTrackChan   <-chan *webrtc.TrackLocalStaticRTP
 	gatherComplete <-chan struct{}
 	closed         chan struct{}
 }
@@ -28,9 +29,4 @@ func (c *Connection) GetAnswer(ctx context.Context) (*webrtc.SessionDescription,
 
 type peerConnector interface {
 	LocalDescription() *webrtc.SessionDescription
-}
-
-type ReceiverConnection struct {
-	Connection
-	receiver
 }

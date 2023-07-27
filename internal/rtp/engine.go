@@ -56,7 +56,7 @@ func (e Engine) NewConnection(offer webrtc.SessionDescription, onLocalTrack chan
 		return nil, fmt.Errorf("create peer connection: %w ", err)
 	}
 	receiver := newReceiver(onLocalTrack)
-	sender := newSender()
+	sender := newSender(peerConnection)
 
 	peerConnection.OnTrack(receiver.onTrack)
 
@@ -88,6 +88,7 @@ func (e Engine) NewConnection(offer webrtc.SessionDescription, onLocalTrack chan
 		peerConnector:  peerConnection,
 		receiver:       receiver,
 		sender:         sender,
+		AddTrackChan:   sender.addTrackChan,
 		gatherComplete: gatherComplete,
 	}, nil
 }

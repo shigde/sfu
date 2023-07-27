@@ -7,24 +7,49 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
-type joinRequest struct {
-	user     uuid.UUID
-	offer    *webrtc.SessionDescription
-	response chan *joinResponse
-	err      chan error
-	ctx      context.Context
+type lobbyRequest struct {
+	user uuid.UUID
+	ctx  context.Context
+	err  chan error
+	data interface{}
 }
 
-func newJoinRequest(ctx context.Context, user uuid.UUID, offer *webrtc.SessionDescription) *joinRequest {
-	errChan := make(chan error)
-	resChan := make(chan *joinResponse)
+type joinData struct {
+	offer    *webrtc.SessionDescription
+	response chan *joinResponse
+}
 
-	return &joinRequest{
+type listenData struct {
+	offer    *webrtc.SessionDescription
+	response chan *listenResponse
+}
+
+type leaveData struct {
+	response chan bool
+}
+
+func newLobbyRequest(ctx context.Context, user uuid.UUID) *lobbyRequest {
+	errChan := make(chan error)
+	return &lobbyRequest{
+		user: user,
+		err:  errChan,
+		ctx:  ctx,
+	}
+}
+
+func newJoinData(offer *webrtc.SessionDescription) *joinData {
+	resChan := make(chan *joinResponse)
+	return &joinData{
 		offer:    offer,
-		user:     user,
-		err:      errChan,
 		response: resChan,
-		ctx:      ctx,
+	}
+}
+
+func newListenData(offer *webrtc.SessionDescription) *listenData {
+	resChan := make(chan *listenResponse)
+	return &listenData{
+		offer:    offer,
+		response: resChan,
 	}
 }
 
@@ -34,9 +59,7 @@ type joinResponse struct {
 	RtpSessionId uuid.UUID
 }
 
-type leaveRequest struct {
-	user     uuid.UUID
-	response chan bool
-	err      chan error
-	ctx      context.Context
+type listenResponse struct {
+	answer       *webrtc.SessionDescription
+	RtpSessionId uuid.UUID
 }
