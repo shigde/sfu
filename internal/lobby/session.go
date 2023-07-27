@@ -1,6 +1,7 @@
 package lobby
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -11,35 +12,42 @@ import (
 	"golang.org/x/exp/slog"
 )
 
+type Answerer interface {
+	GetAnswer(ctx context.Context) (*webrtc.SessionDescription, error)
+}
+
 var errRtpSessionAlreadyClosed = errors.New("the rtp sessions was already closed")
 var errOfferInterrupted = errors.New("request an offer get interrupted")
 
 var sessionReqTimeout = 3 * time.Second
 
 type session struct {
-	Id            uuid.UUID
-	user          uuid.UUID
-	rtpEngine     rtpEngine
-	connReceive   *rtp.Connection
-	connSend      *rtp.Connection
-	offerChan     chan *offerRequest
-	onRemoteTrack chan *webrtc.TrackLocalStaticRTP
-	onLocalTrack  chan<- *webrtc.TrackLocalStaticRTP
-	quit          chan struct{}
+	Id               uuid.UUID
+	user             uuid.UUID
+	rtpEngine        rtpEngine
+	hub              *hub
+	connReceive      *rtp.Connection
+	connSend         *rtp.Connection
+	offerChan        chan *offerRequest
+	foreignTrackChan chan *hubTrackData
+	ownTrackChan     chan *webrtc.TrackLocalStaticRTP
+	quit             chan struct{}
 }
 
-func newSession(user uuid.UUID, onLocalTrack chan<- *webrtc.TrackLocalStaticRTP, engine rtpEngine) *session {
+func newSession(user uuid.UUID, hub *hub, engine rtpEngine) *session {
 	quit := make(chan struct{})
 	offerChan := make(chan *offerRequest)
-	onRemoteTrack := make(chan *webrtc.TrackLocalStaticRTP)
+	ownTrackChan := make(chan *webrtc.TrackLocalStaticRTP)
+
 	session := &session{
-		Id:            uuid.New(),
-		user:          user,
-		rtpEngine:     engine,
-		offerChan:     offerChan,
-		onRemoteTrack: onRemoteTrack,
-		onLocalTrack:  onLocalTrack,
-		quit:          quit,
+		Id:               uuid.New(),
+		user:             user,
+		rtpEngine:        engine,
+		hub:              hub,
+		offerChan:        offerChan,
+		ownTrackChan:     ownTrackChan,
+		foreignTrackChan: hub.dispatchChan,
+		quit:             quit,
 	}
 
 	go session.run()
@@ -52,8 +60,10 @@ func (s *session) run() {
 		select {
 		case offer := <-s.offerChan:
 			s.handleOffer(offer)
-		case track := <-s.onRemoteTrack:
-			s.handleRemoteTrack(track)
+		case track := <-s.ownTrackChan:
+			s.handleOwnTrack(track)
+		case track := <-s.foreignTrackChan:
+			s.handleForeignTrack(track)
 		case <-s.quit:
 			// @TODO Take care that's every stream is closed!
 			slog.Info("lobby.sessions: stop running", "id", s.Id, "user", s.user)
@@ -77,11 +87,22 @@ func (s *session) runOfferRequest(offerReq *offerRequest) {
 
 func (s *session) handleOffer(offerReq *offerRequest) {
 	slog.Info("lobby.sessions: handle offer", "id", s.Id, "user", s.user)
-	conn, err := s.rtpEngine.NewConnection(*offerReq.offer, s.onLocalTrack)
-
+	conn, err := s.rtpEngine.NewConnection(*offerReq.offer, s.ownTrackChan)
 	if err != nil {
 		offerReq.err <- fmt.Errorf("create rtp connection: %w", err)
 		return
+	}
+
+	switch offerReq.offerType {
+	case offerTypeReceving:
+		s.connReceive = conn
+	case offerTypeSending:
+		s.connSend = conn
+		if trackList := s.hub.getAllTracksFromSessions(); trackList != nil {
+			for _, track := range trackList {
+				s.connSend.AddTrack(track)
+			}
+		}
 	}
 
 	answer, err := conn.GetAnswer(offerReq.ctx)
@@ -89,14 +110,32 @@ func (s *session) handleOffer(offerReq *offerRequest) {
 		offerReq.err <- fmt.Errorf("create rtp answer: %w", err)
 		return
 	}
-	s.connReceive = conn
+
 	offerReq.answer <- answer
 }
 
-func (s *session) handleRemoteTrack(track *webrtc.TrackLocalStaticRTP) {
+func (s *session) handleForeignTrack(track *hubTrackData) {
 	if s.connSend != nil {
-		//s.connSend.sender.addTrack(track)
+		s.connSend.AddTrack(track.track)
 	}
+}
+
+func (s *session) handleOwnTrack(track *webrtc.TrackLocalStaticRTP) {
+	data := &hubTrackData{
+		sessionId: s.Id,
+		streamId:  track.StreamID(),
+		track:     track,
+	}
+	go func() {
+		s.hub.dispatchChan <- data
+	}()
+}
+
+func (s *session) getTracks() []*webrtc.TrackLocalStaticRTP {
+	if s.connSend == nil {
+		return nil
+	}
+	return s.connSend.GetTracks()
 }
 
 func (s *session) stop() error {

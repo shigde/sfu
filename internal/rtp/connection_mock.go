@@ -12,7 +12,7 @@ type MockConnectionOps struct {
 func NewMockConnection(ops MockConnectionOps) *Connection {
 	conn := &Connection{}
 	if ops.Answer != nil {
-		conn.peerConnector = &mockPeerConnector{ops.Answer}
+		conn.peerConnection = &mockPeerConnector{ops.Answer}
 	}
 
 	if ops.GatherComplete != nil {
@@ -28,5 +28,12 @@ type mockPeerConnector struct {
 
 func (m *mockPeerConnector) LocalDescription() *webrtc.SessionDescription {
 	return m.SDP
+}
 
+func (m *mockPeerConnector) GetSenders() []*webrtc.RTPSender {
+	return nil
+}
+
+func (m *mockPeerConnector) AddTrack(_ webrtc.TrackLocal) (*webrtc.RTPSender, error) {
+	return nil, nil
 }

@@ -7,17 +7,26 @@ import (
 )
 
 type offerRequest struct {
+	offerType
 	offer  *webrtc.SessionDescription
 	answer chan *webrtc.SessionDescription
 	err    chan error
 	ctx    context.Context
 }
 
-func newOfferRequest(ctx context.Context, offer *webrtc.SessionDescription) *offerRequest {
+type offerType int
+
+const (
+	offerTypeReceving offerType = iota + 1
+	offerTypeSending
+)
+
+func newOfferRequest(ctx context.Context, offer *webrtc.SessionDescription, offerType offerType) *offerRequest {
 	return &offerRequest{
-		offer:  offer,
-		answer: make(chan *webrtc.SessionDescription),
-		err:    make(chan error),
-		ctx:    ctx,
+		offerType: offerType,
+		offer:     offer,
+		answer:    make(chan *webrtc.SessionDescription),
+		err:       make(chan error),
+		ctx:       ctx,
 	}
 }

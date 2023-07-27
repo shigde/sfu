@@ -50,7 +50,7 @@ func NewEngine(rtpConfig *RtpConfig) (*Engine, error) {
 	}, nil
 }
 
-func (e Engine) NewConnection(offer webrtc.SessionDescription, onLocalTrack chan<- *webrtc.TrackLocalStaticRTP) (*Connection, error) {
+func (e *Engine) NewConnection(offer webrtc.SessionDescription, onLocalTrack chan<- *webrtc.TrackLocalStaticRTP) (*Connection, error) {
 	peerConnection, err := e.api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create peer connection: %w ", err)
@@ -85,7 +85,7 @@ func (e Engine) NewConnection(offer webrtc.SessionDescription, onLocalTrack chan
 	}
 
 	return &Connection{
-		peerConnector:  peerConnection,
+		peerConnection: peerConnection,
 		receiver:       receiver,
 		sender:         sender,
 		AddTrackChan:   sender.addTrackChan,

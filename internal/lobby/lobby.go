@@ -80,10 +80,10 @@ func (l *lobby) handleJoin(joinReq *lobbyRequest) {
 	data, _ := joinReq.data.(*joinData)
 	session, ok := l.sessions.FindByUserId(joinReq.user)
 	if !ok {
-		session = newSession(joinReq.user, l.hub.onTrack, l.rtpEngine)
+		session = newSession(joinReq.user, l.hub, l.rtpEngine)
 		l.sessions.Add(session)
 	}
-	offerReq := newOfferRequest(joinReq.ctx, data.offer)
+	offerReq := newOfferRequest(joinReq.ctx, data.offer, offerTypeReceving)
 
 	go func() {
 		slog.Info("lobby.lobby: create offer request", "id", l.Id)
@@ -110,10 +110,10 @@ func (l *lobby) handleListen(req *lobbyRequest) {
 	data, _ := req.data.(*listenData)
 	session, ok := l.sessions.FindByUserId(req.user)
 	if !ok {
-		session = newSession(req.user, l.hub.onTrack, l.rtpEngine)
+		session = newSession(req.user, l.hub, l.rtpEngine)
 		l.sessions.Add(session)
 	}
-	offerReq := newOfferRequest(req.ctx, data.offer)
+	offerReq := newOfferRequest(req.ctx, data.offer, offerTypeSending)
 
 	go func() {
 		slog.Info("lobby.lobby: create offer request", "id", l.Id)
