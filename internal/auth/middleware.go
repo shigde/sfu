@@ -15,7 +15,7 @@ var log = slog.Default()
 const principalContextKey = contextKey("principal")
 
 func HttpMiddleware(ac *AuthConfig, f http.HandlerFunc) http.HandlerFunc {
-	log.Debug("activated authentication http middleware")
+	slog.Debug("activated authentication http middleware")
 	return func(w http.ResponseWriter, r *http.Request) {
 		slog.Debug("getting new client request")
 		authHeader := r.Header.Get("Authorization")
@@ -30,12 +30,12 @@ func HttpMiddleware(ac *AuthConfig, f http.HandlerFunc) http.HandlerFunc {
 
 		principal, err := ValidateToken(jwtToken, ac.JWT)
 		if err != nil {
-			log.Warn("validating invalid jwt token: %w", err)
+			slog.Warn("validating invalid jwt token: %w", err)
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
 
-		log.Debug("authenticating user")
+		slog.Debug("authenticating user")
 		ctx := withPrincipal(r.Context(), principal)
 		f(w, r.WithContext(ctx))
 	}

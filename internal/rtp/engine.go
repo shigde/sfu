@@ -3,10 +3,12 @@ package rtp
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/pion/interceptor"
 	"github.com/pion/interceptor/pkg/intervalpli"
 	"github.com/pion/webrtc/v3"
+	"golang.org/x/exp/slog"
 )
 
 type Engine struct {
@@ -50,11 +52,17 @@ func NewEngine(rtpConfig *RtpConfig) (*Engine, error) {
 	}, nil
 }
 
-func (e *Engine) NewConnection(offer webrtc.SessionDescription, onLocalTrack chan<- *webrtc.TrackLocalStaticRTP) (*Connection, error) {
+func (e *Engine) NewConnection(offer webrtc.SessionDescription, onLocalTrack chan<- *webrtc.TrackLocalStaticRTP, trackList []*webrtc.TrackLocalStaticRTP) (*Connection, error) {
 	peerConnection, err := e.api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create peer connection: %w ", err)
 	}
+	if trackList != nil {
+		for _, track := range trackList {
+			peerConnection.AddTrack(track)
+		}
+	}
+
 	receiver := newReceiver(onLocalTrack)
 	sender := newSender(peerConnection)
 
@@ -67,6 +75,31 @@ func (e *Engine) NewConnection(offer webrtc.SessionDescription, onLocalTrack cha
 			}
 			receiver.stop()
 		}
+	})
+
+	peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
+		slog.Debug("rtp.engine: new DataChannel %s %d\n", d.Label(), d.ID())
+
+		// Register channel opening handling
+		d.OnOpen(func() {
+			slog.Debug("rtp.engine: data channel '%s'-'%d' open. random messages will now be sent to any connected DataChannels every 5 seconds\n", d.Label(), d.ID())
+
+			for range time.NewTicker(5 * time.Second).C {
+				message := "Hallo?"
+				//fmt.Printf("Sending '%s'\n", message)
+
+				// Send the message as text
+				sendErr := d.SendText(message)
+				if sendErr != nil {
+					panic(sendErr)
+				}
+			}
+		})
+
+		// Register text message handling
+		d.OnMessage(func(msg webrtc.DataChannelMessage) {
+			fmt.Printf("Message from DataChannel '%s': '%s'\n", d.Label(), string(msg.Data))
+		})
 	})
 
 	if err := peerConnection.SetRemoteDescription(offer); err != nil {

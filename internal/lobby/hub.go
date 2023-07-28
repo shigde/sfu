@@ -65,6 +65,7 @@ func (h *hub) stop() error {
 }
 
 func (h *hub) getAllTracksFromSessions() []*webrtc.TrackLocalStaticRTP {
+	slog.Debug("lobby.hub: getAllTracksFromSessions")
 	var tracks []*webrtc.TrackLocalStaticRTP
 	h.sessionRepo.Iter(func(s *session) {
 		if sessionTracks := s.getTracks(); sessionTracks != nil {
@@ -77,6 +78,7 @@ func (h *hub) getAllTracksFromSessions() []*webrtc.TrackLocalStaticRTP {
 }
 
 func (h *hub) dispatchToSessions(track *hubTrackData) {
+	slog.Debug("lobby.hub: dispatchToSessions")
 	h.sessionRepo.Iter(func(s *session) {
 		if s.Id != track.sessionId {
 			select {

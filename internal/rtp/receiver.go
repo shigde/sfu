@@ -58,6 +58,22 @@ func (r *receiver) getStream(id string) *localStream {
 	}
 	return stream
 }
+func (r *receiver) getAllTracks() []*webrtc.TrackLocalStaticRTP {
+	r.Lock()
+	defer r.Unlock()
+	var tracks []*webrtc.TrackLocalStaticRTP
+
+	for _, stream := range r.streams {
+		if stream.videoTrack != nil {
+			tracks = append(tracks, stream.videoTrack)
+		}
+		if stream.audioTrack != nil {
+			tracks = append(tracks, stream.audioTrack)
+		}
+	}
+
+	return tracks
+}
 
 func (r *receiver) stop() {
 }

@@ -87,7 +87,13 @@ func (s *session) runOfferRequest(offerReq *offerRequest) {
 
 func (s *session) handleOffer(offerReq *offerRequest) {
 	slog.Info("lobby.sessions: handle offer", "id", s.Id, "user", s.user)
-	conn, err := s.rtpEngine.NewConnection(*offerReq.offer, s.ownTrackChan)
+
+	var trackList []*webrtc.TrackLocalStaticRTP
+	if offerReq.offerType == offerTypeSending {
+		trackList = s.hub.getAllTracksFromSessions()
+	}
+
+	conn, err := s.rtpEngine.NewConnection(*offerReq.offer, s.ownTrackChan, trackList)
 	if err != nil {
 		offerReq.err <- fmt.Errorf("create rtp connection: %w", err)
 		return
@@ -98,11 +104,6 @@ func (s *session) handleOffer(offerReq *offerRequest) {
 		s.connReceive = conn
 	case offerTypeSending:
 		s.connSend = conn
-		if trackList := s.hub.getAllTracksFromSessions(); trackList != nil {
-			for _, track := range trackList {
-				s.connSend.AddTrack(track)
-			}
-		}
 	}
 
 	answer, err := conn.GetAnswer(offerReq.ctx)
@@ -132,10 +133,10 @@ func (s *session) handleOwnTrack(track *webrtc.TrackLocalStaticRTP) {
 }
 
 func (s *session) getTracks() []*webrtc.TrackLocalStaticRTP {
-	if s.connSend == nil {
+	if s.connReceive == nil {
 		return nil
 	}
-	return s.connSend.GetTracks()
+	return s.connReceive.GetTracks()
 }
 
 func (s *session) stop() error {

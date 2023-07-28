@@ -17,7 +17,7 @@ type LobbyManager struct {
 }
 
 type rtpEngine interface {
-	NewConnection(offer webrtc.SessionDescription, onTrack chan<- *webrtc.TrackLocalStaticRTP) (*rtp.Connection, error)
+	NewConnection(offer webrtc.SessionDescription, onTrack chan<- *webrtc.TrackLocalStaticRTP, tracks []*webrtc.TrackLocalStaticRTP) (*rtp.Connection, error)
 }
 
 func NewLobbyManager(e rtpEngine) *LobbyManager {

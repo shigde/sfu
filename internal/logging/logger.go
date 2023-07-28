@@ -15,7 +15,7 @@ type Log struct {
 
 type LogConfig struct {
 	Logfile string `mapstructure:"logfile"`
-	Level   string `mapstructure:"logfile"`
+	Level   string `mapstructure:"level"`
 }
 
 func NewSlog(config *LogConfig) (*Log, error) {
@@ -24,13 +24,20 @@ func NewSlog(config *LogConfig) (*Log, error) {
 		handler slog.Handler
 	)
 
-	// Log file
-	file, err := os.OpenFile(config.Logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		return nil, fmt.Errorf("opening log file: %v", err)
+	var file *os.File
+	var err error
+
+	switch {
+	case config.Logfile != "stdout":
+		file, err = os.OpenFile(config.Logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			return nil, fmt.Errorf("opening log file: %v", err)
+		}
+	default:
+		file = os.Stdout
 	}
 
-	// Log level
+	//Log level
 	var logLevel slog.Level
 	switch config.Level {
 	case "WARN":

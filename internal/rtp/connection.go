@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/pion/webrtc/v3"
+	"golang.org/x/exp/slog"
 )
 
 type Connection struct {
@@ -28,6 +29,7 @@ func (c *Connection) GetAnswer(ctx context.Context) (*webrtc.SessionDescription,
 }
 
 func (c *Connection) hasTrack(track *webrtc.TrackLocalStaticRTP) bool {
+	slog.Debug("rtp.connection: has Tracks")
 	rtpSenderList := c.peerConnection.GetSenders()
 	for _, rtpSender := range rtpSenderList {
 		if rtpTrack := rtpSender.Track(); rtpTrack != nil {
@@ -40,22 +42,17 @@ func (c *Connection) hasTrack(track *webrtc.TrackLocalStaticRTP) bool {
 }
 
 func (c *Connection) AddTrack(track *webrtc.TrackLocalStaticRTP) bool {
+	slog.Debug("rtp.connection: Add Track")
 	if has := c.hasTrack(track); !has {
-		_, _ = c.peerConnection.AddTrack(track)
+		_, err := c.peerConnection.AddTrack(track)
+		slog.Debug("rtp.connection: Add Tracks to connection", "err", err)
 	}
 	return false
 }
 
 func (c *Connection) GetTracks() []*webrtc.TrackLocalStaticRTP {
-	rtpSenderList := c.peerConnection.GetSenders()
-	var tracks []*webrtc.TrackLocalStaticRTP
-	for _, rtpSender := range rtpSenderList {
-		if rtpTrack := rtpSender.Track(); rtpTrack != nil {
-			localTrack, _ := rtpTrack.(*webrtc.TrackLocalStaticRTP)
-			tracks = append(tracks, localTrack)
-		}
-	}
-	return tracks
+	slog.Debug("rtp.connection: get Tracks")
+	return c.receiver.getAllTracks()
 }
 
 type peerConnection interface {

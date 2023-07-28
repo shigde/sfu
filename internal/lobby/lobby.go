@@ -10,7 +10,7 @@ import (
 )
 
 var errLobbyStopped = errors.New("error because lobby stopped")
-var lobbyReqTimeout = 3 * time.Second
+var lobbyReqTimeout = 30 * time.Second
 
 type lobby struct {
 	Id         uuid.UUID
