@@ -10,17 +10,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testStreamLobbySetup(t *testing.T) *lobby {
+func testStreamLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 	t.Helper()
 	logging.SetupDebugLogger()
+	// set one session in lobby
 	engine := mockRtpEngineForOffer(mockedAnswer)
 	lobby := newLobby(uuid.New(), engine)
-	return lobby
+	user := uuid.New()
+	session := newSession(user, lobby.hub, engine)
+	session.sender = mockConnection(mockedAnswer)
+	lobby.sessions.Add(session)
+	return lobby, user
 }
 func TestStreamLobby(t *testing.T) {
 
 	t.Run("join lobby", func(t *testing.T) {
-		lobby := testStreamLobbySetup(t)
+		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
 		request := newLobbyRequest(context.Background(), uuid.New())
@@ -40,7 +45,7 @@ func TestStreamLobby(t *testing.T) {
 	})
 
 	t.Run("cancel join lobby", func(t *testing.T) {
-		lobby := testStreamLobbySetup(t)
+		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -60,10 +65,9 @@ func TestStreamLobby(t *testing.T) {
 	})
 
 	t.Run("listen lobby", func(t *testing.T) {
-		lobby := testStreamLobbySetup(t)
+		lobby, user := testStreamLobbySetup(t)
 		defer lobby.stop()
-
-		request := newLobbyRequest(context.Background(), uuid.New())
+		request := newLobbyRequest(context.Background(), user)
 		listenData := newListenData(mockedOffer)
 		request.data = listenData
 
@@ -78,11 +82,11 @@ func TestStreamLobby(t *testing.T) {
 	})
 
 	t.Run("cancel listen lobby", func(t *testing.T) {
-		lobby := testStreamLobbySetup(t)
+		lobby, user := testStreamLobbySetup(t)
 		defer lobby.stop()
 
 		ctx, cancel := context.WithCancel(context.Background())
-		request := newLobbyRequest(ctx, uuid.New())
+		request := newLobbyRequest(ctx, user)
 		listenData := newListenData(mockedAnswer)
 		request.data = listenData
 
