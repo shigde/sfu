@@ -25,8 +25,8 @@ type session struct {
 	user             uuid.UUID
 	rtpEngine        rtpEngine
 	hub              *hub
-	connReceive      receiver
-	connSend         sender
+	receiver         receiver
+	sender           sender
 	sessionReqChan   chan *sessionRequest
 	foreignTrackChan chan *hubTrackData
 	ownTrackChan     chan *webrtc.TrackLocalStaticRTP
@@ -106,7 +106,7 @@ func (s *session) handleSessionReq(req *sessionRequest) {
 }
 
 func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
-	if s.connReceive != nil {
+	if s.receiver != nil {
 		return nil, errReceiverInSessionAlreadyExists
 	}
 
@@ -114,8 +114,8 @@ func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescriptio
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
-	s.connReceive = conn
-	answer, err := s.connReceive.GetLocalDescription(req.ctx)
+	s.receiver = conn
+	answer, err := s.receiver.GetLocalDescription(req.ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp answerReq: %w", err)
 	}
@@ -123,17 +123,17 @@ func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescriptio
 }
 
 func (s *session) handleAnswerReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
-	if s.connSend == nil {
+	if s.sender == nil {
 		return nil, errNoSenderInSession
 	}
-	if err := s.connSend.SetAnswer(req.reqSDP); err != nil {
+	if err := s.sender.SetAnswer(req.reqSDP); err != nil {
 		return nil, fmt.Errorf("setting answer to sender connection: %w", err)
 	}
 	return nil, nil
 }
 
 func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
-	if s.connSend != nil {
+	if s.sender != nil {
 		return nil, errSenderInSessionAlreadyExists
 	}
 
@@ -147,9 +147,9 @@ func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescriptio
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
 
-	s.connSend = conn
+	s.sender = conn
 
-	offer, err := s.connSend.GetLocalDescription(req.ctx)
+	offer, err := s.sender.GetLocalDescription(req.ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp answerReq: %w", err)
 	}
@@ -158,8 +158,8 @@ func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescriptio
 }
 
 func (s *session) handleForeignTrack(track *hubTrackData) {
-	if s.connSend != nil {
-		s.connSend.AddTrack(track.track)
+	if s.sender != nil {
+		s.sender.AddTrack(track.track)
 	}
 }
 
@@ -175,10 +175,10 @@ func (s *session) handleOwnTrack(track *webrtc.TrackLocalStaticRTP) {
 }
 
 func (s *session) getTracks() []*webrtc.TrackLocalStaticRTP {
-	if s.connReceive == nil {
+	if s.receiver == nil {
 		return nil
 	}
-	return s.connReceive.GetTracks()
+	return s.receiver.GetTracks()
 }
 
 func (s *session) stop() error {
