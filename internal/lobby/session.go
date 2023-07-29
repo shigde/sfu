@@ -8,13 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
-	"github.com/shigde/sfu/internal/rtp"
 	"golang.org/x/exp/slog"
 )
-
-type Answerer interface {
-	GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error)
-}
 
 var (
 	errRtpSessionAlreadyClosed        = errors.New("the rtp sessions was already closed")
@@ -30,8 +25,8 @@ type session struct {
 	user             uuid.UUID
 	rtpEngine        rtpEngine
 	hub              *hub
-	connReceive      *rtp.Connection
-	connSend         *rtp.Connection
+	connReceive      receiver
+	connSend         sender
 	sessionReqChan   chan *sessionRequest
 	foreignTrackChan chan *hubTrackData
 	ownTrackChan     chan *webrtc.TrackLocalStaticRTP
@@ -198,4 +193,15 @@ func (s *session) stop() error {
 		<-s.quit
 	}
 	return nil
+}
+
+type receiver interface {
+	GetTracks() []*webrtc.TrackLocalStaticRTP
+	GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error)
+}
+
+type sender interface {
+	AddTrack(track *webrtc.TrackLocalStaticRTP) bool
+	GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error)
+	SetAnswer(sdp *webrtc.SessionDescription) error
 }
