@@ -90,6 +90,57 @@ func TestRtpSessionStartListen(t *testing.T) {
 	})
 }
 
+func TestRtpSessionListen(t *testing.T) {
+	t.Run("answerReq to session after sessions was stopped", func(t *testing.T) {
+		session, _ := testRtpSessionSetup(t)
+		ctx := context.Background()
+		req := newSessionRequest(ctx, mockedAnswer, answerReq)
+		_ = session.stop()
+		go session.runRequest(req)
+
+		select {
+		case <-req.respSDPChan:
+			t.Fatalf("No sdp was expected!")
+		case <-req.ctx.Done():
+			t.Fatalf("No canceling was expected!")
+		case err := <-req.err:
+			assert.ErrorIs(t, err, errRtpSessionAlreadyClosed)
+		}
+	})
+
+	t.Run("answerReq to session without a sending connection", func(t *testing.T) {
+		session, _ := testRtpSessionSetup(t)
+		req := newSessionRequest(context.Background(), mockedAnswer, answerReq)
+		go func() {
+			session.runRequest(req)
+		}()
+		select {
+		case _ = <-req.respSDPChan:
+			t.Fatalf("No sdp was expected!")
+		case <-req.ctx.Done():
+			t.Fatalf("No cancel was expected!")
+		case err := <-req.err:
+			assert.ErrorIs(t, err, errNoSenderInSession)
+		}
+	})
+
+	t.Run("answerReq to session", func(t *testing.T) {
+		session, _ := testRtpSessionSetup(t)
+		req := newSessionRequest(context.Background(), mockedAnswer, answerReq)
+		go func() {
+			session.runRequest(req)
+		}()
+		select {
+		case res := <-req.respSDPChan:
+			assert.Equal(t, res, nil)
+		case <-req.ctx.Done():
+			t.Fatalf("No cancel was expected!")
+		case <-req.err:
+			t.Fatalf("No error was expected!")
+		}
+	})
+}
+
 func TestRtpSessionStop(t *testing.T) {
 	t.Run("stop sessions right after start sessions", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)

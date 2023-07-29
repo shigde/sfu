@@ -16,7 +16,12 @@ type Answerer interface {
 	GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error)
 }
 
-var errRtpSessionAlreadyClosed = errors.New("the rtp sessions was already closed")
+var (
+	errRtpSessionAlreadyClosed        = errors.New("the rtp sessions was already closed")
+	errReceiverInSessionAlreadyExists = errors.New("receiver connection already exists")
+	errSenderInSessionAlreadyExists   = errors.New("sender connection already exists")
+	errNoSenderInSession              = errors.New("no sender connection exists")
+)
 
 var sessionReqTimeout = 3 * time.Second
 
@@ -107,7 +112,7 @@ func (s *session) handleSessionReq(req *sessionRequest) {
 
 func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
 	if s.connReceive != nil {
-		return nil, errors.New("receiver connection already exists")
+		return nil, errReceiverInSessionAlreadyExists
 	}
 
 	conn, err := s.rtpEngine.NewReceiverConn(*req.reqSDP, s.ownTrackChan)
@@ -124,7 +129,7 @@ func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescriptio
 
 func (s *session) handleAnswerReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
 	if s.connSend == nil {
-		return nil, errors.New("no sender connection exists")
+		return nil, errNoSenderInSession
 	}
 	if err := s.connSend.SetAnswer(req.reqSDP); err != nil {
 		return nil, fmt.Errorf("setting answer to sender connection: %w", err)
@@ -134,7 +139,7 @@ func (s *session) handleAnswerReq(req *sessionRequest) (*webrtc.SessionDescripti
 
 func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
 	if s.connSend != nil {
-		return nil, errors.New("sender connection already exists")
+		return nil, errSenderInSessionAlreadyExists
 	}
 
 	var trackList []*webrtc.TrackLocalStaticRTP
