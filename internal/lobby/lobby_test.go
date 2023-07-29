@@ -100,4 +100,44 @@ func TestStreamLobby(t *testing.T) {
 			t.Fail()
 		}
 	})
+
+	t.Run("start listen lobby", func(t *testing.T) {
+		lobby, _ := testStreamLobbySetup(t)
+		defer lobby.stop()
+
+		request := newLobbyRequest(context.Background(), uuid.New())
+		startData := newStartListenData()
+		request.data = startData
+
+		go lobby.runRequest(request)
+		offer := mockedAnswer // its mocked and make no different
+
+		select {
+		case data := <-startData.response:
+			assert.Equal(t, offer, data.offer)
+			assert.False(t, uuid.Nil == data.RtpSessionId)
+		case <-time.After(time.Second * 3):
+			t.Fail()
+		}
+	})
+
+	t.Run("cancel start listen lobby", func(t *testing.T) {
+		lobby, _ := testStreamLobbySetup(t)
+		defer lobby.stop()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		request := newLobbyRequest(ctx, uuid.New())
+		startData := newStartListenData()
+		request.data = startData
+
+		cancel()
+		go lobby.runRequest(request)
+
+		select {
+		case err := <-request.err:
+			assert.ErrorIs(t, err, errLobbyRequestTimeout)
+		case <-time.After(time.Second * 3):
+			t.Fail()
+		}
+	})
 }
