@@ -126,13 +126,15 @@ func TestRtpSessionListen(t *testing.T) {
 
 	t.Run("answerReq to session", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
+		session.sender = mockConnection(mockedOffer)
+
 		req := newSessionRequest(context.Background(), mockedAnswer, answerReq)
 		go func() {
 			session.runRequest(req)
 		}()
 		select {
 		case res := <-req.respSDPChan:
-			assert.Equal(t, res, nil)
+			assert.Nil(t, res)
 		case <-req.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case <-req.err:

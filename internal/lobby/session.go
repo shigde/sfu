@@ -13,9 +13,9 @@ import (
 
 var (
 	errRtpSessionAlreadyClosed        = errors.New("the rtp sessions was already closed")
-	errReceiverInSessionAlreadyExists = errors.New("receiver connection already exists")
-	errSenderInSessionAlreadyExists   = errors.New("sender connection already exists")
-	errNoSenderInSession              = errors.New("no sender connection exists")
+	errReceiverInSessionAlreadyExists = errors.New("receiver already exists")
+	errSenderInSessionAlreadyExists   = errors.New("sender already exists")
+	errNoSenderInSession              = errors.New("no sender exists")
 )
 
 var sessionReqTimeout = 3 * time.Second
@@ -75,7 +75,7 @@ func (s *session) runRequest(req *sessionRequest) {
 	slog.Debug("lobby.sessions: runRequest", "id", s.Id, "user", s.user)
 	select {
 	case s.sessionReqChan <- req:
-		slog.Debug("lobby.sessions: runRequest - offerReq requested", "id", s.Id, "user", s.user)
+		slog.Debug("lobby.sessions: runRequest - return response", "id", s.Id, "user", s.user)
 	case <-s.quit:
 		req.err <- errRtpSessionAlreadyClosed
 		slog.Debug("lobby.sessions: runRequest - interrupted because sessions closed", "id", s.Id, "user", s.user)
