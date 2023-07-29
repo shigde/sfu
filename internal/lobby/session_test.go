@@ -38,6 +38,24 @@ func TestRtpSessionOffer(t *testing.T) {
 		}
 	})
 
+	t.Run("offerReq to session but receiver already exists", func(t *testing.T) {
+		var offer *webrtc.SessionDescription
+		session, _ := testRtpSessionSetup(t)
+		session.receiver = mockConnection(nil)
+
+		req := newSessionRequest(context.Background(), offer, offerReq)
+		go session.runRequest(req)
+
+		select {
+		case <-req.respSDPChan:
+			t.Fatalf("No answerReq was expected!")
+		case <-req.ctx.Done():
+			t.Fatalf("No canceling was expected!")
+		case err := <-req.err:
+			assert.ErrorIs(t, err, errReceiverInSessionAlreadyExists)
+		}
+	})
+
 	t.Run("offerReq to session and receive an answer", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		req := newSessionRequest(context.Background(), mockedOffer, offerReq)
@@ -70,6 +88,24 @@ func TestRtpSessionStartListen(t *testing.T) {
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
 			assert.ErrorIs(t, err, errRtpSessionAlreadyClosed)
+		}
+	})
+
+	t.Run("startReq to session but sender already exists", func(t *testing.T) {
+		session, _ := testRtpSessionSetup(t)
+		session.sender = mockConnection(nil)
+
+		req := newSessionRequest(context.Background(), nil, startReq)
+		go func() {
+			session.runRequest(req)
+		}()
+		select {
+		case _ = <-req.respSDPChan:
+			t.Fatalf("No sdp was expected!")
+		case <-req.ctx.Done():
+			t.Fatalf("No cancel was expected!")
+		case err := <-req.err:
+			assert.ErrorIs(t, err, errSenderInSessionAlreadyExists)
 		}
 	})
 
