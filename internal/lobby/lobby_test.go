@@ -71,7 +71,6 @@ func TestStreamLobby(t *testing.T) {
 
 		select {
 		case data := <-listenData.response:
-			assert.Equal(t, mockedAnswer, data.answer)
 			assert.False(t, uuid.Nil == data.RtpSessionId)
 		case <-time.After(time.Second * 3):
 			t.Fail()
@@ -84,7 +83,7 @@ func TestStreamLobby(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		request := newLobbyRequest(ctx, uuid.New())
-		listenData := newListenData(mockedOffer)
+		listenData := newListenData(mockedAnswer)
 		request.data = listenData
 
 		cancel()

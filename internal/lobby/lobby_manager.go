@@ -123,7 +123,6 @@ func (m *LobbyManager) ListenLobby(ctx context.Context, liveStreamId uuid.UUID, 
 		case err := <-request.err:
 			return data, fmt.Errorf("requesting listening lobby: %w", err)
 		case rtpResourceData := <-listenData.response:
-			data.Answer = rtpResourceData.answer
 			data.Active = true
 			data.RtpSessionId = rtpResourceData.RtpSessionId
 			return data, nil

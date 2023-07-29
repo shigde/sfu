@@ -23,7 +23,7 @@ func TestRtpSessionOffer(t *testing.T) {
 		var offer *webrtc.SessionDescription
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
-		offerReq := newSessionRequest(ctx, offer, offer)
+		offerReq := newSessionRequest(ctx, offer, offerReq)
 		_ = session.stop()
 		go session.runRequest(offerReq)
 

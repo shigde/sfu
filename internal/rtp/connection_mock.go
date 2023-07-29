@@ -30,6 +30,9 @@ func (m *mockPeerConnector) LocalDescription() *webrtc.SessionDescription {
 	return m.SDP
 }
 
+func (m *mockPeerConnector) SetRemoteDescription(_ webrtc.SessionDescription) error {
+	return nil
+}
 func (m *mockPeerConnector) GetSenders() []*webrtc.RTPSender {
 	return nil
 }
