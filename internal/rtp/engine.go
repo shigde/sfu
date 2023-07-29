@@ -2,7 +2,6 @@ package rtp
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/pion/interceptor"
@@ -52,26 +51,20 @@ func NewEngine(rtpConfig *RtpConfig) (*Engine, error) {
 	}, nil
 }
 
-func (e *Engine) NewConnection(offer webrtc.SessionDescription, onLocalTrack chan<- *webrtc.TrackLocalStaticRTP, trackList []*webrtc.TrackLocalStaticRTP) (*Connection, error) {
+func (e *Engine) NewReceiverConn(offer webrtc.SessionDescription, onLocalTrack chan<- *webrtc.TrackLocalStaticRTP) (*Connection, error) {
 	peerConnection, err := e.api.NewPeerConnection(e.config)
 	if err != nil {
-		return nil, fmt.Errorf("create peer connection: %w ", err)
-	}
-	if trackList != nil {
-		for _, track := range trackList {
-			peerConnection.AddTrack(track)
-		}
+		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
 	}
 
 	receiver := newReceiver(onLocalTrack)
-	sender := newSender(peerConnection)
-
 	peerConnection.OnTrack(receiver.onTrack)
 
 	peerConnection.OnICEConnectionStateChange(func(i webrtc.ICEConnectionState) {
+		// @TODO Implement irregular connection closed by client handling
 		if i == webrtc.ICEConnectionStateFailed {
 			if err := peerConnection.Close(); err != nil {
-				log.Println(err)
+				slog.Error("rtp.engine: receiver peerConnection.Close", "err", err)
 			}
 			receiver.stop()
 		}
@@ -82,22 +75,20 @@ func (e *Engine) NewConnection(offer webrtc.SessionDescription, onLocalTrack cha
 
 		// Register channel opening handling
 		d.OnOpen(func() {
-			slog.Debug("rtp.engine: data channel '%s'-'%d' open. random messages will now be sent to any connected DataChannels every 5 seconds\n", d.Label(), d.ID())
+			slog.Debug("rtp.engine: data channel '%s'-'%d' open. keep-alive messages will now be sent", d.Label(), d.ID())
 
 			for range time.NewTicker(5 * time.Second).C {
-				message := "Hallo?"
-				//fmt.Printf("Sending '%s'\n", message)
-
-				// Send the message as text
+				message := "keep-alive"
 				sendErr := d.SendText(message)
 				if sendErr != nil {
-					panic(sendErr)
+					slog.Warn("rtp.engine: data channel send", "err", sendErr)
 				}
 			}
 		})
 
 		// Register text message handling
 		d.OnMessage(func(msg webrtc.DataChannelMessage) {
+			// do something
 			fmt.Printf("Message from DataChannel '%s': '%s'\n", d.Label(), string(msg.Data))
 		})
 	})
@@ -120,6 +111,48 @@ func (e *Engine) NewConnection(offer webrtc.SessionDescription, onLocalTrack cha
 	return &Connection{
 		peerConnection: peerConnection,
 		receiver:       receiver,
+		gatherComplete: gatherComplete,
+	}, nil
+}
+
+func (e *Engine) NewSenderConn(sendingTracks []*webrtc.TrackLocalStaticRTP) (*Connection, error) {
+	peerConnection, err := e.api.NewPeerConnection(e.config)
+	if err != nil {
+		return nil, fmt.Errorf("create sender peer connection: %w ", err)
+	}
+	if sendingTracks != nil {
+		for _, track := range sendingTracks {
+			_, err = peerConnection.AddTrack(track)
+			return nil, fmt.Errorf("adding track to connection: %w ", err)
+		}
+	}
+	sender := newSender(peerConnection)
+
+	peerConnection.OnICEConnectionStateChange(func(i webrtc.ICEConnectionState) {
+		if i == webrtc.ICEConnectionStateFailed {
+			// @TODO Implement irregular connection closed by client handling
+			if err := peerConnection.Close(); err != nil {
+				slog.Error("rtp.engine: sender peerConnection.Close", "err", err)
+			}
+			if err = sender.stop(); err != nil {
+				slog.Error("rtp.engine: sender.stop", "err", err)
+			}
+		}
+	})
+
+	offer, err := peerConnection.CreateOffer(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	gatherComplete := webrtc.GatheringCompletePromise(peerConnection)
+
+	if err = peerConnection.SetLocalDescription(offer); err != nil {
+		return nil, err
+	}
+
+	return &Connection{
+		peerConnection: peerConnection,
 		sender:         sender,
 		AddTrackChan:   sender.addTrackChan,
 		gatherComplete: gatherComplete,

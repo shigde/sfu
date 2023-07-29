@@ -17,7 +17,8 @@ type LobbyManager struct {
 }
 
 type rtpEngine interface {
-	NewConnection(offer webrtc.SessionDescription, onTrack chan<- *webrtc.TrackLocalStaticRTP, tracks []*webrtc.TrackLocalStaticRTP) (*rtp.Connection, error)
+	NewReceiverConn(offer webrtc.SessionDescription, trackChan chan<- *webrtc.TrackLocalStaticRTP) (*rtp.Connection, error)
+	NewSenderConn(sendingTracks []*webrtc.TrackLocalStaticRTP) (*rtp.Connection, error)
 }
 
 func NewLobbyManager(e rtpEngine) *LobbyManager {
@@ -52,6 +53,45 @@ func (m *LobbyManager) AccessLobby(ctx context.Context, liveStreamId uuid.UUID, 
 		answerData.RtpSessionId = rtpResourceData.RtpSessionId
 		return answerData, nil
 	}
+}
+
+func (m *LobbyManager) StartListenLobby(ctx context.Context, liveStreamId uuid.UUID, user uuid.UUID) (struct {
+	Offer        *webrtc.SessionDescription
+	Active       bool
+	RtpSessionId uuid.UUID
+}, error) {
+
+	var answerData struct {
+		Offer        *webrtc.SessionDescription
+		Active       bool
+		RtpSessionId uuid.UUID
+	}
+
+	if lobby, hasLobby := m.lobbies.getLobby(liveStreamId); hasLobby {
+		request := newLobbyRequest(ctx, user)
+		listenData := newStartListenData()
+		request.data = listenData
+
+		go lobby.runRequest(request)
+
+		var data struct {
+			Offer        *webrtc.SessionDescription
+			Active       bool
+			RtpSessionId uuid.UUID
+		}
+
+		select {
+		case err := <-request.err:
+			return data, fmt.Errorf("requesting listening lobby: %w", err)
+		case rtpResourceData := <-listenData.response:
+			data.Offer = rtpResourceData.offer
+			data.Active = true
+			data.RtpSessionId = rtpResourceData.RtpSessionId
+			return data, nil
+		}
+	}
+	answerData.Active = false
+	return answerData, nil
 }
 
 func (m *LobbyManager) ListenLobby(ctx context.Context, liveStreamId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {

@@ -52,4 +52,13 @@ func TestLobbyManager(t *testing.T) {
 		assert.False(t, uuid.Nil == data.RtpSessionId)
 		assert.False(t, uuid.Nil == data.Resource)
 	})
+
+	t.Run("Start listen to a Lobby with timeout", func(t *testing.T) {
+		manager, lobby := testLobbyManagerSetup(t)
+		userId := uuid.New()
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // trigger cancel for time out
+		_, err := manager.StartListenLobby(ctx, lobby.Id, userId)
+		assert.ErrorIs(t, err, errLobbyRequestTimeout)
+	})
 }

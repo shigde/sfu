@@ -13,11 +13,10 @@ import (
 )
 
 type Answerer interface {
-	GetAnswer(ctx context.Context) (*webrtc.SessionDescription, error)
+	GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error)
 }
 
 var errRtpSessionAlreadyClosed = errors.New("the rtp sessions was already closed")
-var errOfferInterrupted = errors.New("request an offer get interrupted")
 
 var sessionReqTimeout = 3 * time.Second
 
@@ -28,7 +27,7 @@ type session struct {
 	hub              *hub
 	connReceive      *rtp.Connection
 	connSend         *rtp.Connection
-	offerChan        chan *offerRequest
+	sessionReqChan   chan *sessionRequest
 	foreignTrackChan chan *hubTrackData
 	ownTrackChan     chan *webrtc.TrackLocalStaticRTP
 	quit             chan struct{}
@@ -36,7 +35,7 @@ type session struct {
 
 func newSession(user uuid.UUID, hub *hub, engine rtpEngine) *session {
 	quit := make(chan struct{})
-	offerChan := make(chan *offerRequest)
+	offerChan := make(chan *sessionRequest)
 	ownTrackChan := make(chan *webrtc.TrackLocalStaticRTP)
 
 	session := &session{
@@ -44,7 +43,7 @@ func newSession(user uuid.UUID, hub *hub, engine rtpEngine) *session {
 		user:             user,
 		rtpEngine:        engine,
 		hub:              hub,
-		offerChan:        offerChan,
+		sessionReqChan:   offerChan,
 		ownTrackChan:     ownTrackChan,
 		foreignTrackChan: hub.dispatchChan,
 		quit:             quit,
@@ -58,8 +57,8 @@ func (s *session) run() {
 	slog.Info("lobby.sessions: run", "id", s.Id, "user", s.user)
 	for {
 		select {
-		case offer := <-s.offerChan:
-			s.handleOffer(offer)
+		case req := <-s.sessionReqChan:
+			s.handleSessionReq(req)
 		case track := <-s.ownTrackChan:
 			s.handleOwnTrack(track)
 		case track := <-s.foreignTrackChan:
@@ -72,47 +71,90 @@ func (s *session) run() {
 	}
 }
 
-func (s *session) runOfferRequest(offerReq *offerRequest) {
-	slog.Debug("lobby.sessions: offer", "id", s.Id, "user", s.user)
+func (s *session) runRequest(req *sessionRequest) {
+	slog.Debug("lobby.sessions: runRequest", "id", s.Id, "user", s.user)
 	select {
-	case s.offerChan <- offerReq:
-		slog.Debug("lobby.sessions: offer - offer requested", "id", s.Id, "user", s.user)
+	case s.sessionReqChan <- req:
+		slog.Debug("lobby.sessions: runRequest - offerReq requested", "id", s.Id, "user", s.user)
 	case <-s.quit:
-		offerReq.err <- errRtpSessionAlreadyClosed
-		slog.Debug("lobby.sessions: offer - interrupted because sessions closed", "id", s.Id, "user", s.user)
+		req.err <- errRtpSessionAlreadyClosed
+		slog.Debug("lobby.sessions: runRequest - interrupted because sessions closed", "id", s.Id, "user", s.user)
 	case <-time.After(sessionReqTimeout):
-		slog.Error("lobby.sessions: offer - interrupted because request timeout", "id", s.Id, "user", s.user)
+		slog.Error("lobby.sessions: runRequest - interrupted because request timeout", "id", s.Id, "user", s.user)
 	}
 }
 
-func (s *session) handleOffer(offerReq *offerRequest) {
-	slog.Info("lobby.sessions: handle offer", "id", s.Id, "user", s.user)
+func (s *session) handleSessionReq(req *sessionRequest) {
+	slog.Info("lobby.sessions: handle session req", "id", s.Id, "user", s.user)
+
+	var sdp *webrtc.SessionDescription
+	var err error
+	switch req.sessionReqType {
+	case offerReq:
+		sdp, err = s.handleOfferReq(req)
+	case answerReq:
+		sdp, err = s.handleAnswerReq(req)
+	case startReq:
+		sdp, err = s.handleStartReq(req)
+	}
+	if err != nil {
+		req.err <- fmt.Errorf("handle request: %w", err)
+		return
+	}
+
+	req.respSDPChan <- sdp
+}
+
+func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
+	if s.connReceive != nil {
+		return nil, errors.New("receiver connection already exists")
+	}
+
+	conn, err := s.rtpEngine.NewReceiverConn(*req.reqSDP, s.ownTrackChan)
+	if err != nil {
+		return nil, fmt.Errorf("create rtp connection: %w", err)
+	}
+	s.connReceive = conn
+	answer, err := s.connReceive.GetLocalDescription(req.ctx)
+	if err != nil {
+		return nil, fmt.Errorf("create rtp answerReq: %w", err)
+	}
+	return answer, nil
+}
+
+func (s *session) handleAnswerReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
+	if s.connSend == nil {
+		return nil, errors.New("no sender connection exists")
+	}
+	if err := s.connSend.SetAnswer(req.reqSDP); err != nil {
+		return nil, fmt.Errorf("setting answer to sender connection: %w", err)
+	}
+	return nil, nil
+}
+
+func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
+	if s.connSend != nil {
+		return nil, errors.New("sender connection already exists")
+	}
 
 	var trackList []*webrtc.TrackLocalStaticRTP
-	if offerReq.offerType == offerTypeSending {
+	if req.sessionReqType == answerReq {
 		trackList = s.hub.getAllTracksFromSessions()
 	}
 
-	conn, err := s.rtpEngine.NewConnection(*offerReq.offer, s.ownTrackChan, trackList)
+	conn, err := s.rtpEngine.NewSenderConn(trackList)
 	if err != nil {
-		offerReq.err <- fmt.Errorf("create rtp connection: %w", err)
-		return
+		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
 
-	switch offerReq.offerType {
-	case offerTypeReceving:
-		s.connReceive = conn
-	case offerTypeSending:
-		s.connSend = conn
-	}
+	s.connSend = conn
 
-	answer, err := conn.GetAnswer(offerReq.ctx)
+	offer, err := s.connSend.GetLocalDescription(req.ctx)
 	if err != nil {
-		offerReq.err <- fmt.Errorf("create rtp answer: %w", err)
-		return
+		return nil, fmt.Errorf("create rtp answerReq: %w", err)
 	}
 
-	offerReq.answer <- answer
+	return offer, nil
 }
 
 func (s *session) handleForeignTrack(track *hubTrackData) {
@@ -148,6 +190,7 @@ func (s *session) stop() error {
 	default:
 		close(s.quit)
 		slog.Info("lobby.sessions: stopped was triggered", "id", s.Id, "user", s.user)
+		<-s.quit
 	}
 	return nil
 }

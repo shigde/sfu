@@ -17,7 +17,7 @@ type Connection struct {
 	closed         chan struct{}
 }
 
-func (c *Connection) GetAnswer(ctx context.Context) (*webrtc.SessionDescription, error) {
+func (c *Connection) GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error) {
 	// block until ice gathering is complete before return local sdp
 	// all ice candidates should be part of the answer
 	select {
@@ -26,6 +26,9 @@ func (c *Connection) GetAnswer(ctx context.Context) (*webrtc.SessionDescription,
 	case <-ctx.Done():
 		return nil, errors.New("getting answer get interrupted")
 	}
+}
+func (c *Connection) SetAnswer(sdp *webrtc.SessionDescription) error {
+	return c.peerConnection.SetRemoteDescription(*sdp)
 }
 
 func (c *Connection) hasTrack(track *webrtc.TrackLocalStaticRTP) bool {
@@ -57,6 +60,7 @@ func (c *Connection) GetTracks() []*webrtc.TrackLocalStaticRTP {
 
 type peerConnection interface {
 	LocalDescription() *webrtc.SessionDescription
+	SetRemoteDescription(desc webrtc.SessionDescription) error
 	GetSenders() (result []*webrtc.RTPSender)
 	AddTrack(track webrtc.TrackLocal) (*webrtc.RTPSender, error)
 }

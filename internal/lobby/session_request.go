@@ -6,27 +6,32 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
-type offerRequest struct {
-	offerType
-	offer  *webrtc.SessionDescription
-	answer chan *webrtc.SessionDescription
-	err    chan error
-	ctx    context.Context
+type sessionRequest struct {
+	sessionReqType
+	reqSDP      *webrtc.SessionDescription
+	respSDPChan chan *webrtc.SessionDescription
+	err         chan error
+	ctx         context.Context
 }
 
-type offerType int
+type sessionReqType int
 
 const (
-	offerTypeReceving offerType = iota + 1
-	offerTypeSending
+	startReq sessionReqType = iota + 1
+	offerReq
+	answerReq
 )
 
-func newOfferRequest(ctx context.Context, offer *webrtc.SessionDescription, offerType offerType) *offerRequest {
-	return &offerRequest{
-		offerType: offerType,
-		offer:     offer,
-		answer:    make(chan *webrtc.SessionDescription),
-		err:       make(chan error),
-		ctx:       ctx,
+func newSessionRequest(ctx context.Context, sdp *webrtc.SessionDescription, reqType sessionReqType) *sessionRequest {
+	return &sessionRequest{
+		sessionReqType: reqType,
+		reqSDP:         sdp,
+		respSDPChan:    make(chan *webrtc.SessionDescription),
+		err:            make(chan error),
+		ctx:            ctx,
 	}
+}
+
+func newStartRequest(ctx context.Context) *sessionRequest {
+	return newSessionRequest(ctx, nil, startReq)
 }

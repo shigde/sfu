@@ -14,7 +14,11 @@ func newRtpEngineMock() *rtpEngineMock {
 	return &rtpEngineMock{}
 }
 
-func (e *rtpEngineMock) NewConnection(_ webrtc.SessionDescription, _ chan<- *webrtc.TrackLocalStaticRTP) (*rtp.Connection, error) {
+func (e *rtpEngineMock) NewReceiverConn(_ webrtc.SessionDescription, _ chan<- *webrtc.TrackLocalStaticRTP) (*rtp.Connection, error) {
+	return e.conn, e.err
+}
+
+func (e *rtpEngineMock) NewSenderConn(_ []*webrtc.TrackLocalStaticRTP) (*rtp.Connection, error) {
 	return e.conn, e.err
 }
 

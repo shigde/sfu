@@ -19,17 +19,17 @@ func testRtpSessionSetup(t *testing.T) (*session, *rtpEngineMock) {
 	return session, engine
 }
 func TestRtpSessionOffer(t *testing.T) {
-	t.Run("offer a sessions after sessions was stopped", func(t *testing.T) {
+	t.Run("offerReq a sessions after sessions was stopped", func(t *testing.T) {
 		var offer *webrtc.SessionDescription
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
-		offerReq := newOfferRequest(ctx, offer, offerTypeReceving)
+		offerReq := newSessionRequest(ctx, offer, offer)
 		_ = session.stop()
-		go session.runOfferRequest(offerReq)
+		go session.runRequest(offerReq)
 
 		select {
-		case <-offerReq.answer:
-			t.Fatalf("No answer was expected!")
+		case <-offerReq.respSDPChan:
+			t.Fatalf("No answerReq was expected!")
 		case <-offerReq.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-offerReq.err:
@@ -37,14 +37,14 @@ func TestRtpSessionOffer(t *testing.T) {
 		}
 	})
 
-	t.Run("offer a sessions and receive an answer", func(t *testing.T) {
+	t.Run("offerReq a sessions and receive an answerReq", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		offerReq := newOfferRequest(context.Background(), mockedOffer, offerTypeReceving)
+		offerReq := newSessionRequest(context.Background(), mockedOffer, offerReq)
 		go func() {
-			session.runOfferRequest(offerReq)
+			session.runRequest(offerReq)
 		}()
 		select {
-		case res := <-offerReq.answer:
+		case res := <-offerReq.respSDPChan:
 			assert.Equal(t, res, mockedAnswer)
 		case <-offerReq.ctx.Done():
 			t.Fatalf("No cancel was expected!")

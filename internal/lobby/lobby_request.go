@@ -19,8 +19,12 @@ type joinData struct {
 	response chan *joinResponse
 }
 
+type startListenData struct {
+	response chan *startListenResponse
+}
+
 type listenData struct {
-	offer    *webrtc.SessionDescription
+	answer   *webrtc.SessionDescription
 	response chan *listenResponse
 }
 
@@ -45,10 +49,17 @@ func newJoinData(offer *webrtc.SessionDescription) *joinData {
 	}
 }
 
-func newListenData(offer *webrtc.SessionDescription) *listenData {
+func newStartListenData() *startListenData {
+	resChan := make(chan *startListenResponse)
+	return &startListenData{
+		response: resChan,
+	}
+}
+
+func newListenData(answer *webrtc.SessionDescription) *listenData {
 	resChan := make(chan *listenResponse)
 	return &listenData{
-		offer:    offer,
+		answer:   answer,
 		response: resChan,
 	}
 }
@@ -59,7 +70,11 @@ type joinResponse struct {
 	RtpSessionId uuid.UUID
 }
 
+type startListenResponse struct {
+	offer        *webrtc.SessionDescription
+	RtpSessionId uuid.UUID
+}
+
 type listenResponse struct {
-	answer       *webrtc.SessionDescription
 	RtpSessionId uuid.UUID
 }
