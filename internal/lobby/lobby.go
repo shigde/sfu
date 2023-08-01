@@ -150,6 +150,7 @@ func (l *lobby) handleListen(req *lobbyRequest) {
 		case <-l.quit:
 			req.err <- errLobbyStopped
 		}
+		return
 	}
 
 	answerReq := newSessionRequest(req.ctx, data.answer, answerReq)
