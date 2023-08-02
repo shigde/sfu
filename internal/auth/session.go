@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -8,6 +9,8 @@ import (
 	"github.com/gorilla/sessions"
 )
 
+var ErrNoUserSession = errors.New("no user in session")
+var ErrNotAuthenticatedSession = errors.New("not authenticated session")
 var store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_SECRET")))
 
 func StartSession(w http.ResponseWriter, r *http.Request) error {
@@ -33,14 +36,35 @@ func StartSession(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func HasActiveSession(w http.ResponseWriter, r *http.Request) error {
+func HasActiveSession(r *http.Request) (bool, error) {
 	session, err := store.Get(r, "session.id")
 	if err != nil {
-		return fmt.Errorf("start session by reding session: %w", err)
+		return false, fmt.Errorf("start session by reding session: %w", err)
 	}
-	session.Values["authenticated"] = true
-	if err = session.Save(r, w); err != nil {
-		return fmt.Errorf("start session by saving session id: %w", err)
+
+	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+		return false, nil
 	}
-	return nil
+
+	return true, nil
+}
+
+func GetPrincipalFromSession(r *http.Request) (*Principal, error) {
+	session, err := store.Get(r, "session.id")
+	if err != nil {
+		return nil, fmt.Errorf("start session by reding session: %w", err)
+	}
+
+	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+		return nil, ErrNotAuthenticatedSession
+	}
+
+	userId, ok := session.Values["userUuid"].(string)
+	if !ok || len(userId) == 0 {
+		return nil, ErrNoUserSession
+	}
+
+	return &Principal{
+		UUID: userId,
+	}, nil
 }

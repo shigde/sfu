@@ -11,7 +11,61 @@ import (
 	"github.com/shigde/sfu/internal/stream"
 )
 
-func whep(spaceManager spaceGetCreator) http.HandlerFunc {
+func whepOffer(spaceManager spaceGetCreator) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/sdp")
+		user, err := auth.GetPrincipalFromSession(r)
+		if err != nil {
+			switch {
+			case errors.Is(err, auth.ErrNotAuthenticatedSession):
+				httpError(w, "no session", http.StatusForbidden, err)
+			case errors.Is(err, auth.ErrNoUserSession):
+				httpError(w, "no user session", http.StatusForbidden, err)
+			default:
+				httpError(w, "internal error", http.StatusInternalServerError, err)
+			}
+			return
+		}
+
+		userId, err := user.GetUuid()
+		if err != nil {
+			httpError(w, "error user", http.StatusBadRequest, err)
+			return
+		}
+
+		liveStream, space, err := getLiveStream(r, spaceManager)
+		if err != nil {
+			handleResourceError(w, err)
+			return
+		}
+
+		answer, err := space.ListenLobby(r.Context(), nil, liveStream, userId)
+		if err != nil && errors.Is(err, stream.ErrLobbyNotActive) {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		if err != nil {
+			httpError(w, "error build whep", http.StatusInternalServerError, err)
+			return
+		}
+
+		response := []byte(answer.SDP)
+		hash := md5.Sum(response)
+
+		w.WriteHeader(http.StatusCreated)
+		contentLen, err := w.Write(response)
+		if err != nil {
+			httpError(w, "error build response", http.StatusInternalServerError, err)
+			return
+		}
+
+		w.Header().Set("etag", fmt.Sprintf("%x", hash))
+		w.Header().Set("Content-Length", strconv.Itoa(contentLen))
+	}
+}
+
+func whepAnswer(spaceManager spaceGetCreator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/sdp")
 		if err := auth.StartSession(w, r); err != nil {
