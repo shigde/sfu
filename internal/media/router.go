@@ -22,6 +22,7 @@ func NewRouter(
 	// Lobby
 	router.HandleFunc("/space/{space}/stream/{id}/whip", auth.HttpMiddleware(config, whip(spaceManager))).Methods("POST")
 	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.HttpMiddleware(config, whepOffer(spaceManager))).Methods("POST")
+	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.HttpMiddleware(config, whepAnswer(spaceManager))).Methods("PATCH")
 	return router
 }
 

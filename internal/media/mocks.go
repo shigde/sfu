@@ -51,6 +51,22 @@ func (l *testLobbyManager) AccessLobby(_ context.Context, _ uuid.UUID, _ uuid.UU
 	return data, nil
 }
 
+func (l *testLobbyManager) StartListenLobby(_ context.Context, _ uuid.UUID, _ uuid.UUID) (struct {
+	Offer        *webrtc.SessionDescription
+	Active       bool
+	RtpSessionId uuid.UUID
+}, error) {
+	var data struct {
+		Offer        *webrtc.SessionDescription
+		Active       bool
+		RtpSessionId uuid.UUID
+	}
+	data.Offer = &webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: testOffer}
+	data.Active = true
+	data.RtpSessionId, _ = uuid.Parse(rtpSessionId)
+	return data, nil
+}
+
 func (l *testLobbyManager) ListenLobby(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Active       bool

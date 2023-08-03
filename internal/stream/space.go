@@ -18,6 +18,12 @@ type lobbyListenAccessor interface {
 		RtpSessionId uuid.UUID
 	}, error)
 
+	StartListenLobby(ctx context.Context, liveStreamId uuid.UUID, userId uuid.UUID) (struct {
+		Offer        *webrtc.SessionDescription
+		Active       bool
+		RtpSessionId uuid.UUID
+	}, error)
+
 	ListenLobby(ctx context.Context, liveStreamId uuid.UUID, userId uuid.UUID, offer *webrtc.SessionDescription) (struct {
 		Answer       *webrtc.SessionDescription
 		Active       bool
@@ -51,13 +57,24 @@ func (s *Space) EnterLobby(ctx context.Context, sdp *webrtc.SessionDescription, 
 	return resourceData.Answer, resource, nil
 }
 
-func (s *Space) ListenLobby(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, id uuid.UUID) (*webrtc.SessionDescription, error) {
-	resourceData, err := s.lobby.ListenLobby(ctx, stream.UUID, id, offer)
+func (s *Space) StartListenLobby(ctx context.Context, stream *LiveStream, id uuid.UUID) (*webrtc.SessionDescription, error) {
+	resourceData, err := s.lobby.StartListenLobby(ctx, stream.UUID, id)
 	if err != nil {
-		return nil, fmt.Errorf("listening lobby: %w", err)
+		return nil, fmt.Errorf("start listening lobby: %w", err)
 	}
 	if !resourceData.Active {
 		return nil, ErrLobbyNotActive
 	}
-	return resourceData.Answer, nil
+	return resourceData.Offer, nil
+}
+
+func (s *Space) ListenLobby(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, id uuid.UUID) (bool, error) {
+	resourceData, err := s.lobby.ListenLobby(ctx, stream.UUID, id, offer)
+	if err != nil {
+		return false, fmt.Errorf("listening lobby: %w", err)
+	}
+	if !resourceData.Active {
+		return false, ErrLobbyNotActive
+	}
+	return resourceData.Active, nil
 }

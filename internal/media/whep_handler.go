@@ -39,7 +39,7 @@ func whepOffer(spaceManager spaceGetCreator) http.HandlerFunc {
 			return
 		}
 
-		answer, err := space.ListenLobby(r.Context(), nil, liveStream, userId)
+		answer, err := space.StartListenLobby(r.Context(), liveStream, userId)
 		if err != nil && errors.Is(err, stream.ErrLobbyNotActive) {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -68,8 +68,22 @@ func whepOffer(spaceManager spaceGetCreator) http.HandlerFunc {
 func whepAnswer(spaceManager spaceGetCreator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/sdp")
-		if err := auth.StartSession(w, r); err != nil {
-			httpError(w, "error", http.StatusInternalServerError, err)
+		user, err := auth.GetPrincipalFromSession(r)
+		if err != nil {
+			switch {
+			case errors.Is(err, auth.ErrNotAuthenticatedSession):
+				httpError(w, "no session", http.StatusForbidden, err)
+			case errors.Is(err, auth.ErrNoUserSession):
+				httpError(w, "no user session", http.StatusForbidden, err)
+			default:
+				httpError(w, "internal error", http.StatusInternalServerError, err)
+			}
+			return
+		}
+		userId, err := user.GetUuid()
+		if err != nil {
+			httpError(w, "error user", http.StatusBadRequest, err)
+			return
 		}
 
 		liveStream, space, err := getLiveStream(r, spaceManager)
@@ -78,25 +92,13 @@ func whepAnswer(spaceManager spaceGetCreator) http.HandlerFunc {
 			return
 		}
 
-		offer, err := getSdpPayload(w, r)
+		answer, err := getSdpPayload(w, r)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		user, ok := auth.PrincipalFromContext(r.Context())
-		if !ok {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		userId, err := user.GetUuid()
-		if err != nil {
-			httpError(w, "error user", http.StatusBadRequest, err)
-			return
-		}
-
-		answer, err := space.ListenLobby(r.Context(), offer, liveStream, userId)
+		_, err = space.ListenLobby(r.Context(), answer, liveStream, userId)
 		if err != nil && errors.Is(err, stream.ErrLobbyNotActive) {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -107,17 +109,12 @@ func whepAnswer(spaceManager spaceGetCreator) http.HandlerFunc {
 			return
 		}
 
-		response := []byte(answer.SDP)
-		hash := md5.Sum(response)
-
 		w.WriteHeader(http.StatusCreated)
-		contentLen, err := w.Write(response)
 		if err != nil {
 			httpError(w, "error build response", http.StatusInternalServerError, err)
 			return
 		}
 
-		w.Header().Set("etag", fmt.Sprintf("%x", hash))
-		w.Header().Set("Content-Length", strconv.Itoa(contentLen))
+		w.Header().Set("Content-Length", "0")
 	}
 }
