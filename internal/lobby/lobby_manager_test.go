@@ -84,11 +84,11 @@ func TestLobbyManager(t *testing.T) {
 	})
 
 	t.Run("listen to a Lobby with timeout", func(t *testing.T) {
-		manager, lobby, _ := testLobbyManagerSetup(t)
+		manager, lobby, user := testLobbyManagerSetup(t)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // trigger cancel for time out
-		_, err := manager.ListenLobby(ctx, lobby.Id, uuid.New(), mockedAnswer)
+		_, err := manager.ListenLobby(ctx, lobby.Id, user, mockedAnswer)
 		assert.ErrorIs(t, err, errLobbyRequestTimeout)
 	})
 
