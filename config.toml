@@ -9,7 +9,13 @@ logfile = "stdout"
 name = "sqlite3"
 dataSource = "shig.db"
 
-[auth.jwt]
+[security]
+# set list of domains allowed to request api
+# trustedOrigins = ["*.shig.de", "example.com"]
+# default: ["*"]
+trustedOrigins = ["*"]
+
+[security.jwt]
 enabled = true
 key = "SecretValueReplaceThis"
 defaultexpiretime = 604800  # 1 week not implemented et jet

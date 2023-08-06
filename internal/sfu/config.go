@@ -9,7 +9,7 @@ import (
 )
 
 type Config struct {
-	*auth.AuthConfig       `mapstructure:"auth"`
+	*auth.SecurityConfig   `mapstructure:"security"`
 	*storage.StorageConfig `mapstructure:"store"`
 	*logging.LogConfig     `mapstructure:"log"`
 	*metric.MetricConfig   `mapstructure:"metric"`

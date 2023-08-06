@@ -6,11 +6,15 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
 )
 
-var ErrNoUserSession = errors.New("no user in session")
-var ErrNotAuthenticatedSession = errors.New("not authenticated session")
+var (
+	ErrNoUserSession           = errors.New("no user in session")
+	ErrNotAuthenticatedSession = errors.New("not authenticated session")
+	ErrNoCsrfTokenInSession    = errors.New("no csrf token in session")
+)
 var store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_SECRET")))
 
 func StartSession(w http.ResponseWriter, r *http.Request) error {
@@ -28,6 +32,7 @@ func StartSession(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return fmt.Errorf("start session by reding session: %w", err)
 	}
+	session.ID = uuid.New().String()
 	session.Values["authenticated"] = true
 	session.Values["userUuid"] = userUuid.String()
 	if err = session.Save(r, w); err != nil {
@@ -36,27 +41,10 @@ func StartSession(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func HasActiveSession(r *http.Request) (bool, error) {
-	session, err := store.Get(r, "session.id")
-	if err != nil {
-		return false, fmt.Errorf("start session by reding session: %w", err)
-	}
-
-	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
-		return false, nil
-	}
-
-	return true, nil
-}
-
 func GetPrincipalFromSession(r *http.Request) (*Principal, error) {
-	session, err := store.Get(r, "session.id")
+	session, err := getSession(r)
 	if err != nil {
-		return nil, fmt.Errorf("start session by reding session: %w", err)
-	}
-
-	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
-		return nil, ErrNotAuthenticatedSession
+		return nil, fmt.Errorf("reading session: %w", err)
 	}
 
 	userId, ok := session.Values["userUuid"].(string)
@@ -67,4 +55,16 @@ func GetPrincipalFromSession(r *http.Request) (*Principal, error) {
 	return &Principal{
 		UUID: userId,
 	}, nil
+}
+
+func getSession(r *http.Request) (*sessions.Session, error) {
+	session, err := store.Get(r, "session.id")
+	if err != nil {
+		return nil, fmt.Errorf("start session by reding session: %w", err)
+	}
+
+	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+		return nil, ErrNotAuthenticatedSession
+	}
+	return session, nil
 }

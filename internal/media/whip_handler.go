@@ -55,7 +55,7 @@ func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 			httpError(w, "error build response", http.StatusInternalServerError, err)
 			return
 		}
-
+		auth.SetNewCsrfToken(w, user.UUID)
 		w.Header().Set("etag", fmt.Sprintf("%x", hash))
 		w.Header().Set("Content-Length", strconv.Itoa(contentLen))
 		w.Header().Set("Location", "resource/"+resourceId)

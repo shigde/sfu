@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/sfu"
 	"github.com/spf13/viper"
@@ -39,16 +40,16 @@ func ParseConfig(file string) (*sfu.Config, error) {
 		return nil, fmt.Errorf("store.dataSource should not be empty")
 	}
 
-	if len(config.AuthConfig.JWT.Key) < 1 {
-		return nil, fmt.Errorf("auth.jwt.key should not be empty")
-	}
-
 	if len(config.LogConfig.Logfile) == 0 {
 		return nil, fmt.Errorf("log.logfile should not be empty")
 	}
 
 	if len(config.MetricConfig.Prometheus.Endpoint) == 0 {
 		return nil, fmt.Errorf("metric.prometheus.endpoint should not be empty")
+	}
+
+	if err := auth.ValidateSecurityConfig(config.SecurityConfig); err != nil {
+		return nil, err
 	}
 
 	if err := rtp.ValidateRtpConfig(config.RtpConfig); err != nil {

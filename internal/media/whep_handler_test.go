@@ -18,7 +18,7 @@ import (
 func testWhepReqSetup(t *testing.T) (*mux.Router, string) {
 	t.Helper()
 	jwt := &auth.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}
-	config := &auth.AuthConfig{JWT: jwt}
+	config := &auth.SecurityConfig{JWT: jwt, TrustedOrigins: []string{"*"}}
 
 	// Setup space
 	lobbyManager := newTestLobbyManager()
@@ -33,14 +33,17 @@ func testWhepReqSetup(t *testing.T) (*mux.Router, string) {
 	return router, streamId
 }
 
-func runWhipRequest(t *testing.T, router *mux.Router, streamId string) *http.Cookie {
+func runWhipRequest(t *testing.T, router *mux.Router, streamId string) (*http.Cookie, string) {
+	t.Helper()
 	offer := []byte(testOffer)
 	body := bytes.NewBuffer(offer)
 
 	req := newSDPContentRequest("POST", fmt.Sprintf("/space/%s/stream/%s/whip", spaceId, streamId), body, len(offer))
+	req.Header.Set("gorilla.csrf.Token", "mach-was")
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
-	return rr.Result().Cookies()[0]
+	csrfToken := rr.Header().Get("X-Csrf-Token")
+	return rr.Result().Cookies()[0], csrfToken
 }
 
 func TestWhepOfferReq(t *testing.T) {
@@ -57,10 +60,11 @@ func TestWhepOfferReq(t *testing.T) {
 
 	t.Run("Request to start and listen WHEP", func(t *testing.T) {
 		router, streamId := testWhepReqSetup(t)
-		sessionCookie := runWhipRequest(t, router, streamId)
+		sessionCookie, csrfToken := runWhipRequest(t, router, streamId)
 
 		startReq := newSDPContentRequest("POST", fmt.Sprintf("/space/%s/stream/%s/whep", spaceId, streamId), nil, 0)
 		startReq.AddCookie(sessionCookie)
+		startReq.Header.Set("X-Csrf-Token", csrfToken)
 		startRr := httptest.NewRecorder()
 		router.ServeHTTP(startRr, startReq)
 
@@ -74,6 +78,7 @@ func TestWhepOfferReq(t *testing.T) {
 
 		listenReq := newSDPContentRequest("PATCH", fmt.Sprintf("/space/%s/stream/%s/whep", spaceId, streamId), body, len(answer))
 		listenReq.AddCookie(sessionCookie)
+		listenReq.Header.Set("X-Csrf-Token", startRr.Header().Get("X-Csrf-Token"))
 		listenRr := httptest.NewRecorder()
 		router.ServeHTTP(listenRr, listenReq)
 

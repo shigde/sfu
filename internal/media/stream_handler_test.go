@@ -20,7 +20,7 @@ import (
 func testStreamsReqSetup(t *testing.T) (string, *mux.Router, *stream.LiveStreamRepository) {
 	t.Helper()
 	jwt := &auth.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}
-	config := &auth.AuthConfig{JWT: jwt}
+	config := &auth.SecurityConfig{JWT: jwt, TrustedOrigins: []string{"*"}}
 	// Setup space
 	lobbyManager := newTestLobbyManager()
 	store := newTestStore()

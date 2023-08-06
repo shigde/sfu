@@ -40,7 +40,7 @@ func NewServer(config *Config) (*Server, error) {
 	}
 
 	// api endpoints
-	router := media.NewRouter(config.AuthConfig, spaceManager)
+	router := media.NewRouter(config.SecurityConfig, spaceManager)
 
 	// monitoring
 	if config.MetricConfig.Prometheus.Enable {

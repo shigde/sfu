@@ -3,16 +3,20 @@ package media
 import (
 	"context"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/stream"
 )
 
 func NewRouter(
-	config *auth.AuthConfig,
+	config *auth.SecurityConfig,
 	spaceManager spaceGetCreator,
 ) *mux.Router {
 	router := mux.NewRouter()
+	cors := handlers.CORS(handlers.AllowedOrigins(config.TrustedOrigins))
+	router.Use(cors)
+
 	// Space
 	router.HandleFunc("/space/{space}/streams", auth.HttpMiddleware(config, getStreamList(spaceManager))).Methods("GET")
 	router.HandleFunc("/space/{space}/stream", auth.HttpMiddleware(config, createStream(spaceManager))).Methods("POST")
@@ -21,8 +25,8 @@ func NewRouter(
 	router.HandleFunc("/space/{space}/stream/{id}", auth.HttpMiddleware(config, deleteStream(spaceManager))).Methods("DELETE")
 	// Lobby
 	router.HandleFunc("/space/{space}/stream/{id}/whip", auth.HttpMiddleware(config, whip(spaceManager))).Methods("POST")
-	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.HttpMiddleware(config, whepOffer(spaceManager))).Methods("POST")
-	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.HttpMiddleware(config, whepAnswer(spaceManager))).Methods("PATCH")
+	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.CsrfMiddleware(whepOffer(spaceManager))).Methods("POST")
+	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.CsrfMiddleware(whepAnswer(spaceManager))).Methods("PATCH")
 	return router
 }
 

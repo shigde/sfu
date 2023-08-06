@@ -19,7 +19,7 @@ import (
 func testWhipReqSetup(t *testing.T) (*mux.Router, string) {
 	t.Helper()
 	jwt := &auth.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}
-	config := &auth.AuthConfig{JWT: jwt}
+	config := &auth.SecurityConfig{JWT: jwt, TrustedOrigins: []string{"*"}}
 
 	// Setup space
 	lobbyManager := newTestLobbyManager()

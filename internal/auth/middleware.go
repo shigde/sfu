@@ -14,7 +14,7 @@ var log = slog.Default()
 
 const principalContextKey = contextKey("principal")
 
-func HttpMiddleware(ac *AuthConfig, f http.HandlerFunc) http.HandlerFunc {
+func HttpMiddleware(ac *SecurityConfig, f http.HandlerFunc) http.HandlerFunc {
 	slog.Debug("activated authentication http middleware")
 	return func(w http.ResponseWriter, r *http.Request) {
 		slog.Debug("getting new client request")
