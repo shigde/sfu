@@ -41,7 +41,16 @@ func CsrfMiddleware(f http.HandlerFunc) http.HandlerFunc {
 func SetNewCsrfToken(w http.ResponseWriter, user string) {
 	token := newCsrfToken()
 	csrf.setToken(user, token, expiration)
-	w.Header().Set(csrfTokenHEADER, token)
+
+	// set cookie for storing token
+	cookie := http.Cookie{}
+	cookie.Name = "csrf"
+	cookie.Value = token
+	cookie.Expires = time.Now().Add(365 * 24 * time.Hour)
+	cookie.Secure = false
+	cookie.HttpOnly = true
+	cookie.Path = "/"
+	http.SetCookie(w, &cookie)
 }
 
 func newCsrfToken() string {

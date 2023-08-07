@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strconv"
 	"testing"
 
@@ -39,11 +40,11 @@ func runWhipRequest(t *testing.T, router *mux.Router, streamId string) (*http.Co
 	body := bytes.NewBuffer(offer)
 
 	req := newSDPContentRequest("POST", fmt.Sprintf("/space/%s/stream/%s/whip", spaceId, streamId), body, len(offer))
-	req.Header.Set("gorilla.csrf.Token", "mach-was")
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
-	csrfToken := rr.Header().Get("X-Csrf-Token")
-	return rr.Result().Cookies()[0], csrfToken
+	session := rr.Result().Cookies()[0]
+	csrfToken := getCsrfToken(t, rr.Header())
+	return session, csrfToken
 }
 
 func TestWhepOfferReq(t *testing.T) {
@@ -78,7 +79,7 @@ func TestWhepOfferReq(t *testing.T) {
 
 		listenReq := newSDPContentRequest("PATCH", fmt.Sprintf("/space/%s/stream/%s/whep", spaceId, streamId), body, len(answer))
 		listenReq.AddCookie(sessionCookie)
-		listenReq.Header.Set("X-Csrf-Token", startRr.Header().Get("X-Csrf-Token"))
+		listenReq.Header.Set("X-Csrf-Token", getCsrfToken(t, startRr.Header()))
 		listenRr := httptest.NewRecorder()
 		router.ServeHTTP(listenRr, listenReq)
 
@@ -86,4 +87,17 @@ func TestWhepOfferReq(t *testing.T) {
 		assert.Equal(t, "application/sdp", listenRr.Header().Get("Content-Type"))
 		assert.Equal(t, "0", listenRr.Header().Get("Content-Length"))
 	})
+}
+
+func getCsrfToken(t *testing.T, headers http.Header) string {
+	t.Helper()
+	cookieStrings := headers.Values("Set-Cookie")
+	rx, _ := regexp.Compile("csrf=([a-zA-Z]+);")
+	token := ""
+	for _, cString := range cookieStrings {
+		if rx.MatchString(cString) {
+			token = rx.FindStringSubmatch(cString)[1]
+		}
+	}
+	return token
 }
