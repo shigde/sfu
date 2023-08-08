@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/auth"
 )
 
@@ -23,7 +24,7 @@ func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 			return
 		}
 
-		offer, err := getSdpPayload(w, r)
+		offer, err := getSdpPayload(w, r, webrtc.SDPTypeOffer)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return

@@ -2,6 +2,7 @@ package rtp
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/pion/interceptor"
@@ -140,6 +141,8 @@ func (e *Engine) NewSenderConn(sendingTracks []*webrtc.TrackLocalStaticRTP) (*Co
 		}
 	})
 
+	creatDC(peerConnection)
+
 	offer, err := peerConnection.CreateOffer(nil)
 	if err != nil {
 		return nil, err
@@ -157,4 +160,33 @@ func (e *Engine) NewSenderConn(sendingTracks []*webrtc.TrackLocalStaticRTP) (*Co
 		AddTrackChan:   sender.addTrackChan,
 		gatherComplete: gatherComplete,
 	}, nil
+}
+
+func creatDC(pc *webrtc.PeerConnection) {
+	ordered := false
+	maxRetransmits := uint16(0)
+
+	options := &webrtc.DataChannelInit{
+		Ordered:        &ordered,
+		MaxRetransmits: &maxRetransmits,
+	}
+
+	// Create a datachannel with label 'data'
+	dc, _ := pc.CreateDataChannel("data", options)
+
+	var msgID = 0
+	buf := make([]byte, 1000)
+	// Register channel opening handling
+	dc.OnOpen(func() {
+		log.Printf("OnOpen: %s-%d. Random messages will now be sent to any connected DataChannels every second\n", dc.Label(), dc.ID())
+
+		for range time.NewTicker(1000 * time.Millisecond).C {
+			log.Printf("Sending (%d) msg with len %d \n", msgID, len(buf))
+			msgID++
+
+			_ = dc.Send(buf)
+
+		}
+	})
+
 }

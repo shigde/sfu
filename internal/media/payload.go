@@ -26,7 +26,7 @@ func getJsonPayload(w http.ResponseWriter, r *http.Request) (*json.Decoder, erro
 	return dec, nil
 }
 
-func getSdpPayload(w http.ResponseWriter, r *http.Request) (*webrtc.SessionDescription, error) {
+func getSdpPayload(w http.ResponseWriter, r *http.Request, sdpType webrtc.SDPType) (*webrtc.SessionDescription, error) {
 	contentType := r.Header.Get("Content-Type")
 	if contentType != "application/sdp" {
 		return nil, invalidPayload
@@ -40,18 +40,6 @@ func getSdpPayload(w http.ResponseWriter, r *http.Request) (*webrtc.SessionDescr
 
 	return &webrtc.SessionDescription{
 		SDP:  bodyString,
-		Type: webrtc.SDPTypeOffer,
+		Type: sdpType,
 	}, nil
-}
-
-type Offer struct {
-	SId string                    `json:"sId"`
-	Sdp webrtc.SessionDescription `json:"offer"`
-	UID string
-}
-
-type Answer struct {
-	SId       string                    `json:"sId"`
-	Sdp       webrtc.SessionDescription `json:"offer"`
-	SessionId string                    `json:"spaceId"`
 }

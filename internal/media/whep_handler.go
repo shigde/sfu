@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/stream"
 )
@@ -92,7 +93,7 @@ func whepAnswer(spaceManager spaceGetCreator) http.HandlerFunc {
 			return
 		}
 
-		answer, err := getSdpPayload(w, r)
+		answer, err := getSdpPayload(w, r, webrtc.SDPTypeAnswer)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
