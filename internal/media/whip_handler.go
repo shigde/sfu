@@ -12,6 +12,7 @@ import (
 func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/sdp")
+
 		if err := auth.StartSession(w, r); err != nil {
 			httpError(w, "error", http.StatusInternalServerError, err)
 		}
@@ -39,6 +40,7 @@ func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 			httpError(w, "error user", http.StatusBadRequest, err)
 			return
 		}
+		auth.SetNewRequestToken(w, user.UUID)
 
 		answer, resourceId, err := space.EnterLobby(r.Context(), offer, liveStream, userId)
 		if err != nil {
@@ -50,14 +52,13 @@ func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 		hash := md5.Sum(response)
 
 		w.WriteHeader(http.StatusCreated)
+		w.Header().Set("etag", fmt.Sprintf("%x", hash))
+		w.Header().Set("Location", "resource/"+resourceId)
 		contentLen, err := w.Write(response)
 		if err != nil {
 			httpError(w, "error build response", http.StatusInternalServerError, err)
 			return
 		}
-		auth.SetNewRequestToken(w, user.UUID)
-		w.Header().Set("etag", fmt.Sprintf("%x", hash))
 		w.Header().Set("Content-Length", strconv.Itoa(contentLen))
-		w.Header().Set("Location", "resource/"+resourceId)
 	}
 }

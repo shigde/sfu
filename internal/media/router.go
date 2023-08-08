@@ -3,7 +3,6 @@ package media
 import (
 	"context"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/rtp"
@@ -16,8 +15,11 @@ func NewRouter(
 	spaceManager spaceGetCreator,
 ) *mux.Router {
 	router := mux.NewRouter()
-	cors := handlers.CORS(handlers.AllowedOrigins(securityConfig.TrustedOrigins))
-	router.Use(cors)
+	//cors := handlers.CORS(
+	//	handlers.AllowedOrigins(securityConfig.TrustedOrigins),
+	//	handlers.AllowedHeaders([]string{"X-Req-Token"}),
+	//)
+	//router.Use(cors)
 
 	// Space
 	router.HandleFunc("/space/{space}/streams", auth.HttpMiddleware(securityConfig, getStreamList(spaceManager))).Methods("GET")
