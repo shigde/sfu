@@ -11,15 +11,12 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
-	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/stream"
 	"github.com/stretchr/testify/assert"
 )
 
 func testWhipReqSetup(t *testing.T) (*mux.Router, string) {
 	t.Helper()
-	jwt := &auth.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}
-	config := &auth.SecurityConfig{JWT: jwt, TrustedOrigins: []string{"*"}}
 
 	// Setup space
 	lobbyManager := newTestLobbyManager()
@@ -30,7 +27,7 @@ func testWhipReqSetup(t *testing.T) (*mux.Router, string) {
 	// Setup Stream
 	s := &stream.LiveStream{}
 	streamId, _ := space.LiveStreamRepo.Add(context.Background(), s)
-	router := NewRouter(config, manager)
+	router := NewRouter(securityConfig, rtpConfig, manager)
 	return router, streamId
 }
 

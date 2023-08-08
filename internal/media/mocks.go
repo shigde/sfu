@@ -5,15 +5,26 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
+	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/rtp"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
-const bearer = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyLCJ1dWlkIjoiYTY0MzY1ZGItMTc0ZC00ZDExLThjYjEtZWIyYTM2MzlmZmU2In0._xbasA_1ljeszeWdqYqp96EWvJIbCnYOTOFxKgcd7vM"
+const (
+	bearer              = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyLCJ1dWlkIjoiYTY0MzY1ZGItMTc0ZC00ZDExLThjYjEtZWIyYTM2MzlmZmU2In0._xbasA_1ljeszeWdqYqp96EWvJIbCnYOTOFxKgcd7vM"
+	spaceId             = "abc123"
+	resourceID          = "152cca71-7156-455b-8b30-a90a4bf8f772"
+	rtpSessionId        = "dac0039e-947a-4d22-8207-4e81a5cdcf19"
+	reqTokenHeaderName  = "X-Req-Token"
+	csrfTokenHeaderName = "X-Csrf-Token"
+)
 
-const spaceId = "abc123"
-const resourceID = "152cca71-7156-455b-8b30-a90a4bf8f772"
-const rtpSessionId = "dac0039e-947a-4d22-8207-4e81a5cdcf19"
+var (
+	securityConfig = &auth.SecurityConfig{JWT: jwt, TrustedOrigins: []string{"*"}}
+	rtpConfig      = &rtp.RtpConfig{ICEServer: []rtp.ICEServer{{Urls: []string{"stun:stun.l.google.com:19302"}}}}
+	jwt            = &auth.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}
+)
 
 type testStore struct {
 	db *gorm.DB

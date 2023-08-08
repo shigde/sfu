@@ -6,20 +6,16 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"regexp"
 	"strconv"
 	"testing"
 
 	"github.com/gorilla/mux"
-	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/stream"
 	"github.com/stretchr/testify/assert"
 )
 
 func testWhepReqSetup(t *testing.T) (*mux.Router, string) {
 	t.Helper()
-	jwt := &auth.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}
-	config := &auth.SecurityConfig{JWT: jwt, TrustedOrigins: []string{"*"}}
 
 	// Setup space
 	lobbyManager := newTestLobbyManager()
@@ -30,12 +26,13 @@ func testWhepReqSetup(t *testing.T) (*mux.Router, string) {
 	// Setup Stream
 	s := &stream.LiveStream{}
 	streamId, _ := space.LiveStreamRepo.Add(context.Background(), s)
-	router := NewRouter(config, manager)
+	router := NewRouter(securityConfig, rtpConfig, manager)
 	return router, streamId
 }
 
 func runWhipRequest(t *testing.T, router *mux.Router, streamId string) (*http.Cookie, string) {
 	t.Helper()
+
 	offer := []byte(testOffer)
 	body := bytes.NewBuffer(offer)
 
@@ -43,7 +40,7 @@ func runWhipRequest(t *testing.T, router *mux.Router, streamId string) (*http.Co
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 	session := rr.Result().Cookies()[0]
-	csrfToken := getCsrfToken(t, rr.Header())
+	csrfToken := rr.Header().Get(reqTokenHeaderName)
 	return session, csrfToken
 }
 
@@ -61,11 +58,11 @@ func TestWhepOfferReq(t *testing.T) {
 
 	t.Run("Request to start and listen WHEP", func(t *testing.T) {
 		router, streamId := testWhepReqSetup(t)
-		sessionCookie, csrfToken := runWhipRequest(t, router, streamId)
+		sessionCookie, reqToken := runWhipRequest(t, router, streamId)
 
 		startReq := newSDPContentRequest("POST", fmt.Sprintf("/space/%s/stream/%s/whep", spaceId, streamId), nil, 0)
 		startReq.AddCookie(sessionCookie)
-		startReq.Header.Set("X-Csrf-Token", csrfToken)
+		startReq.Header.Set(reqTokenHeaderName, reqToken)
 		startRr := httptest.NewRecorder()
 		router.ServeHTTP(startRr, startReq)
 
@@ -76,10 +73,11 @@ func TestWhepOfferReq(t *testing.T) {
 
 		answer := []byte(testAnswer)
 		body := bytes.NewBuffer(answer)
+		reqToken = startRr.Header().Get(reqTokenHeaderName)
 
 		listenReq := newSDPContentRequest("PATCH", fmt.Sprintf("/space/%s/stream/%s/whep", spaceId, streamId), body, len(answer))
 		listenReq.AddCookie(sessionCookie)
-		listenReq.Header.Set("X-Csrf-Token", getCsrfToken(t, startRr.Header()))
+		listenReq.Header.Set(reqTokenHeaderName, reqToken)
 		listenRr := httptest.NewRecorder()
 		router.ServeHTTP(listenRr, listenReq)
 
@@ -87,17 +85,4 @@ func TestWhepOfferReq(t *testing.T) {
 		assert.Equal(t, "application/sdp", listenRr.Header().Get("Content-Type"))
 		assert.Equal(t, "0", listenRr.Header().Get("Content-Length"))
 	})
-}
-
-func getCsrfToken(t *testing.T, headers http.Header) string {
-	t.Helper()
-	cookieStrings := headers.Values("Set-Cookie")
-	rx, _ := regexp.Compile("csrf=([a-zA-Z]+);")
-	token := ""
-	for _, cString := range cookieStrings {
-		if rx.MatchString(cString) {
-			token = rx.FindStringSubmatch(cString)[1]
-		}
-	}
-	return token
 }

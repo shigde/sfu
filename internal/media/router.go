@@ -6,27 +6,30 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/stream"
 )
 
 func NewRouter(
-	config *auth.SecurityConfig,
+	securityConfig *auth.SecurityConfig,
+	rtpConfig *rtp.RtpConfig,
 	spaceManager spaceGetCreator,
 ) *mux.Router {
 	router := mux.NewRouter()
-	cors := handlers.CORS(handlers.AllowedOrigins(config.TrustedOrigins))
+	cors := handlers.CORS(handlers.AllowedOrigins(securityConfig.TrustedOrigins))
 	router.Use(cors)
 
 	// Space
-	router.HandleFunc("/space/{space}/streams", auth.HttpMiddleware(config, getStreamList(spaceManager))).Methods("GET")
-	router.HandleFunc("/space/{space}/stream", auth.HttpMiddleware(config, createStream(spaceManager))).Methods("POST")
-	router.HandleFunc("/space/{space}/stream/{id}", auth.HttpMiddleware(config, getStream(spaceManager))).Methods("GET")
-	router.HandleFunc("/space/{space}/stream", auth.HttpMiddleware(config, updateStream(spaceManager))).Methods("PUT")
-	router.HandleFunc("/space/{space}/stream/{id}", auth.HttpMiddleware(config, deleteStream(spaceManager))).Methods("DELETE")
+	router.HandleFunc("/space/{space}/streams", auth.HttpMiddleware(securityConfig, getStreamList(spaceManager))).Methods("GET")
+	router.HandleFunc("/space/{space}/stream", auth.HttpMiddleware(securityConfig, createStream(spaceManager))).Methods("POST")
+	router.HandleFunc("/space/{space}/stream/{id}", auth.HttpMiddleware(securityConfig, getStream(spaceManager))).Methods("GET")
+	router.HandleFunc("/space/{space}/stream", auth.HttpMiddleware(securityConfig, updateStream(spaceManager))).Methods("PUT")
+	router.HandleFunc("/space/{space}/stream/{id}", auth.HttpMiddleware(securityConfig, deleteStream(spaceManager))).Methods("DELETE")
 	// Lobby
-	router.HandleFunc("/space/{space}/stream/{id}/whip", auth.HttpMiddleware(config, whip(spaceManager))).Methods("POST")
-	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.CsrfMiddleware(whepOffer(spaceManager))).Methods("POST")
-	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.CsrfMiddleware(whepAnswer(spaceManager))).Methods("PATCH")
+	router.HandleFunc("/space/setting", auth.Csrf(auth.HttpMiddleware(securityConfig, getSettings(rtpConfig)))).Methods("GET")
+	router.HandleFunc("/space/{space}/stream/{id}/whip", auth.HttpMiddleware(securityConfig, whip(spaceManager))).Methods("POST")
+	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.TokenMiddleware(whepOffer(spaceManager))).Methods("POST")
+	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.TokenMiddleware(whepAnswer(spaceManager))).Methods("PATCH")
 	return router
 }
 
