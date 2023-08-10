@@ -9,8 +9,8 @@ type MockConnectionOps struct {
 	GatherComplete chan struct{}
 }
 
-func NewMockConnection(ops MockConnectionOps) *Connection {
-	conn := &Connection{}
+func NewMockConnection(ops MockConnectionOps) *Endpoint {
+	conn := &Endpoint{}
 	if ops.Answer != nil {
 		conn.peerConnection = &mockPeerConnector{SDP: ops.Answer}
 	}

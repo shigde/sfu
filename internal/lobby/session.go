@@ -107,19 +107,19 @@ func (s *session) handleSessionReq(req *sessionRequest) {
 }
 
 func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
-	_, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleOfferReq")
+	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleOfferReq")
 	defer span.End()
 
 	if s.receiver != nil {
 		return nil, errReceiverInSessionAlreadyExists
 	}
 
-	conn, err := s.rtpEngine.NewReceiverConn(*req.reqSDP, s.ownTrackChan)
+	conn, err := s.rtpEngine.NewReceiverEndpoint(ctx, *req.reqSDP, s.ownTrackChan)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
 	s.receiver = conn
-	answer, err := s.receiver.GetLocalDescription(req.ctx)
+	answer, err := s.receiver.GetLocalDescription(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp answerReq: %w", err)
 	}
@@ -140,7 +140,7 @@ func (s *session) handleAnswerReq(req *sessionRequest) (*webrtc.SessionDescripti
 }
 
 func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
-	_, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleStartReq")
+	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleStartReq")
 	defer span.End()
 
 	if s.sender != nil {
@@ -152,14 +152,14 @@ func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescriptio
 		trackList = s.hub.getAllTracksFromSessions()
 	}
 
-	conn, err := s.rtpEngine.NewSenderConn(trackList)
+	conn, err := s.rtpEngine.NewSenderEndpoint(ctx, trackList)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
 
 	s.sender = conn
 
-	offer, err := s.sender.GetLocalDescription(req.ctx)
+	offer, err := s.sender.GetLocalDescription(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp answerReq: %w", err)
 	}

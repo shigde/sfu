@@ -1,14 +1,18 @@
 package rtp
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/pion/interceptor"
 	"github.com/pion/interceptor/pkg/intervalpli"
 	"github.com/pion/webrtc/v3"
+	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
 )
+
+const tracerName = "github.com/shigde/sfu/internal/engine"
 
 type Engine struct {
 	config webrtc.Configuration
@@ -51,7 +55,10 @@ func NewEngine(rtpConfig *RtpConfig) (*Engine, error) {
 	}, nil
 }
 
-func (e *Engine) NewReceiverConn(offer webrtc.SessionDescription, onLocalTrack chan<- *webrtc.TrackLocalStaticRTP) (*Connection, error) {
+func (e *Engine) NewReceiverEndpoint(ctx context.Context, offer webrtc.SessionDescription, onLocalTrack chan<- *webrtc.TrackLocalStaticRTP) (*Endpoint, error) {
+	_, span := otel.Tracer(tracerName).Start(ctx, "engine:receiver-endpoint")
+	defer span.End()
+
 	peerConnection, err := e.api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
@@ -108,14 +115,17 @@ func (e *Engine) NewReceiverConn(offer webrtc.SessionDescription, onLocalTrack c
 		return nil, err
 	}
 
-	return &Connection{
+	return &Endpoint{
 		peerConnection: peerConnection,
 		receiver:       receiver,
 		gatherComplete: gatherComplete,
 	}, nil
 }
 
-func (e *Engine) NewSenderConn(sendingTracks []*webrtc.TrackLocalStaticRTP) (*Connection, error) {
+func (e *Engine) NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.TrackLocalStaticRTP) (*Endpoint, error) {
+	_, span := otel.Tracer(tracerName).Start(ctx, "engine:sender-endpoint")
+	defer span.End()
+
 	peerConnection, err := e.api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create sender peer connection: %w ", err)
@@ -153,7 +163,7 @@ func (e *Engine) NewSenderConn(sendingTracks []*webrtc.TrackLocalStaticRTP) (*Co
 		return nil, err
 	}
 
-	return &Connection{
+	return &Endpoint{
 		peerConnection: peerConnection,
 		sender:         sender,
 		AddTrackChan:   sender.addTrackChan,

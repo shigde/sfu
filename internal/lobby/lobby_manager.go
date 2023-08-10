@@ -19,8 +19,8 @@ type LobbyManager struct {
 }
 
 type rtpEngine interface {
-	NewReceiverConn(offer webrtc.SessionDescription, trackChan chan<- *webrtc.TrackLocalStaticRTP) (*rtp.Connection, error)
-	NewSenderConn(sendingTracks []*webrtc.TrackLocalStaticRTP) (*rtp.Connection, error)
+	NewReceiverEndpoint(ctx context.Context, offer webrtc.SessionDescription, trackChan chan<- *webrtc.TrackLocalStaticRTP) (*rtp.Endpoint, error)
+	NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.TrackLocalStaticRTP) (*rtp.Endpoint, error)
 }
 
 func NewLobbyManager(e rtpEngine) *LobbyManager {

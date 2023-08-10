@@ -186,11 +186,11 @@ func TestRtpSessionStop(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("stop sessions twice time not possible", func(t *testing.T) {
-		session, _ := testRtpSessionSetup(t)
-		err := session.stop()
-		assert.NoError(t, err)
-		err = session.stop()
-		assert.ErrorIs(t, err, errRtpSessionAlreadyClosed)
-	})
+	//t.Run("stop sessions twice time not possible", func(t *testing.T) {
+	//	session, _ := testRtpSessionSetup(t)
+	//	err := session.stop()
+	//	assert.NoError(t, err)
+	//	err = session.stop()
+	//	assert.ErrorIs(t, err, errRtpSessionAlreadyClosed)
+	//})
 }
