@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
+	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
 )
 
@@ -106,6 +107,9 @@ func (s *session) handleSessionReq(req *sessionRequest) {
 }
 
 func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
+	_, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleOfferReq")
+	defer span.End()
+
 	if s.receiver != nil {
 		return nil, errReceiverInSessionAlreadyExists
 	}
@@ -123,6 +127,9 @@ func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescriptio
 }
 
 func (s *session) handleAnswerReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
+	_, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleAnswerReq")
+	defer span.End()
+
 	if s.sender == nil {
 		return nil, errNoSenderInSession
 	}
@@ -133,6 +140,9 @@ func (s *session) handleAnswerReq(req *sessionRequest) (*webrtc.SessionDescripti
 }
 
 func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
+	_, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleStartReq")
+	defer span.End()
+
 	if s.sender != nil {
 		return nil, errSenderInSessionAlreadyExists
 	}

@@ -10,6 +10,8 @@ import (
 	"github.com/shigde/sfu/internal/rtp"
 )
 
+const tracerName = "github.com/shigde/sfu/internal/lobby"
+
 var errLobbyRequestTimeout = errors.New("lobby request timeout error")
 
 type LobbyManager struct {

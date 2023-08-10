@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
 )
 
@@ -80,6 +81,10 @@ func (l *lobby) runRequest(req *lobbyRequest) {
 
 func (l *lobby) handleJoin(joinReq *lobbyRequest) {
 	slog.Info("lobby.lobby: handle join", "id", l.Id, "user", joinReq.user)
+	ctx, span := otel.Tracer(tracerName).Start(joinReq.ctx, "lobby:handleJoin")
+	joinReq.ctx = ctx
+	defer span.End()
+
 	data, _ := joinReq.data.(*joinData)
 	session, ok := l.sessions.FindByUserId(joinReq.user)
 	if !ok {
@@ -110,6 +115,10 @@ func (l *lobby) handleJoin(joinReq *lobbyRequest) {
 
 func (l *lobby) handleStartListen(req *lobbyRequest) {
 	slog.Info("lobby.lobby: handle start listen", "id", l.Id, "user", req.user)
+	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "lobby:handleStartListen")
+	req.ctx = ctx
+	defer span.End()
+
 	data, _ := req.data.(*startListenData)
 
 	session, ok := l.sessions.FindByUserId(req.user)
@@ -140,6 +149,10 @@ func (l *lobby) handleStartListen(req *lobbyRequest) {
 
 func (l *lobby) handleListen(req *lobbyRequest) {
 	slog.Info("lobby.lobby: handle listen", "id", l.Id, "user", req.user)
+	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "lobby:handleListen")
+	req.ctx = ctx
+	defer span.End()
+
 	data, _ := req.data.(*listenData)
 	session, ok := l.sessions.FindByUserId(req.user)
 	if !ok {
