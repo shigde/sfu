@@ -13,12 +13,15 @@ import (
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/storage"
 	"github.com/shigde/sfu/internal/stream"
+	"github.com/shigde/sfu/internal/telemetry"
+	"go.opentelemetry.io/otel/sdk/trace"
 	"golang.org/x/exp/slog"
 )
 
 type Server struct {
 	server *http.Server
 	config *Config
+	tp     *trace.TracerProvider
 }
 
 func NewServer(config *Config) (*Server, error) {
@@ -52,10 +55,16 @@ func NewServer(config *Config) (*Server, error) {
 		router.Path(m.Endpoint).Handler(promhttp.Handler())
 	}
 
+	tp, err := telemetry.NewTracerProvider()
+	if err != nil {
+		return nil, fmt.Errorf("starting telemetry tracer provider: %w", err)
+	}
+
 	// start server
 	return &Server{
 		server: &http.Server{Addr: ":8080", Handler: router},
 		config: config,
+		tp:     tp,
 	}, nil
 }
 
@@ -68,6 +77,10 @@ func (s *Server) Serve() error {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
+	if err := s.tp.Shutdown(ctx); err != nil {
+		return fmt.Errorf("shutting down tracer provider: %w", err)
+	}
+
 	if err := s.server.Shutdown(ctx); err != nil {
 		return fmt.Errorf("shuting down http server: %w", err)
 	}

@@ -9,6 +9,8 @@ import (
 	"github.com/shigde/sfu/internal/stream"
 )
 
+const tracerName = "github.com/shigde/sfu/internal/media"
+
 func NewRouter(
 	securityConfig *auth.SecurityConfig,
 	rtpConfig *rtp.RtpConfig,
