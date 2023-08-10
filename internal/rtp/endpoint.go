@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/pion/webrtc/v3"
+	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
 )
 
@@ -20,6 +21,8 @@ type Endpoint struct {
 func (c *Endpoint) GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error) {
 	// block until ice gathering is complete before return local sdp
 	// all ice candidates should be part of the answer
+	_, span := otel.Tracer(tracerName).Start(ctx, "endpoint:GetLocalDescription")
+	defer span.End()
 	select {
 	case <-c.gatherComplete:
 		return c.peerConnection.LocalDescription(), nil
