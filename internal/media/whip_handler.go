@@ -15,7 +15,7 @@ import (
 
 func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "post-whip")
+		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "whip-create")
 		//ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer(tracerName).Start(ctx, "post-whip")
 		defer span.End()
 
