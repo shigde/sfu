@@ -1,12 +1,14 @@
 package rtp
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
+	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
 )
 
@@ -24,6 +26,8 @@ func newLocalStream(remoteId string) *localStream {
 }
 
 func (s *localStream) writeAudioRtp(track *webrtc.TrackRemote, dispatch chan<- *webrtc.TrackLocalStaticRTP) error {
+	_, span := otel.Tracer(tracerName).Start(context.Background(), "localStream:writeAudioRtp")
+	defer span.End()
 	if err := s.addAudioTrack(track); err != nil {
 		return fmt.Errorf("adding audio remote track (%s:%s) to local stream: %w", track.ID(), track.StreamID(), err)
 	}
@@ -47,6 +51,8 @@ func (s *localStream) addAudioTrack(remoteTrack *webrtc.TrackRemote) error {
 }
 
 func (s *localStream) writeVideoRtp(track *webrtc.TrackRemote, dispatch chan<- *webrtc.TrackLocalStaticRTP) error {
+	_, span := otel.Tracer(tracerName).Start(context.Background(), "localStream:writeVideoRtp")
+	defer span.End()
 	if err := s.addVideoTrack(track); err != nil {
 		return fmt.Errorf("adding video remote track (%s:%s) to local stream: %w", track.ID(), track.StreamID(), err)
 	}
