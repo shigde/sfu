@@ -13,30 +13,30 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.16.0"
 	"google.golang.org/grpc"
 )
 
-func NewTracerProvider() (*trace.TracerProvider, error) {
-	exporter, err := newTempoExporter(context.Background())
+func NewTracerProvider(ctx context.Context) (*trace.TracerProvider, error) {
+	exporter, err := newTempoExporter(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("creating OTLP trace exporter: %w", err)
 	}
 
-	r, err := resource.Merge(
-		resource.Default(),
-		resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceName("shig-sfu"),
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			// the service name used to display traces in backends
+			semconv.ServiceNameKey.String("shig-sfu"),
 		),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating OTLP resource: %w", err)
 	}
+
 	tp := trace.NewTracerProvider(
+		trace.WithResource(res),
 		trace.WithSampler(trace.AlwaysSample()),
 		trace.WithBatcher(exporter),
-		trace.WithResource(r),
 	)
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
@@ -44,8 +44,12 @@ func NewTracerProvider() (*trace.TracerProvider, error) {
 }
 
 func newHttpExporter(ctx context.Context) (*otlptrace.Exporter, error) {
-	client := otlptracehttp.NewClient()
+	client := otlptracehttp.NewClient(
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithEndpoint("localhost:3200"),
+	)
 	exporter, err := otlptrace.New(ctx, client)
+
 	if err != nil {
 		return nil, fmt.Errorf("creating HTTP trace exporter: %w", err)
 	}
@@ -71,7 +75,7 @@ func newStdoutExporter() (*stdouttrace.Exporter, error) {
 func newTempoExporter(ctx context.Context) (*otlptrace.Exporter, error) {
 	client := otlptracegrpc.NewClient(
 		otlptracegrpc.WithInsecure(),
-		otlptracegrpc.WithEndpoint("localhost:9095"),
+		otlptracegrpc.WithEndpoint("localhost:4317"),
 		otlptracegrpc.WithDialOption(grpc.WithBlock()),
 	)
 	exporter, err := otlptrace.New(ctx, client)

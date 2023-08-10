@@ -2,7 +2,6 @@ package rtp
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/pion/interceptor"
@@ -178,10 +177,10 @@ func creatDC(pc *webrtc.PeerConnection) {
 	buf := make([]byte, 1000)
 	// Register channel opening handling
 	dc.OnOpen(func() {
-		log.Printf("OnOpen: %s-%d. Random messages will now be sent to any connected DataChannels every second\n", dc.Label(), dc.ID())
+		// log.Printf("OnOpen: %s-%d. Random messages will now be sent to any connected DataChannels every second\n", dc.Label(), dc.ID())
 
 		for range time.NewTicker(1000 * time.Millisecond).C {
-			log.Printf("Sending (%d) msg with len %d \n", msgID, len(buf))
+			// log.Printf("Sending (%d) msg with len %d \n", msgID, len(buf))
 			msgID++
 
 			_ = dc.Send(buf)

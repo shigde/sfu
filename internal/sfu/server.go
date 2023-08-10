@@ -19,12 +19,13 @@ import (
 )
 
 type Server struct {
+	ctx    context.Context
 	server *http.Server
 	config *Config
 	tp     *trace.TracerProvider
 }
 
-func NewServer(config *Config) (*Server, error) {
+func NewServer(ctx context.Context, config *Config) (*Server, error) {
 	// RTP lobby
 	engine, err := rtp.NewEngine(config.RtpConfig)
 	if err != nil {
@@ -55,13 +56,14 @@ func NewServer(config *Config) (*Server, error) {
 		router.Path(m.Endpoint).Handler(promhttp.Handler())
 	}
 
-	tp, err := telemetry.NewTracerProvider()
+	tp, err := telemetry.NewTracerProvider(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("starting telemetry tracer provider: %w", err)
 	}
 
 	// start server
 	return &Server{
+		ctx:    ctx,
 		server: &http.Server{Addr: ":8080", Handler: router},
 		config: config,
 		tp:     tp,

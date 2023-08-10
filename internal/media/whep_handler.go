@@ -67,6 +67,7 @@ func whepOffer(spaceManager spaceGetCreator) http.HandlerFunc {
 		w.WriteHeader(http.StatusCreated)
 		contentLen, err := w.Write(response)
 		if err != nil {
+			telemetry.RecordError(span, err)
 			httpError(w, "error build response", http.StatusInternalServerError, err)
 			return
 		}

@@ -14,6 +14,7 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
 	conf, err := config.ParseConfig("config.toml")
 	if err != nil {
 		panic(fmt.Errorf("parsing config: %w", err))
@@ -28,7 +29,7 @@ func main() {
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	server, err := sfu.NewServer(conf)
+	server, err := sfu.NewServer(ctx, conf)
 	if err != nil {
 		panic(fmt.Errorf("creating new server: %w", err))
 	}
