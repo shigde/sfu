@@ -2,7 +2,6 @@ package rtp
 
 import (
 	"errors"
-	"sync"
 
 	"github.com/pion/webrtc/v3"
 	"golang.org/x/exp/slog"
@@ -11,22 +10,20 @@ import (
 var errSenderAlreadyClosed = errors.New("sender already closed")
 
 type sender struct {
-	sync.RWMutex
-	streams      map[string]*localStream
-	conn         *webrtc.PeerConnection
-	addTrackChan <-chan *webrtc.TrackLocalStaticRTP
-	quit         chan struct{}
+	conn            *webrtc.PeerConnection
+	addTrackChan    <-chan *webrtc.TrackLocalStaticRTP
+	removeTrackChan <-chan *webrtc.TrackLocalStaticRTP
+	quit            chan struct{}
 }
 
 func newSender(conn *webrtc.PeerConnection) *sender {
-	streams := make(map[string]*localStream)
-	addTrack := make(<-chan *webrtc.TrackLocalStaticRTP)
+	addTrack := make(<-chan *webrtc.TrackLocalStaticRTP, 1)
+	removeTrack := make(<-chan *webrtc.TrackLocalStaticRTP, 1)
 	quit := make(chan struct{})
 	sender := &sender{
-		sync.RWMutex{},
-		streams,
 		conn,
 		addTrack,
+		removeTrack,
 		quit,
 	}
 
@@ -41,6 +38,8 @@ func (s *sender) run() {
 			return
 		case track := <-s.addTrackChan:
 			s.addTrackToConnection(track)
+		case track := <-s.removeTrackChan:
+			s.removeTrackFromConnection(track)
 		}
 	}
 }
@@ -69,13 +68,17 @@ func (s *sender) addTrackToConnection(track *webrtc.TrackLocalStaticRTP) {
 	}
 }
 
-func (r *sender) getStream(id string) *localStream {
-	r.Unlock()
-	defer r.Unlock()
-	stream, ok := r.streams[id]
-	if !ok {
-		stream = newLocalStream(id)
-		r.streams[id] = stream
+func (s *sender) removeTrackFromConnection(track *webrtc.TrackLocalStaticRTP) {
+	senders := s.conn.GetSenders()
+	for _, sender := range senders {
+		if sender.Track().ID() == track.ID() {
+			if err := s.conn.RemoveTrack(sender); err != nil {
+				slog.Error("rtc.sender: remove track from connection",
+					"stream", track.StreamID(),
+					"track", track.ID(),
+					"err", err,
+				)
+			}
+		}
 	}
-	return stream
 }

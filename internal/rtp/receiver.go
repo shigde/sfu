@@ -12,20 +12,15 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-type dispatcher interface {
-	dispatchAddTrack(track *webrtc.TrackLocalStaticRTP)
-	dispatchRemoveTrack(track *webrtc.TrackLocalStaticRTP)
-}
-
 type receiver struct {
 	sync.RWMutex
 	id         uuid.UUID
 	streams    map[string]*localStream
-	dispatcher dispatcher
+	dispatcher TrackDispatcher
 	quit       chan struct{}
 }
 
-func newReceiver(d dispatcher) *receiver {
+func newReceiver(d TrackDispatcher) *receiver {
 	streams := make(map[string]*localStream)
 	quit := make(chan struct{})
 	return &receiver{sync.RWMutex{}, uuid.New(), streams, d, quit}
@@ -46,7 +41,7 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 			// stop handler goroutine because error
 			return
 		}
-		r.dispatcher.dispatchAddTrack(stream.audioTrack)
+		r.dispatcher.DispatchAddTrack(stream.audioTrack)
 	}
 
 	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "video") {
@@ -57,7 +52,7 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 			// stop handler goroutine because error
 			return
 		}
-		r.dispatcher.dispatchAddTrack(stream.videoTrack)
+		r.dispatcher.DispatchAddTrack(stream.videoTrack)
 	}
 }
 

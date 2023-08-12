@@ -105,7 +105,7 @@ func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescriptio
 		return nil, errReceiverInSessionAlreadyExists
 	}
 
-	conn, err := s.rtpEngine.NewReceiverEndpoint(ctx, *req.reqSDP, s.ownTrackChan)
+	conn, err := s.rtpEngine.NewReceiverEndpoint(ctx, *req.reqSDP, s.hub)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
@@ -158,30 +158,6 @@ func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescriptio
 	return offer, nil
 }
 
-func (s *session) handleForeignTrack(track *hubTrackData) {
-	if s.sender != nil {
-		s.sender.AddTrack(track.track)
-	}
-}
-
-func (s *session) handleOwnTrack(track *webrtc.TrackLocalStaticRTP) {
-	data := &hubTrackData{
-		sessionId: s.Id,
-		streamId:  track.StreamID(),
-		track:     track,
-	}
-	go func() {
-		s.hub.dispatchChan <- data
-	}()
-}
-
-func (s *session) getTracks() []*webrtc.TrackLocalStaticRTP {
-	if s.receiver == nil {
-		return nil
-	}
-	return s.receiver.GetTracks()
-}
-
 func (s *session) stop() error {
 	slog.Info("lobby.sessions: stop", "id", s.Id, "user", s.user)
 	select {
@@ -197,20 +173,24 @@ func (s *session) stop() error {
 }
 
 func (s *session) addTrack(track *webrtc.TrackLocalStaticRTP) {
-
+	if s.sender != nil {
+		s.sender.AddTrack(track)
+	}
 }
 
 func (s *session) removeTrack(track *webrtc.TrackLocalStaticRTP) {
-
+	if s.sender != nil {
+		s.sender.RemoveTrack(track)
+	}
 }
 
 type receiver interface {
-	GetTracks() []*webrtc.TrackLocalStaticRTP
 	GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error)
 }
 
 type sender interface {
-	AddTrack(track *webrtc.TrackLocalStaticRTP) bool
+	AddTrack(track *webrtc.TrackLocalStaticRTP)
+	RemoveTrack(track *webrtc.TrackLocalStaticRTP)
 	GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error)
 	SetAnswer(sdp *webrtc.SessionDescription) error
 }

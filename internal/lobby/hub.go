@@ -55,7 +55,7 @@ func (h *hub) run() {
 	}
 }
 
-func (h *hub) dispatchAddTrack(track *webrtc.TrackLocalStaticRTP) {
+func (h *hub) DispatchAddTrack(track *webrtc.TrackLocalStaticRTP) {
 	select {
 	case h.reqChan <- &hubRequest{kind: addTrack, track: track}:
 	case <-h.quit:
@@ -65,7 +65,7 @@ func (h *hub) dispatchAddTrack(track *webrtc.TrackLocalStaticRTP) {
 	}
 }
 
-func (h *hub) dispatchRemoveTrack(track *webrtc.TrackLocalStaticRTP) {
+func (h *hub) DispatchRemoveTrack(track *webrtc.TrackLocalStaticRTP) {
 	select {
 	case h.reqChan <- &hubRequest{kind: removeTrack, track: track}:
 	case <-h.quit:
@@ -111,19 +111,6 @@ func (h *hub) stop() error {
 		<-h.quit
 	}
 	return nil
-}
-
-func (h *hub) getAllTracksFromSessions() []*webrtc.TrackLocalStaticRTP {
-	slog.Debug("lobby.hub: getAllTracksFromSessions")
-	var tracks []*webrtc.TrackLocalStaticRTP
-	h.sessionRepo.Iter(func(s *session) {
-		if sessionTracks := s.getTracks(); sessionTracks != nil {
-			for _, s := range sessionTracks {
-				tracks = append(tracks, s)
-			}
-		}
-	})
-	return tracks
 }
 
 func (h *hub) onAddTrack(event *hubRequest) {

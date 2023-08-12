@@ -47,22 +47,20 @@ func (c *Endpoint) hasTrack(track *webrtc.TrackLocalStaticRTP) bool {
 	return false
 }
 
-func (c *Endpoint) AddTrack(track *webrtc.TrackLocalStaticRTP) bool {
+func (c *Endpoint) AddTrack(track *webrtc.TrackLocalStaticRTP) {
 	slog.Debug("rtp.connection: Add Track")
 	if has := c.hasTrack(track); !has {
 		_, err := c.peerConnection.AddTrack(track)
 		slog.Debug("rtp.connection: Add Tracks to connection", "err", err)
 	}
-	return false
 }
 
-func (c *Endpoint) RemoveTrack(track *webrtc.TrackLocalStaticRTP) bool {
+func (c *Endpoint) RemoveTrack(track *webrtc.TrackLocalStaticRTP) {
 	slog.Debug("rtp.connection: Add Track")
-	if has := c.hasTrack(track); Removehas {
+	if has := c.hasTrack(track); !has {
 		_, err := c.peerConnection.AddTrack(track)
 		slog.Debug("rtp.connection: Add Tracks to connection", "err", err)
 	}
-	return false
 }
 
 type peerConnection interface {
