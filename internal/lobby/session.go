@@ -22,32 +22,27 @@ var (
 var sessionReqTimeout = 3 * time.Second
 
 type session struct {
-	Id               uuid.UUID
-	user             uuid.UUID
-	rtpEngine        rtpEngine
-	hub              *hub
-	receiver         receiver
-	sender           sender
-	sessionReqChan   chan *sessionRequest
-	foreignTrackChan chan *hubTrackData
-	ownTrackChan     chan *webrtc.TrackLocalStaticRTP
-	quit             chan struct{}
+	Id        uuid.UUID
+	user      uuid.UUID
+	rtpEngine rtpEngine
+	hub       *hub
+	receiver  receiver
+	sender    sender
+	reqChan   chan *sessionRequest
+	quit      chan struct{}
 }
 
 func newSession(user uuid.UUID, hub *hub, engine rtpEngine) *session {
 	quit := make(chan struct{})
-	offerChan := make(chan *sessionRequest)
-	ownTrackChan := make(chan *webrtc.TrackLocalStaticRTP)
+	requests := make(chan *sessionRequest)
 
 	session := &session{
-		Id:               uuid.New(),
-		user:             user,
-		rtpEngine:        engine,
-		hub:              hub,
-		sessionReqChan:   offerChan,
-		ownTrackChan:     ownTrackChan,
-		foreignTrackChan: hub.dispatchChan,
-		quit:             quit,
+		Id:        uuid.New(),
+		user:      user,
+		rtpEngine: engine,
+		hub:       hub,
+		reqChan:   requests,
+		quit:      quit,
 	}
 
 	go session.run()
@@ -58,12 +53,8 @@ func (s *session) run() {
 	slog.Info("lobby.sessions: run", "id", s.Id, "user", s.user)
 	for {
 		select {
-		case req := <-s.sessionReqChan:
+		case req := <-s.reqChan:
 			s.handleSessionReq(req)
-		case track := <-s.ownTrackChan:
-			s.handleOwnTrack(track)
-		case track := <-s.foreignTrackChan:
-			s.handleForeignTrack(track)
 		case <-s.quit:
 			// @TODO Take care that's every stream is closed!
 			slog.Info("lobby.sessions: stop running", "id", s.Id, "user", s.user)
@@ -75,7 +66,7 @@ func (s *session) run() {
 func (s *session) runRequest(req *sessionRequest) {
 	slog.Debug("lobby.sessions: runRequest", "id", s.Id, "user", s.user)
 	select {
-	case s.sessionReqChan <- req:
+	case s.reqChan <- req:
 		slog.Debug("lobby.sessions: runRequest - return response", "id", s.Id, "user", s.user)
 	case <-s.quit:
 		req.err <- errRtpSessionAlreadyClosed
@@ -147,9 +138,9 @@ func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescriptio
 		return nil, errSenderInSessionAlreadyExists
 	}
 
-	var trackList []*webrtc.TrackLocalStaticRTP
-	if req.sessionReqType == answerReq {
-		trackList = s.hub.getAllTracksFromSessions()
+	trackList, err := s.hub.getTrackList()
+	if err != nil {
+		return nil, fmt.Errorf("reading track list by creating rtp connection: %w", err)
 	}
 
 	conn, err := s.rtpEngine.NewSenderEndpoint(ctx, trackList)
@@ -203,6 +194,14 @@ func (s *session) stop() error {
 		<-s.quit
 	}
 	return nil
+}
+
+func (s *session) addTrack(track *webrtc.TrackLocalStaticRTP) {
+
+}
+
+func (s *session) removeTrack(track *webrtc.TrackLocalStaticRTP) {
+
 }
 
 type receiver interface {

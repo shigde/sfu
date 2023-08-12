@@ -1,51 +1,64 @@
 package rtp
 
 import (
+	"context"
 	"strings"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
+	"github.com/shigde/sfu/internal/telemetry"
+	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
 )
 
-type receiver struct {
-	sync.RWMutex
-	// senders []*sender
-	streams  map[string]*localStream
-	newTrack chan<- *webrtc.TrackLocalStaticRTP
+type dispatcher interface {
+	dispatchAddTrack(track *webrtc.TrackLocalStaticRTP)
+	dispatchRemoveTrack(track *webrtc.TrackLocalStaticRTP)
 }
 
-func newReceiver(newTrack chan<- *webrtc.TrackLocalStaticRTP) *receiver {
+type receiver struct {
+	sync.RWMutex
+	id         uuid.UUID
+	streams    map[string]*localStream
+	dispatcher dispatcher
+	quit       chan struct{}
+}
+
+func newReceiver(d dispatcher) *receiver {
 	streams := make(map[string]*localStream)
-	return &receiver{sync.RWMutex{}, streams, newTrack}
+	quit := make(chan struct{})
+	return &receiver{sync.RWMutex{}, uuid.New(), streams, d, quit}
 }
 
 func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.RTPReceiver) {
+	slog.Debug("rtp.receiver: on track")
+	ctx, span := otel.Tracer(tracerName).Start(context.Background(), "rtp.receiver: on track")
+	defer span.End()
+
+	stream := r.getStream(remoteTrack.StreamID())
+
 	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "audio") {
-		if err := r.onAudioTrack(remoteTrack, rtpReceiver); err != nil {
+		slog.Debug("rtp.receiver: on audio track")
+		if err := stream.writeAudioRtp(ctx, remoteTrack, rtpReceiver); err != nil {
 			slog.Error("rtp.receiver: on audio track", "err", err)
-			// stop handler goroutine
+			telemetry.RecordError(span, err)
+			// stop handler goroutine because error
 			return
 		}
+		r.dispatcher.dispatchAddTrack(stream.audioTrack)
 	}
 
 	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "video") {
-		if err := r.onVideoTrack(remoteTrack, rtpReceiver); err != nil {
+		slog.Debug("rtp.receiver: on video track")
+		if err := stream.writeVideoRtp(ctx, remoteTrack, rtpReceiver); err != nil {
 			slog.Error("rtp.receiver: on video track", "err", err)
-			// stop handler goroutine
+			telemetry.RecordError(span, err)
+			// stop handler goroutine because error
 			return
 		}
+		r.dispatcher.dispatchAddTrack(stream.videoTrack)
 	}
-}
-
-func (r *receiver) onAudioTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.RTPReceiver) error {
-	stream := r.getStream(remoteTrack.StreamID())
-	return stream.writeAudioRtp(remoteTrack, r.newTrack)
-}
-
-func (r *receiver) onVideoTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.RTPReceiver) error {
-	stream := r.getStream(remoteTrack.StreamID())
-	return stream.writeVideoRtp(remoteTrack, r.newTrack)
 }
 
 func (r *receiver) getStream(id string) *localStream {
@@ -53,27 +66,19 @@ func (r *receiver) getStream(id string) *localStream {
 	defer r.Unlock()
 	stream, ok := r.streams[id]
 	if !ok {
-		stream = newLocalStream(id)
+		stream = newLocalStream(id, r.dispatcher, r.quit)
 		r.streams[id] = stream
 	}
 	return stream
 }
-func (r *receiver) getAllTracks() []*webrtc.TrackLocalStaticRTP {
-	r.Lock()
-	defer r.Unlock()
-	var tracks []*webrtc.TrackLocalStaticRTP
-
-	for _, stream := range r.streams {
-		if stream.videoTrack != nil {
-			tracks = append(tracks, stream.videoTrack)
-		}
-		if stream.audioTrack != nil {
-			tracks = append(tracks, stream.audioTrack)
-		}
-	}
-
-	return tracks
-}
 
 func (r *receiver) stop() {
+	slog.Info("receiver: stop", "id", r.id)
+	select {
+	case <-r.quit:
+		slog.Warn("receiver: the receiver was already closed", "id", r.id)
+	default:
+		close(r.quit)
+		slog.Info("receiver: stopped was triggered", "id", r.id)
+	}
 }

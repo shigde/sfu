@@ -55,7 +55,7 @@ func NewEngine(rtpConfig *RtpConfig) (*Engine, error) {
 	}, nil
 }
 
-func (e *Engine) NewReceiverEndpoint(ctx context.Context, offer webrtc.SessionDescription, onLocalTrack chan<- *webrtc.TrackLocalStaticRTP) (*Endpoint, error) {
+func (e *Engine) NewReceiverEndpoint(ctx context.Context, offer webrtc.SessionDescription, dispatcher dispatcher) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create receiver-endpoint")
 	defer span.End()
 
@@ -64,7 +64,7 @@ func (e *Engine) NewReceiverEndpoint(ctx context.Context, offer webrtc.SessionDe
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
 	}
 
-	receiver := newReceiver(onLocalTrack)
+	receiver := newReceiver(dispatcher)
 	peerConnection.OnTrack(receiver.onTrack)
 
 	peerConnection.OnICEConnectionStateChange(func(i webrtc.ICEConnectionState) {

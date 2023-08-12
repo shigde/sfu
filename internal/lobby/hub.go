@@ -4,33 +4,31 @@ import (
 	"errors"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"golang.org/x/exp/slog"
 )
 
-var errHubAlreadyClosed = errors.New("hub was already closed")
-var hubDispachTimeout = time.Second
-
-type hubTrackData struct {
-	sessionId uuid.UUID
-	streamId  string
-	kind      webrtc.RTPCodecType
-	track     *webrtc.TrackLocalStaticRTP
-}
+var (
+	errHubAlreadyClosed   = errors.New("hub was already closed")
+	errHubDispatchTimeOut = errors.New("hub dispatch timeout")
+	hubDispatchTimeout    = 3 * time.Second
+)
 
 type hub struct {
-	sessionRepo  *sessionRepository
-	dispatchChan chan *hubTrackData
-	quit         chan struct{}
+	sessionRepo *sessionRepository
+	reqChan     chan *hubRequest
+	tracks      map[string]*webrtc.TrackLocalStaticRTP
+	quit        chan struct{}
 }
 
 func newHub(sessionRepo *sessionRepository) *hub {
 	quit := make(chan struct{})
-	dispatchChan := make(chan *hubTrackData)
+	tracks := make(map[string]*webrtc.TrackLocalStaticRTP)
+	requests := make(chan *hubRequest)
 	hub := &hub{
 		sessionRepo,
-		dispatchChan,
+		requests,
+		tracks,
 		quit,
 	}
 	go hub.run()
@@ -41,13 +39,64 @@ func (h *hub) run() {
 	slog.Info("lobby.hub: run")
 	for {
 		select {
-		case trackData := <-h.dispatchChan:
-			h.dispatchToSessions(trackData)
+		case trackEvent := <-h.reqChan:
+			switch trackEvent.kind {
+			case addTrack:
+				h.onAddTrack(trackEvent)
+			case removeTrack:
+				h.onRemoveTrack(trackEvent)
+			case getTrackList:
+				h.onGetTrackList(trackEvent)
+			}
 		case <-h.quit:
 			slog.Info("lobby.hub: closed hub")
 			return
 		}
 	}
+}
+
+func (h *hub) dispatchAddTrack(track *webrtc.TrackLocalStaticRTP) {
+	select {
+	case h.reqChan <- &hubRequest{kind: addTrack, track: track}:
+	case <-h.quit:
+		slog.Warn("lobby.hub: dispatch add track even on closed hub")
+	case <-time.After(hubDispatchTimeout):
+		slog.Error("lobby.hub: dispatch add track - interrupted because dispatch timeout")
+	}
+}
+
+func (h *hub) dispatchRemoveTrack(track *webrtc.TrackLocalStaticRTP) {
+	select {
+	case h.reqChan <- &hubRequest{kind: removeTrack, track: track}:
+	case <-h.quit:
+		slog.Warn("lobby.hub: dispatch remove track even on closed hub")
+	case <-time.After(hubDispatchTimeout):
+		slog.Error("lobby.hub: dispatch remove track - interrupted because dispatch timeout")
+	}
+}
+
+func (h *hub) getTrackList() ([]*webrtc.TrackLocalStaticRTP, error) {
+	var list []*webrtc.TrackLocalStaticRTP
+	trackListChan := make(chan []*webrtc.TrackLocalStaticRTP)
+	select {
+	case h.reqChan <- &hubRequest{kind: getTrackList, trackListChan: trackListChan}:
+	case <-h.quit:
+		slog.Warn("lobby.hub: get track list on closed hub")
+		return nil, errHubAlreadyClosed
+	case <-time.After(hubDispatchTimeout):
+		slog.Error("lobby.hub: get track list - interrupted because dispatch timeout")
+		return nil, errHubDispatchTimeOut
+	}
+
+	select {
+	case list = <-trackListChan:
+	case <-h.quit:
+		slog.Warn("lobby.hub: get track list on closed hub")
+	case <-time.After(hubDispatchTimeout):
+		slog.Error("lobby.hub: get track list - interrupted because dispatch timeout")
+	}
+
+	return list, nil
 }
 
 func (h *hub) stop() error {
@@ -77,16 +126,33 @@ func (h *hub) getAllTracksFromSessions() []*webrtc.TrackLocalStaticRTP {
 	return tracks
 }
 
-func (h *hub) dispatchToSessions(track *hubTrackData) {
-	slog.Debug("lobby.hub: dispatchToSessions")
+func (h *hub) onAddTrack(event *hubRequest) {
+	h.tracks[event.track.ID()] = event.track
 	h.sessionRepo.Iter(func(s *session) {
-		if s.Id != track.sessionId {
-			select {
-			case <-s.quit:
-			case s.foreignTrackChan <- track:
-			case <-time.After(hubDispachTimeout):
-				slog.Error("lobby.hub: dispatchToSessions - interrupted because dispatch timeout", "sessionId", s.Id, "user", s.user)
-			}
-		}
+		s.addTrack(event.track)
 	})
+}
+
+func (h *hub) onRemoveTrack(event *hubRequest) {
+	if _, ok := h.tracks[event.track.ID()]; ok {
+		delete(h.tracks, event.track.ID())
+	}
+	h.sessionRepo.Iter(func(s *session) {
+		s.removeTrack(event.track)
+	})
+}
+
+func (h *hub) onGetTrackList(event *hubRequest) {
+	list := make([]*webrtc.TrackLocalStaticRTP, len(h.tracks))
+	for _, track := range h.tracks {
+		list = append(list, track)
+	}
+	event.trackListChan <- list
+	select {
+	case event.trackListChan <- list:
+	case <-h.quit:
+		slog.Warn("lobby.hub: onGetTrackList on closed hub")
+	case <-time.After(hubDispatchTimeout):
+		slog.Error("lobby.hub: onGetTrackList - interrupted because dispatch timeout")
+	}
 }
