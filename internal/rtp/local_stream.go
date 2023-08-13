@@ -78,7 +78,7 @@ func (s *localStream) createNewAudioLocalTrack(remoteTrack *webrtc.TrackRemote) 
 	if s.audioTrack != nil {
 		return nil, errors.New("has already audio track")
 	}
-	audio, err := webrtc.NewTrackLocalStaticRTP(remoteTrack.Codec().RTPCodecCapability, "audio", s.id.String())
+	audio, err := webrtc.NewTrackLocalStaticRTP(remoteTrack.Codec().RTPCodecCapability, uuid.NewString(), s.id.String())
 	if err != nil {
 		return nil, fmt.Errorf("creating new local audio track for local stream %s: %w", s.id, err)
 	}
@@ -89,7 +89,7 @@ func (s *localStream) createNewVideoLocalTrack(remoteTrack *webrtc.TrackRemote) 
 	if s.videoTrack != nil {
 		return nil, errors.New("has already video track")
 	}
-	video, err := webrtc.NewTrackLocalStaticRTP(remoteTrack.Codec().RTPCodecCapability, "video", s.id.String())
+	video, err := webrtc.NewTrackLocalStaticRTP(remoteTrack.Codec().RTPCodecCapability, uuid.NewString(), s.id.String())
 	if err != nil {
 		return nil, fmt.Errorf("creating new local video track for local stream %s: %w", s.id, err)
 	}

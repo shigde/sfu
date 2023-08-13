@@ -106,7 +106,6 @@ func (e *Engine) NewReceiverEndpoint(ctx context.Context, offer webrtc.SessionDe
 
 	gatherComplete := webrtc.GatheringCompletePromise(peerConnection)
 	answer, err := peerConnection.CreateAnswer(nil)
-
 	if err != nil {
 		return nil, err
 	}
@@ -132,10 +131,8 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.
 	}
 	if sendingTracks != nil {
 		for _, track := range sendingTracks {
-			if track != nil {
-				if _, err = peerConnection.AddTrack(track); err != nil {
-					return nil, fmt.Errorf("adding track to connection: %w ", err)
-				}
+			if _, err = peerConnection.AddTrack(track); err != nil {
+				return nil, fmt.Errorf("adding track to connection: %w ", err)
 			}
 		}
 	}
@@ -154,6 +151,7 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.
 	})
 
 	peerConnection.OnNegotiationNeeded(func() {
+		slog.Debug("rtp.engine: sender OnNegotiationNeeded triggered")
 		_, err := peerConnection.CreateOffer(nil)
 		if err != nil {
 			slog.Error("rtp.engine: sender OnNegotiationNeeded", "err", err)

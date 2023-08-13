@@ -130,7 +130,7 @@ func (h *hub) onRemoveTrack(event *hubRequest) {
 }
 
 func (h *hub) onGetTrackList(event *hubRequest) {
-	list := make([]*webrtc.TrackLocalStaticRTP, len(h.tracks))
+	list := make([]*webrtc.TrackLocalStaticRTP, 0, len(h.tracks))
 	for _, track := range h.tracks {
 		list = append(list, track)
 	}
