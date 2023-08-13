@@ -150,6 +150,14 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.
 		}
 	})
 
+	peerConnection.OnNegotiationNeeded(func() {
+		_, err := peerConnection.CreateOffer(nil)
+		if err != nil {
+			slog.Error("rtp.engine: sender OnNegotiationNeeded", "err", err)
+		}
+		//send offer
+	})
+
 	creatDC(peerConnection)
 
 	offer, err := peerConnection.CreateOffer(nil)
