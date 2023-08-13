@@ -132,8 +132,11 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.
 	}
 	if sendingTracks != nil {
 		for _, track := range sendingTracks {
-			_, err = peerConnection.AddTrack(track)
-			return nil, fmt.Errorf("adding track to connection: %w ", err)
+			if track != nil {
+				if _, err = peerConnection.AddTrack(track); err != nil {
+					return nil, fmt.Errorf("adding track to connection: %w ", err)
+				}
+			}
 		}
 	}
 	sender := newSender(peerConnection)

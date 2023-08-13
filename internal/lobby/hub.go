@@ -134,7 +134,7 @@ func (h *hub) onGetTrackList(event *hubRequest) {
 	for _, track := range h.tracks {
 		list = append(list, track)
 	}
-	event.trackListChan <- list
+
 	select {
 	case event.trackListChan <- list:
 	case <-h.quit:
