@@ -3,8 +3,17 @@ package lobby
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/rtp"
+)
+
+var (
+	mockedAnswer                = &webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: "--a--"}
+	mockedOffer                 = &webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: "--o--"}
+	onQuitSessionInternallyStub = func(ctx context.Context, user uuid.UUID) bool {
+		return true
+	}
 )
 
 type rtpEngineMock struct {
@@ -38,6 +47,3 @@ func mockConnection(answer *webrtc.SessionDescription) *rtp.Endpoint {
 	close(ops.GatherComplete)
 	return rtp.NewMockConnection(ops)
 }
-
-var mockedAnswer = &webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: "--a--"}
-var mockedOffer = &webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: "--o--"}

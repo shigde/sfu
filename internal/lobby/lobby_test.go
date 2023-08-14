@@ -17,7 +17,7 @@ func testStreamLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 	engine := mockRtpEngineForOffer(mockedAnswer)
 	lobby := newLobby(uuid.New(), engine)
 	user := uuid.New()
-	session := newSession(user, lobby.hub, engine)
+	session := newSession(user, lobby.hub, engine, lobby.onSessionStoppedInternally)
 	session.sender = mockConnection(mockedAnswer)
 	lobby.sessions.Add(session)
 	return lobby, user

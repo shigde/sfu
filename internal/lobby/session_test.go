@@ -15,7 +15,7 @@ func testRtpSessionSetup(t *testing.T) (*session, *rtpEngineMock) {
 	logging.SetupDebugLogger()
 	engine := mockRtpEngineForOffer(mockedAnswer)
 
-	session := newSession(uuid.New(), newHub(newSessionRepository()), engine)
+	session := newSession(uuid.New(), newHub(newSessionRepository()), engine, onQuitSessionInternallyStub)
 	return session, engine
 }
 
@@ -34,7 +34,7 @@ func TestRtpSessionOffer(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errRtpSessionAlreadyClosed)
+			assert.ErrorIs(t, err, errSessionAlreadyClosed)
 		}
 	})
 
@@ -87,7 +87,7 @@ func TestRtpSessionStartListen(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errRtpSessionAlreadyClosed)
+			assert.ErrorIs(t, err, errSessionAlreadyClosed)
 		}
 	})
 
@@ -140,7 +140,7 @@ func TestRtpSessionListen(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errRtpSessionAlreadyClosed)
+			assert.ErrorIs(t, err, errSessionAlreadyClosed)
 		}
 	})
 
@@ -191,6 +191,6 @@ func TestRtpSessionStop(t *testing.T) {
 	//	err := session.stop()
 	//	assert.NoError(t, err)
 	//	err = session.stop()
-	//	assert.ErrorIs(t, err, errRtpSessionAlreadyClosed)
+	//	assert.ErrorIs(t, err, errSessionAlreadyClosed)
 	//})
 }

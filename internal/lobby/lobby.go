@@ -1,6 +1,7 @@
 package lobby
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -72,7 +73,7 @@ func (l *lobby) runRequest(req *lobbyRequest) {
 	case l.reqChan <- req:
 		slog.Debug("lobby.lobby: runRequest - requested", "id", l.Id)
 	case <-l.quit:
-		req.err <- errRtpSessionAlreadyClosed
+		req.err <- errSessionAlreadyClosed
 		slog.Debug("lobby.lobby: runRequest - interrupted because lobby closed", "id", l.Id)
 	case <-time.After(lobbyReqTimeout):
 		slog.Error("lobby.lobby: runRequest - interrupted because request timeout", "id", l.Id)
@@ -88,7 +89,7 @@ func (l *lobby) handleJoin(joinReq *lobbyRequest) {
 	data, _ := joinReq.data.(*joinData)
 	session, ok := l.sessions.FindByUserId(joinReq.user)
 	if !ok {
-		session = newSession(joinReq.user, l.hub, l.rtpEngine)
+		session = newSession(joinReq.user, l.hub, l.rtpEngine, l.onSessionStoppedInternally)
 		l.sessions.Add(session)
 	}
 	offerReq := newSessionRequest(joinReq.ctx, data.offer, offerReq)
@@ -123,7 +124,7 @@ func (l *lobby) handleStartListen(req *lobbyRequest) {
 
 	session, ok := l.sessions.FindByUserId(req.user)
 	if !ok {
-		session = newSession(req.user, l.hub, l.rtpEngine)
+		session = newSession(req.user, l.hub, l.rtpEngine, l.onSessionStoppedInternally)
 		l.sessions.Add(session)
 	}
 	startSessionReq := newStartRequest(req.ctx)
@@ -188,24 +189,44 @@ func (l *lobby) handleListen(req *lobbyRequest) {
 
 func (l *lobby) handleLeave(req *lobbyRequest) {
 	slog.Info("lobby.lobby: leave", "id", l.Id, "user", req.user)
+	data, _ := req.data.(*leaveData)
 	if session, ok := l.sessions.FindByUserId(req.user); ok {
 		if err := session.stop(); err != nil {
 			req.err <- fmt.Errorf("stopping rtp session %s for user %s: %w", session.Id, req.user, err)
 		}
-		data, _ := req.data.(*leaveData)
-		data.response <- l.sessions.Delete(session.Id)
+		data.response <- true
 		return
 	}
 	req.err <- fmt.Errorf("no session existing for user %s", req.user)
 }
 
+// This methode triggers handleLeave because session get stopped by internal reason.
+// The internal reason gould be a connection lost or something like this.
+func (l *lobby) onSessionStoppedInternally(ctx context.Context, user uuid.UUID) bool {
+	slog.Info("lobby.lobby: onSessionStoppedInternally", "lobbyId", l.Id, "user", user)
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "lobby:handleListen")
+	defer span.End()
+	request := newLobbyRequest(ctx, user)
+	leaveData := newLeaveData()
+	request.data = leaveData
+	go l.runRequest(request)
+
+	select {
+	case err := <-request.err:
+		slog.Error("lobby.lobby: stopping session because internally reason", "err", err, "lobbyId", l.Id, "userId", user)
+		return false
+	case success := <-leaveData.response:
+		return success
+	}
+}
+
 func (l *lobby) stop() {
-	slog.Info("lobby.lobby: stop", "id", l.Id)
+	slog.Info("lobby.lobby: stop", "lobbyId", l.Id)
 	select {
 	case <-l.quit:
-		slog.Warn("lobby.lobby: the Lobby was already closed", "id", l.Id)
+		slog.Warn("lobby.lobby: the Lobby was already closed", "lobbyId", l.Id)
 	default:
 		close(l.quit)
-		slog.Info("lobby.lobby: stopped was triggered", "id", l.Id)
+		slog.Info("lobby.lobby: stopped was triggered", "lobbyId", l.Id)
 	}
 }

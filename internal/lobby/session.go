@@ -13,7 +13,8 @@ import (
 )
 
 var (
-	errRtpSessionAlreadyClosed        = errors.New("the rtp sessions was already closed")
+	errSessionAlreadyClosed           = errors.New("the sessions was already closed")
+	errSessionCouldNotClosed          = errors.New("the sessions could not closed in right way")
 	errReceiverInSessionAlreadyExists = errors.New("receiver already exists")
 	errSenderInSessionAlreadyExists   = errors.New("sender already exists")
 	errNoSenderInSession              = errors.New("no sender exists")
@@ -22,27 +23,29 @@ var (
 var sessionReqTimeout = 3 * time.Second
 
 type session struct {
-	Id        uuid.UUID
-	user      uuid.UUID
-	rtpEngine rtpEngine
-	hub       *hub
-	receiver  receiver
-	sender    sender
-	reqChan   chan *sessionRequest
-	quit      chan struct{}
+	Id               uuid.UUID
+	user             uuid.UUID
+	rtpEngine        rtpEngine
+	hub              *hub
+	receiver         receiver
+	sender           sender
+	reqChan          chan *sessionRequest
+	quit             chan struct{}
+	onInternallyQuit onInternallyQuit
 }
 
-func newSession(user uuid.UUID, hub *hub, engine rtpEngine) *session {
+func newSession(user uuid.UUID, hub *hub, engine rtpEngine, onQuit onInternallyQuit) *session {
 	quit := make(chan struct{})
 	requests := make(chan *sessionRequest)
 
 	session := &session{
-		Id:        uuid.New(),
-		user:      user,
-		rtpEngine: engine,
-		hub:       hub,
-		reqChan:   requests,
-		quit:      quit,
+		Id:               uuid.New(),
+		user:             user,
+		rtpEngine:        engine,
+		hub:              hub,
+		reqChan:          requests,
+		quit:             quit,
+		onInternallyQuit: onQuit,
 	}
 
 	go session.run()
@@ -69,7 +72,7 @@ func (s *session) runRequest(req *sessionRequest) {
 	case s.reqChan <- req:
 		slog.Debug("lobby.sessions: runRequest - return response", "id", s.Id, "user", s.user)
 	case <-s.quit:
-		req.err <- errRtpSessionAlreadyClosed
+		req.err <- errSessionAlreadyClosed
 		slog.Debug("lobby.sessions: runRequest - interrupted because sessions closed", "id", s.Id, "user", s.user)
 	case <-time.After(sessionReqTimeout):
 		slog.Error("lobby.sessions: runRequest - interrupted because request timeout", "id", s.Id, "user", s.user)
@@ -163,7 +166,7 @@ func (s *session) stop() error {
 	select {
 	case <-s.quit:
 		slog.Error("lobby.sessions: the rtp sessions was already closed", "id", s.Id, "user", s.user)
-		return errRtpSessionAlreadyClosed
+		return errSessionAlreadyClosed
 	default:
 		close(s.quit)
 		slog.Info("lobby.sessions: stopped was triggered", "id", s.Id, "user", s.user)
@@ -194,3 +197,5 @@ type sender interface {
 	GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error)
 	SetAnswer(sdp *webrtc.SessionDescription) error
 }
+
+type onInternallyQuit = func(ctx context.Context, user uuid.UUID) bool

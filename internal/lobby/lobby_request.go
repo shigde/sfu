@@ -64,6 +64,13 @@ func newListenData(answer *webrtc.SessionDescription) *listenData {
 	}
 }
 
+func newLeaveData() *leaveData {
+	resChan := make(chan bool)
+	return &leaveData{
+		response: resChan,
+	}
+}
+
 type joinResponse struct {
 	answer       *webrtc.SessionDescription
 	resource     uuid.UUID
