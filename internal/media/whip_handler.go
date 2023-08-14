@@ -9,6 +9,7 @@ import (
 
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/stream"
 	"github.com/shigde/sfu/internal/telemetry"
 	"go.opentelemetry.io/otel"
 )
@@ -75,5 +76,64 @@ func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 			return
 		}
 		w.Header().Set("Content-Length", strconv.Itoa(contentLen))
+	}
+}
+
+func whipDelete(spaceManager spaceGetCreator) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "whip-delete")
+		defer span.End()
+
+		w.Header().Set("Content-Type", "application/sdp")
+		user, err := auth.GetPrincipalFromSession(r)
+		if err != nil {
+			switch {
+			case errors.Is(err, auth.ErrNotAuthenticatedSession):
+				httpError(w, "no session", http.StatusForbidden, err)
+			case errors.Is(err, auth.ErrNoUserSession):
+				httpError(w, "no user session", http.StatusForbidden, err)
+			default:
+				httpError(w, "internal error", http.StatusInternalServerError, err)
+			}
+			telemetry.RecordError(span, err)
+			return
+		}
+
+		userId, err := user.GetUuid()
+		if err != nil {
+			telemetry.RecordError(span, err)
+			httpError(w, "error user", http.StatusBadRequest, err)
+			return
+		}
+
+		liveStream, space, err := getLiveStream(r, spaceManager)
+		if err != nil {
+			telemetry.RecordError(span, err)
+			handleResourceError(w, err)
+			return
+		}
+
+		left, err := space.LeaveLobby(ctx, liveStream, userId)
+		if err != nil {
+			telemetry.RecordError(span, err)
+			if errors.Is(err, stream.ErrLobbyNotActive) {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			httpError(w, "error", http.StatusInternalServerError, err)
+			return
+		}
+
+		if !left {
+			httpError(w, "error", http.StatusInternalServerError, errors.New("leaving lobby was not possible"))
+			return
+		}
+
+		if err := auth.DeleteSession(w, r); err != nil {
+			telemetry.RecordError(span, err)
+			httpError(w, "error", http.StatusInternalServerError, err)
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 }

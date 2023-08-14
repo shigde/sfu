@@ -31,6 +31,20 @@ func testWhipReqSetup(t *testing.T) (*mux.Router, string) {
 	return router, streamId
 }
 
+func runWhipRequest(t *testing.T, router *mux.Router, streamId string) (*http.Cookie, string) {
+	t.Helper()
+
+	offer := []byte(testOffer)
+	body := bytes.NewBuffer(offer)
+
+	req := newSDPContentRequest("POST", fmt.Sprintf("/space/%s/stream/%s/whip", spaceId, streamId), body, len(offer))
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+	session := rr.Result().Cookies()[0]
+	csrfToken := rr.Header().Get(reqTokenHeaderName)
+	return session, csrfToken
+}
+
 func TestWhipReq(t *testing.T) {
 	router, streamId := testWhipReqSetup(t)
 	resourceRxp := fmt.Sprintf("^resource/%s", resourceID)
@@ -49,6 +63,20 @@ func TestWhipReq(t *testing.T) {
 	assert.Regexp(t, resourceRxp, rr.Header().Get("Location"))
 	assert.Regexp(t, "^session.id=[a-zA-z0-9]+", rr.Header().Get("Set-Cookie"))
 	assert.Equal(t, testAnswer, rr.Body.String())
+}
+
+func TestWhipDeleteReq(t *testing.T) {
+	router, streamId := testWhipReqSetup(t)
+	sessionCookie, reqToken := runWhipRequest(t, router, streamId)
+
+	req := newSDPContentRequest("DELETE", fmt.Sprintf("/space/%s/stream/%s/whip", spaceId, streamId), nil, 0)
+	req.AddCookie(sessionCookie)
+	req.Header.Set(reqTokenHeaderName, reqToken)
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+	// Then: status is 200
+	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 func newSDPContentRequest(method string, url string, body io.Reader, len int) *http.Request {

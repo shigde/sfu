@@ -32,6 +32,7 @@ func NewRouter(
 	// Lobby
 	router.HandleFunc("/space/setting", auth.Csrf(auth.HttpMiddleware(securityConfig, getSettings(rtpConfig)))).Methods("GET")
 	router.HandleFunc("/space/{space}/stream/{id}/whip", auth.HttpMiddleware(securityConfig, whip(spaceManager))).Methods("POST")
+	router.HandleFunc("/space/{space}/stream/{id}/whip", auth.TokenMiddleware(whipDelete(spaceManager))).Methods("DELETE")
 	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.TokenMiddleware(whepOffer(spaceManager))).Methods("POST")
 	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.TokenMiddleware(whepAnswer(spaceManager))).Methods("PATCH")
 	return router

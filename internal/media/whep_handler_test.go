@@ -30,20 +30,6 @@ func testWhepReqSetup(t *testing.T) (*mux.Router, string) {
 	return router, streamId
 }
 
-func runWhipRequest(t *testing.T, router *mux.Router, streamId string) (*http.Cookie, string) {
-	t.Helper()
-
-	offer := []byte(testOffer)
-	body := bytes.NewBuffer(offer)
-
-	req := newSDPContentRequest("POST", fmt.Sprintf("/space/%s/stream/%s/whip", spaceId, streamId), body, len(offer))
-	rr := httptest.NewRecorder()
-	router.ServeHTTP(rr, req)
-	session := rr.Result().Cookies()[0]
-	csrfToken := rr.Header().Get(reqTokenHeaderName)
-	return session, csrfToken
-}
-
 func TestWhepOfferReq(t *testing.T) {
 	t.Run("Request to start WHEP, but have no active web session", func(t *testing.T) {
 		router, streamId := testWhepReqSetup(t)

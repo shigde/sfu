@@ -41,6 +41,20 @@ func StartSession(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+func DeleteSession(w http.ResponseWriter, r *http.Request) error {
+	session, err := getSession(r)
+	if err != nil {
+		return fmt.Errorf("reading session: %w", err)
+	}
+	session.Options.MaxAge = -1
+
+	if err = session.Save(r, w); err != nil {
+		return fmt.Errorf("deleting session: %w", err)
+	}
+
+	return nil
+}
+
 func GetPrincipalFromSession(r *http.Request) (*Principal, error) {
 	session, err := getSession(r)
 	if err != nil {

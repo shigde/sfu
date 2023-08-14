@@ -29,6 +29,8 @@ type lobbyListenAccessor interface {
 		Active       bool
 		RtpSessionId uuid.UUID
 	}, error)
+
+	LeaveLobby(ctx context.Context, liveStreamId uuid.UUID, userId uuid.UUID) (bool, error)
 }
 
 type Space struct {
@@ -77,4 +79,12 @@ func (s *Space) ListenLobby(ctx context.Context, offer *webrtc.SessionDescriptio
 		return false, ErrLobbyNotActive
 	}
 	return resourceData.Active, nil
+}
+
+func (s *Space) LeaveLobby(ctx context.Context, stream *LiveStream, userId uuid.UUID) (bool, error) {
+	left, err := s.lobby.LeaveLobby(ctx, stream.UUID, userId)
+	if err != nil {
+		return false, fmt.Errorf("leave lobby: %w", err)
+	}
+	return left, nil
 }
