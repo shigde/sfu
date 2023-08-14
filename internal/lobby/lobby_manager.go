@@ -133,3 +133,7 @@ func (m *LobbyManager) ListenLobby(ctx context.Context, liveStreamId uuid.UUID, 
 	answerData.Active = false
 	return answerData, nil
 }
+
+func (m *LobbyManager) LeaveLobby(ctx context.Context, liveStreamId uuid.UUID, userId uuid.UUID) (bool, error) {
+	return true, nil
+}
