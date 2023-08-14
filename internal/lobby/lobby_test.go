@@ -140,4 +140,14 @@ func TestStreamLobby(t *testing.T) {
 			t.Fail()
 		}
 	})
+
+	t.Run("stop session internally", func(t *testing.T) {
+		lobby, user := testStreamLobbySetup(t)
+		defer lobby.stop()
+		session, _ := lobby.sessions.FindByUserId(user)
+
+		stopped := lobby.onSessionStoppedInternally(context.Background(), user)
+		assert.True(t, stopped)
+		assert.False(t, lobby.sessions.Contains(session.Id))
+	})
 }

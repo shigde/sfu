@@ -44,7 +44,7 @@ func newLobby(id uuid.UUID, rtpEngine rtpEngine) *lobby {
 }
 
 func (l *lobby) run() {
-	slog.Info("lobby.lobby: run", "id", l.Id)
+	slog.Info("lobby.lobby: run", "lobbyId", l.Id)
 	for {
 		select {
 		case req := <-l.reqChan:
@@ -61,27 +61,27 @@ func (l *lobby) run() {
 				slog.Error("lobby.lobby: not supported request type in Lobby", "type", requestType)
 			}
 		case <-l.quit:
-			slog.Info("lobby.lobby: close Lobby", "id", l.Id)
+			slog.Info("lobby.lobby: close Lobby", "lobbyId", l.Id)
 			return
 		}
 	}
 }
 
 func (l *lobby) runRequest(req *lobbyRequest) {
-	slog.Debug("lobby.lobby: runRequest", "id", l.Id)
+	slog.Debug("lobby.lobby: runRequest", "lobbyId", l.Id, "user", req.user)
 	select {
 	case l.reqChan <- req:
-		slog.Debug("lobby.lobby: runRequest - requested", "id", l.Id)
+		slog.Debug("lobby.lobby: runRequest - request finish", "lobbyId", l.Id, "user", req.user)
 	case <-l.quit:
 		req.err <- errSessionAlreadyClosed
-		slog.Debug("lobby.lobby: runRequest - interrupted because lobby closed", "id", l.Id)
+		slog.Debug("lobby.lobby: runRequest - interrupted because lobby closed", "lobbyId", l.Id, "user", req.user)
 	case <-time.After(lobbyReqTimeout):
-		slog.Error("lobby.lobby: runRequest - interrupted because request timeout", "id", l.Id)
+		slog.Error("lobby.lobby: runRequest - interrupted because request timeout", "lobbyId", l.Id, "user", req.user)
 	}
 }
 
 func (l *lobby) handleJoin(joinReq *lobbyRequest) {
-	slog.Info("lobby.lobby: handle join", "id", l.Id, "user", joinReq.user)
+	slog.Info("lobby.lobby: handle join", "lobbyId", l.Id, "user", joinReq.user)
 	ctx, span := otel.Tracer(tracerName).Start(joinReq.ctx, "lobby:handleJoin")
 	joinReq.ctx = ctx
 	defer span.End()
@@ -95,7 +95,7 @@ func (l *lobby) handleJoin(joinReq *lobbyRequest) {
 	offerReq := newSessionRequest(joinReq.ctx, data.offer, offerReq)
 
 	go func() {
-		slog.Info("lobby.lobby: create offerReq request", "id", l.Id)
+		slog.Info("lobby.lobby: create offerReq request", "lobbyId", l.Id, "user", joinReq.user)
 		session.runRequest(offerReq)
 	}()
 	select {
@@ -115,7 +115,7 @@ func (l *lobby) handleJoin(joinReq *lobbyRequest) {
 }
 
 func (l *lobby) handleStartListen(req *lobbyRequest) {
-	slog.Info("lobby.lobby: handle start listen", "id", l.Id, "user", req.user)
+	slog.Info("lobby.lobby: handle start listen", "lobbyId", l.Id, "user", req.user)
 	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "lobby:handleStartListen")
 	req.ctx = ctx
 	defer span.End()
@@ -130,7 +130,7 @@ func (l *lobby) handleStartListen(req *lobbyRequest) {
 	startSessionReq := newStartRequest(req.ctx)
 
 	go func() {
-		slog.Info("lobby.lobby: create offerReq request", "id", l.Id)
+		slog.Info("lobby.lobby: create offerReq request", "lobbyId", l.Id, "user", req.user)
 		session.runRequest(startSessionReq)
 	}()
 	select {
@@ -149,7 +149,7 @@ func (l *lobby) handleStartListen(req *lobbyRequest) {
 }
 
 func (l *lobby) handleListen(req *lobbyRequest) {
-	slog.Info("lobby.lobby: handle listen", "id", l.Id, "user", req.user)
+	slog.Info("lobby.lobby: handle listen", "lobbyId", l.Id, "user", req.user)
 	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "lobby:handleListen")
 	req.ctx = ctx
 	defer span.End()
@@ -169,7 +169,7 @@ func (l *lobby) handleListen(req *lobbyRequest) {
 
 	answerReq := newSessionRequest(req.ctx, data.answer, answerReq)
 	go func() {
-		slog.Info("lobby.lobby: create offerReq request", "id", l.Id)
+		slog.Info("lobby.lobby: create offerReq request", "lobbyId", l.Id, "user", req.user)
 		session.runRequest(answerReq)
 	}()
 
@@ -188,13 +188,13 @@ func (l *lobby) handleListen(req *lobbyRequest) {
 }
 
 func (l *lobby) handleLeave(req *lobbyRequest) {
-	slog.Info("lobby.lobby: leave", "id", l.Id, "user", req.user)
+	slog.Info("lobby.lobby: handleLeave", "lobbyId", l.Id, "user", req.user)
 	data, _ := req.data.(*leaveData)
 	if session, ok := l.sessions.FindByUserId(req.user); ok {
 		if err := session.stop(); err != nil {
 			req.err <- fmt.Errorf("stopping rtp session %s for user %s: %w", session.Id, req.user, err)
 		}
-		data.response <- true
+		data.response <- l.sessions.Delete(session.Id)
 		return
 	}
 	req.err <- fmt.Errorf("no session existing for user %s", req.user)
