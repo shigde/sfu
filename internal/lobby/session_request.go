@@ -20,6 +20,7 @@ const (
 	startReq sessionReqType = iota + 1
 	offerReq
 	answerReq
+	closeReq
 )
 
 func newSessionRequest(ctx context.Context, sdp *webrtc.SessionDescription, reqType sessionReqType) *sessionRequest {
@@ -34,4 +35,12 @@ func newSessionRequest(ctx context.Context, sdp *webrtc.SessionDescription, reqT
 
 func newStartRequest(ctx context.Context) *sessionRequest {
 	return newSessionRequest(ctx, nil, startReq)
+}
+
+func newCloseRequest(ctx context.Context) *sessionRequest {
+	return &sessionRequest{
+		sessionReqType: closeReq,
+		err:            make(chan error),
+		ctx:            ctx,
+	}
 }

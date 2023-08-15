@@ -11,9 +11,12 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-var errNoSession = errors.New("no session exists")
-var errLobbyStopped = errors.New("error because lobby stopped")
-var lobbyReqTimeout = 3 * time.Second
+var (
+	errNoSession           = errors.New("no session exists")
+	errLobbyStopped        = errors.New("error because lobby stopped")
+	errLobbyRequestTimeout = errors.New("lobby request timeout error")
+	lobbyReqTimeout        = 3 * time.Second
+)
 
 type lobby struct {
 	Id         uuid.UUID
@@ -67,6 +70,21 @@ func (l *lobby) run() {
 	}
 }
 
+// @TODO Refactor this for better understanding
+// Maybe when I use an error chanel as return and fill the pointer of result with result value I could simplify this
+// methode and even close the channels more safety.
+// Even the errors of runRequest will not mixed withe the errors resulting by the request command.
+// ...
+//
+//	func (l *lobby) runRequest(req *lobbyRequest) <-error {
+//	   err := make(chanel error)
+//	   defer close(err)
+//	   ...
+//	   return err
+//	}
+//
+// Open Question: But before I want do this I have to find a way that's make the calling function waiting for the result
+// of the request command.
 func (l *lobby) runRequest(req *lobbyRequest) {
 	slog.Debug("lobby.lobby: runRequest", "lobbyId", l.Id, "user", req.user)
 	select {
@@ -76,6 +94,7 @@ func (l *lobby) runRequest(req *lobbyRequest) {
 		req.err <- errSessionAlreadyClosed
 		slog.Debug("lobby.lobby: runRequest - interrupted because lobby closed", "lobbyId", l.Id, "user", req.user)
 	case <-time.After(lobbyReqTimeout):
+		req.err <- errLobbyRequestTimeout
 		slog.Error("lobby.lobby: runRequest - interrupted because request timeout", "lobbyId", l.Id, "user", req.user)
 	}
 }
@@ -158,7 +177,7 @@ func (l *lobby) handleListen(req *lobbyRequest) {
 	session, ok := l.sessions.FindByUserId(req.user)
 	if !ok {
 		select {
-		case req.err <- errNoSession:
+		case req.err <- fmt.Errorf("no session existing for user %s: %w", req.user, errNoSession):
 		case <-req.ctx.Done():
 			req.err <- errLobbyRequestTimeout
 		case <-l.quit:
@@ -197,7 +216,7 @@ func (l *lobby) handleLeave(req *lobbyRequest) {
 		data.response <- l.sessions.Delete(session.Id)
 		return
 	}
-	req.err <- fmt.Errorf("no session existing for user %s", req.user)
+	req.err <- fmt.Errorf("no session existing for user %s: %w", req.user, errNoSession)
 }
 
 // This methode triggers handleLeave because session get stopped by internal reason.
@@ -209,6 +228,7 @@ func (l *lobby) onSessionStoppedInternally(ctx context.Context, user uuid.UUID) 
 	request := newLobbyRequest(ctx, user)
 	leaveData := newLeaveData()
 	request.data = leaveData
+
 	go l.runRequest(request)
 
 	select {

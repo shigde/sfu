@@ -150,4 +150,21 @@ func TestStreamLobby(t *testing.T) {
 		assert.True(t, stopped)
 		assert.False(t, lobby.sessions.Contains(session.Id))
 	})
+
+	t.Run("leave lobby", func(t *testing.T) {
+		lobby, user := testStreamLobbySetup(t)
+		defer lobby.stop()
+		request := newLobbyRequest(context.Background(), user)
+		leaveData := newLeaveData()
+		request.data = leaveData
+
+		go lobby.runRequest(request)
+
+		select {
+		case success := <-leaveData.response:
+			assert.True(t, success)
+		case <-time.After(time.Second * 3):
+			t.Fail()
+		}
+	})
 }

@@ -18,6 +18,7 @@ var (
 	errReceiverInSessionAlreadyExists = errors.New("receiver already exists")
 	errSenderInSessionAlreadyExists   = errors.New("sender already exists")
 	errNoSenderInSession              = errors.New("no sender exists")
+	errSessionRequestTimeout          = errors.New("session request timeout error")
 )
 
 var sessionReqTimeout = 3 * time.Second
@@ -75,6 +76,7 @@ func (s *session) runRequest(req *sessionRequest) {
 		req.err <- errSessionAlreadyClosed
 		slog.Debug("lobby.sessions: runRequest - interrupted because sessions closed", "id", s.Id, "user", s.user)
 	case <-time.After(sessionReqTimeout):
+		req.err <- errSessionRequestTimeout
 		slog.Error("lobby.sessions: runRequest - interrupted because request timeout", "id", s.Id, "user", s.user)
 	}
 }
@@ -171,6 +173,17 @@ func (s *session) stop() error {
 		close(s.quit)
 		slog.Info("lobby.sessions: stopped was triggered", "id", s.Id, "user", s.user)
 		<-s.quit
+		if s.sender != nil {
+			if err := s.sender.Close(); err != nil {
+				slog.Error("lobby.sessions: closing sender", "id", s.Id, "user", s.user)
+			}
+		}
+
+		if s.receiver != nil {
+			if err := s.receiver.Close(); err != nil {
+				slog.Error("lobby.sessions: closing receiver", "id", s.Id, "user", s.user)
+			}
+		}
 	}
 	return nil
 }
@@ -189,6 +202,7 @@ func (s *session) removeTrack(track *webrtc.TrackLocalStaticRTP) {
 
 type receiver interface {
 	GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error)
+	Close() error
 }
 
 type sender interface {
@@ -196,6 +210,7 @@ type sender interface {
 	RemoveTrack(track *webrtc.TrackLocalStaticRTP)
 	GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error)
 	SetAnswer(sdp *webrtc.SessionDescription) error
+	Close() error
 }
 
 type onInternallyQuit = func(ctx context.Context, user uuid.UUID) bool

@@ -3,6 +3,7 @@ package rtp
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/pion/webrtc/v3"
 	"go.opentelemetry.io/otel"
@@ -63,9 +64,17 @@ func (c *Endpoint) RemoveTrack(track *webrtc.TrackLocalStaticRTP) {
 	}
 }
 
+func (c *Endpoint) Close() error {
+	if err := c.peerConnection.Close(); err != nil {
+		return fmt.Errorf("closing peer connection: %w", err)
+	}
+	return nil
+}
+
 type peerConnection interface {
 	LocalDescription() *webrtc.SessionDescription
 	SetRemoteDescription(desc webrtc.SessionDescription) error
 	GetSenders() (result []*webrtc.RTPSender)
 	AddTrack(track webrtc.TrackLocal) (*webrtc.RTPSender, error)
+	Close() error
 }

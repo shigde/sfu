@@ -105,4 +105,17 @@ func TestLobbyManager(t *testing.T) {
 		_, err := manager.ListenLobby(context.Background(), lobby.Id, uuid.New(), mockedAnswer)
 		assert.ErrorIs(t, err, errNoSession)
 	})
+
+	t.Run("leave a Lobby but no session", func(t *testing.T) {
+		manager, lobby, _ := testLobbyManagerSetup(t)
+		_, err := manager.LeaveLobby(context.Background(), lobby.Id, uuid.New())
+		assert.ErrorIs(t, err, errNoSession)
+	})
+
+	t.Run("Leave a Lobby", func(t *testing.T) {
+		manager, lobby, user := testLobbyManagerSetup(t)
+		success, err := manager.LeaveLobby(context.Background(), lobby.Id, user)
+		assert.NoError(t, err)
+		assert.True(t, success)
+	})
 }

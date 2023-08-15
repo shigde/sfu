@@ -2,7 +2,6 @@ package lobby
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -11,8 +10,6 @@ import (
 )
 
 const tracerName = "github.com/shigde/sfu/internal/lobby"
-
-var errLobbyRequestTimeout = errors.New("lobby request timeout error")
 
 type LobbyManager struct {
 	lobbies *lobbyRepository
@@ -135,5 +132,19 @@ func (m *LobbyManager) ListenLobby(ctx context.Context, liveStreamId uuid.UUID, 
 }
 
 func (m *LobbyManager) LeaveLobby(ctx context.Context, liveStreamId uuid.UUID, userId uuid.UUID) (bool, error) {
-	return true, nil
+	if lobby, hasLobby := m.lobbies.getLobby(liveStreamId); hasLobby {
+		request := newLobbyRequest(ctx, userId)
+		leaveData := newLeaveData()
+		request.data = leaveData
+
+		go lobby.runRequest(request)
+
+		select {
+		case err := <-request.err:
+			return false, err
+		case success := <-leaveData.response:
+			return success, nil
+		}
+	}
+	return false, nil
 }
