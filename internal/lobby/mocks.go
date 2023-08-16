@@ -25,11 +25,11 @@ func newRtpEngineMock() *rtpEngineMock {
 	return &rtpEngineMock{}
 }
 
-func (e *rtpEngineMock) NewReceiverEndpoint(_ context.Context, _ webrtc.SessionDescription, _ rtp.TrackDispatcher) (*rtp.Endpoint, error) {
+func (e *rtpEngineMock) NewReceiverEndpoint(_ context.Context, _ webrtc.SessionDescription, _ rtp.TrackDispatcher, _ rtp.StateEventHandler) (*rtp.Endpoint, error) {
 	return e.conn, e.err
 }
 
-func (e *rtpEngineMock) NewSenderEndpoint(_ context.Context, _ []*webrtc.TrackLocalStaticRTP) (*rtp.Endpoint, error) {
+func (e *rtpEngineMock) NewSenderEndpoint(_ context.Context, _ []*webrtc.TrackLocalStaticRTP, _ rtp.StateEventHandler) (*rtp.Endpoint, error) {
 	return e.conn, e.err
 }
 

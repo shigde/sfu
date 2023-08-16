@@ -3,7 +3,6 @@ package rtp
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/pion/interceptor"
 	"github.com/pion/interceptor/pkg/intervalpli"
@@ -55,7 +54,7 @@ func NewEngine(rtpConfig *RtpConfig) (*Engine, error) {
 	}, nil
 }
 
-func (e *Engine) NewReceiverEndpoint(ctx context.Context, offer webrtc.SessionDescription, dispatcher TrackDispatcher) (*Endpoint, error) {
+func (e *Engine) NewReceiverEndpoint(ctx context.Context, offer webrtc.SessionDescription, dispatcher TrackDispatcher, handler StateEventHandler) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create receiver-endpoint")
 	defer span.End()
 
@@ -67,36 +66,14 @@ func (e *Engine) NewReceiverEndpoint(ctx context.Context, offer webrtc.SessionDe
 	receiver := newReceiver(dispatcher)
 	peerConnection.OnTrack(receiver.onTrack)
 
-	peerConnection.OnICEConnectionStateChange(func(i webrtc.ICEConnectionState) {
-		// @TODO Implement irregular connection closed by client handling
-		if i == webrtc.ICEConnectionStateFailed {
-			if err := peerConnection.Close(); err != nil {
-				slog.Error("rtp.engine: receiver peerConnection.Close", "err", err)
-			}
-			receiver.stop()
-		}
-	})
+	peerConnection.OnICEConnectionStateChange(handler.OnConnectionStateChange)
 
 	peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
 		slog.Debug("rtp.engine: new DataChannel %s %d\n", d.Label(), d.ID())
-
 		// Register channel opening handling
 		d.OnOpen(func() {
 			slog.Debug("rtp.engine: data channel '%s'-'%d' open. keep-alive messages will now be sent", d.Label(), d.ID())
-
-			for range time.NewTicker(5 * time.Second).C {
-				message := "keep-alive"
-				sendErr := d.SendText(message)
-				if sendErr != nil {
-					slog.Warn("rtp.engine: data channel send", "err", sendErr)
-				}
-			}
-		})
-
-		// Register text message handling
-		d.OnMessage(func(msg webrtc.DataChannelMessage) {
-			// do something
-			fmt.Printf("Message from DataChannel '%s': '%s'\n", d.Label(), string(msg.Data))
+			handler.OnOnChannel(d)
 		})
 	})
 
@@ -121,7 +98,7 @@ func (e *Engine) NewReceiverEndpoint(ctx context.Context, offer webrtc.SessionDe
 	}, nil
 }
 
-func (e *Engine) NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.TrackLocalStaticRTP) (*Endpoint, error) {
+func (e *Engine) NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.TrackLocalStaticRTP, handler StateEventHandler) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create sender-endpoint")
 	defer span.End()
 
@@ -137,33 +114,25 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.
 		}
 	}
 	sender := newSender(peerConnection)
-
-	peerConnection.OnICEConnectionStateChange(func(i webrtc.ICEConnectionState) {
-		if i == webrtc.ICEConnectionStateFailed {
-			// @TODO Implement irregular connection closed by client handling
-			if err := peerConnection.Close(); err != nil {
-				slog.Error("rtp.engine: sender peerConnection.Close", "err", err)
-			}
-			if err = sender.stop(); err != nil {
-				slog.Error("rtp.engine: sender.stop", "err", err)
-			}
-		}
-	})
+	peerConnection.OnICEConnectionStateChange(handler.OnConnectionStateChange)
 
 	peerConnection.OnNegotiationNeeded(func() {
 		slog.Debug("rtp.engine: sender OnNegotiationNeeded triggered")
-		_, err := peerConnection.CreateOffer(nil)
+		offer, err := peerConnection.CreateOffer(nil)
 		if err != nil {
 			slog.Error("rtp.engine: sender OnNegotiationNeeded", "err", err)
 		}
-		//send offer
+		handler.OnNegotiationNeeded(offer)
 	})
 
-	creatDC(peerConnection)
+	err = creatDC(peerConnection, handler)
+	if err != nil {
+		return nil, fmt.Errorf("creating data channel: %w", err)
+	}
 
 	offer, err := peerConnection.CreateOffer(nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating offer: %w", err)
 	}
 
 	gatherComplete := webrtc.GatheringCompletePromise(peerConnection)
@@ -180,7 +149,7 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.
 	}, nil
 }
 
-func creatDC(pc *webrtc.PeerConnection) {
+func creatDC(pc *webrtc.PeerConnection, handler StateEventHandler) error {
 	ordered := false
 	maxRetransmits := uint16(0)
 
@@ -190,21 +159,14 @@ func creatDC(pc *webrtc.PeerConnection) {
 	}
 
 	// Create a datachannel with label 'data'
-	dc, _ := pc.CreateDataChannel("data", options)
+	dc, err := pc.CreateDataChannel("data", options)
+	if err != nil {
+		return fmt.Errorf("creating data channel: %w", err)
+	}
 
-	var msgID = 0
-	buf := make([]byte, 1000)
 	// Register channel opening handling
 	dc.OnOpen(func() {
-		// log.Printf("OnOpen: %s-%d. Random messages will now be sent to any connected DataChannels every second\n", dc.Label(), dc.ID())
-
-		for range time.NewTicker(1000 * time.Millisecond).C {
-			// log.Printf("Sending (%d) msg with len %d \n", msgID, len(buf))
-			msgID++
-
-			_ = dc.Send(buf)
-
-		}
+		handler.OnOnChannel(dc)
 	})
-
+	return nil
 }

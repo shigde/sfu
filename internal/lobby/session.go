@@ -13,12 +13,13 @@ import (
 )
 
 var (
-	errSessionAlreadyClosed           = errors.New("the sessions was already closed")
-	errSessionCouldNotClosed          = errors.New("the sessions could not closed in right way")
-	errReceiverInSessionAlreadyExists = errors.New("receiver already exists")
-	errSenderInSessionAlreadyExists   = errors.New("sender already exists")
-	errNoSenderInSession              = errors.New("no sender exists")
-	errSessionRequestTimeout          = errors.New("session request timeout error")
+	errSessionAlreadyClosed            = errors.New("the sessions was already closed")
+	errSessionCouldNotClosed           = errors.New("the sessions could not closed in right way")
+	errReceiverInSessionAlreadyExists  = errors.New("receiver already exists")
+	errReceiverInSessionHasNoMessenger = errors.New("receiver has no messenger")
+	errSenderInSessionAlreadyExists    = errors.New("sender already exists")
+	errNoSenderInSession               = errors.New("no sender exists")
+	errSessionRequestTimeout           = errors.New("session request timeout error")
 )
 
 var sessionReqTimeout = 3 * time.Second
@@ -28,8 +29,8 @@ type session struct {
 	user             uuid.UUID
 	rtpEngine        rtpEngine
 	hub              *hub
-	receiver         receiver
-	sender           sender
+	receiver         *receiverHandler
+	sender           *senderHandler
 	reqChan          chan *sessionRequest
 	quit             chan struct{}
 	onInternallyQuit onInternallyQuit
@@ -109,13 +110,13 @@ func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescriptio
 	if s.receiver != nil {
 		return nil, errReceiverInSessionAlreadyExists
 	}
-
-	conn, err := s.rtpEngine.NewReceiverEndpoint(ctx, *req.reqSDP, s.hub)
+	s.receiver = newReceiverHandler(s.Id, s.user, s.onInternallyQuit)
+	endpoint, err := s.rtpEngine.NewReceiverEndpoint(ctx, *req.reqSDP, s.hub, s.receiver)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
-	s.receiver = conn
-	answer, err := s.receiver.GetLocalDescription(ctx)
+	s.receiver.endpoint = endpoint
+	answer, err := s.receiver.endpoint.GetLocalDescription(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp answerReq: %w", err)
 	}
@@ -126,10 +127,10 @@ func (s *session) handleAnswerReq(req *sessionRequest) (*webrtc.SessionDescripti
 	_, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleAnswerReq")
 	defer span.End()
 
-	if s.sender == nil {
+	if s.sender == nil || s.sender.endpoint == nil {
 		return nil, errNoSenderInSession
 	}
-	if err := s.sender.SetAnswer(req.reqSDP); err != nil {
+	if err := s.sender.endpoint.SetAnswer(req.reqSDP); err != nil {
 		return nil, fmt.Errorf("setting answer to sender connection: %w", err)
 	}
 	return nil, nil
@@ -143,19 +144,24 @@ func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescriptio
 		return nil, errSenderInSessionAlreadyExists
 	}
 
+	if s.receiver.messenger == nil {
+		return nil, errReceiverInSessionHasNoMessenger
+	}
+
+	s.sender = newSenderHandler(s.Id, s.user, s.receiver.messenger)
+
 	trackList, err := s.hub.getTrackList()
 	if err != nil {
 		return nil, fmt.Errorf("reading track list by creating rtp connection: %w", err)
 	}
 
-	conn, err := s.rtpEngine.NewSenderEndpoint(ctx, trackList)
+	endpoint, err := s.rtpEngine.NewSenderEndpoint(ctx, trackList, s.sender)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
+	s.sender.endpoint = endpoint
 
-	s.sender = conn
-
-	offer, err := s.sender.GetLocalDescription(ctx)
+	offer, err := s.sender.endpoint.GetLocalDescription(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp answerReq: %w", err)
 	}
@@ -167,21 +173,21 @@ func (s *session) stop() error {
 	slog.Info("lobby.sessions: stop", "id", s.Id, "user", s.user)
 	select {
 	case <-s.quit:
-		slog.Error("lobby.sessions: the rtp sessions was already closed", "id", s.Id, "user", s.user)
+		slog.Error("lobby.sessions: the rtp sessions was already closed", "sessionId", s.Id, "user", s.user)
 		return errSessionAlreadyClosed
 	default:
 		close(s.quit)
-		slog.Info("lobby.sessions: stopped was triggered", "id", s.Id, "user", s.user)
+		slog.Info("lobby.sessions: stopped was triggered", "sessionId", s.Id, "user", s.user)
 		<-s.quit
 		if s.sender != nil {
-			if err := s.sender.Close(); err != nil {
-				slog.Error("lobby.sessions: closing sender", "id", s.Id, "user", s.user)
+			if err := s.sender.close(); err != nil {
+				slog.Error("lobby.sessions: closing sender", "sessionId", s.Id, "user", s.user)
 			}
 		}
 
 		if s.receiver != nil {
-			if err := s.receiver.Close(); err != nil {
-				slog.Error("lobby.sessions: closing receiver", "id", s.Id, "user", s.user)
+			if err := s.receiver.close(); err != nil {
+				slog.Error("lobby.sessions: closing receiver", "sessionId", s.Id, "user", s.user)
 			}
 		}
 	}
@@ -189,28 +195,15 @@ func (s *session) stop() error {
 }
 
 func (s *session) addTrack(track *webrtc.TrackLocalStaticRTP) {
-	if s.sender != nil {
-		s.sender.AddTrack(track)
+	if s.sender != nil && s.sender.endpoint != nil {
+		s.sender.endpoint.AddTrack(track)
 	}
 }
 
 func (s *session) removeTrack(track *webrtc.TrackLocalStaticRTP) {
-	if s.sender != nil {
-		s.sender.RemoveTrack(track)
+	if s.sender != nil && s.sender.endpoint != nil {
+		s.sender.endpoint.RemoveTrack(track)
 	}
-}
-
-type receiver interface {
-	GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error)
-	Close() error
-}
-
-type sender interface {
-	AddTrack(track *webrtc.TrackLocalStaticRTP)
-	RemoveTrack(track *webrtc.TrackLocalStaticRTP)
-	GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error)
-	SetAnswer(sdp *webrtc.SessionDescription) error
-	Close() error
 }
 
 type onInternallyQuit = func(ctx context.Context, user uuid.UUID) bool
