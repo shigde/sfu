@@ -1,6 +1,7 @@
 package lobby
 
 import (
+	"encoding/json"
 	"sync"
 	"testing"
 
@@ -32,19 +33,20 @@ func TestMessenger(t *testing.T) {
 	t.Run("receive Answer", func(t *testing.T) {
 		_, sender, o := testMessengerSetup(t)
 
-		var answer message.Sdp
+		var answer *message.Sdp
 		var wg sync.WaitGroup
 		wg.Add(1)
 		o.onMessage = func(msg message.ChannelMsg) {
 			defer wg.Done()
-			answer, _ = msg.Data.(message.Sdp)
+			jsonStr, _ := json.Marshal(msg.Data)
+			answer, _ = message.SdpUnmarshal(jsonStr)
 		}
 
 		sender.updateOnmessageListener(webrtc.DataChannelMessage{Data: rawAnswer})
 		wg.Wait()
 
-		assert.Equal(t, mockedAnswer, answer.SDP)
-		assert.Equal(t, 3, answer.Number)
+		assert.Equal(t, *mockedAnswer, answer.SDP)
+		assert.Equal(t, uint64(3), answer.Number)
 	})
 }
 

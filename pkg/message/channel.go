@@ -21,6 +21,7 @@ func Unmarshal(rawChannelMsg []byte) (*ChannelMsg, error) {
 	if err := json.Unmarshal(rawChannelMsg, &newChannelMsg); err != nil {
 		return nil, err
 	}
+
 	return &newChannelMsg, nil
 }
 
