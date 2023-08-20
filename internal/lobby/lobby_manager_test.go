@@ -92,7 +92,7 @@ func TestLobbyManager(t *testing.T) {
 		user := uuid.New()
 		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), onQuitSessionInternallyStub)
 		session.receiver = newReceiverHandler(session.Id, session.user, nil)
-		session.receiver.messenger = newMessenger(nil)
+		session.receiver.messenger = newMessenger(newSendMock())
 		lobby.sessions.Add(session)
 
 		data, err := manager.StartListenLobby(context.Background(), lobby.Id, user)
