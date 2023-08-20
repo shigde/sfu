@@ -7,8 +7,8 @@ import (
 )
 
 type Sdp struct {
-	Number uint64                    `json:"number"`
-	SDP    webrtc.SessionDescription `json:"sdp"`
+	Number uint64                     `json:"number"`
+	SDP    *webrtc.SessionDescription `json:"sdp"`
 }
 
 func SdpUnmarshal(sdpData []byte) (*Sdp, error) {

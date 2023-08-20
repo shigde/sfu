@@ -35,7 +35,7 @@ func (h *senderHandler) OnConnectionStateChange(state webrtc.ICEConnectionState)
 }
 
 func (h *senderHandler) OnNegotiationNeeded(offer webrtc.SessionDescription) {
-	if _, err := h.messenger.sendOffer(offer, 1); err != nil {
+	if _, err := h.messenger.sendOffer(&offer, 1); err != nil {
 		slog.Error("lobby.senderHandler: on negotiated was trigger with error", "err", err, "session", h.session, "user", h.user)
 	}
 }
@@ -43,14 +43,6 @@ func (h *senderHandler) OnOnChannel(dc *webrtc.DataChannel) {
 	slog.Debug("lobby.senderHandler: datachannel is open", "session", h.session, "user", h.user)
 
 }
-
-//type sender interface {
-//	AddTrack(track *webrtc.TrackLocalStaticRTP)
-//	RemoveTrack(track *webrtc.TrackLocalStaticRTP)
-//	GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error)
-//	SetAnswer(sdp *webrtc.SessionDescription) error
-//	Close() error
-//}
 
 func (h *senderHandler) close() error {
 	if h.endpoint == nil {

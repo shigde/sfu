@@ -1,6 +1,7 @@
 package lobby
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -29,7 +30,7 @@ func newMessenger(s msgSender) *messenger {
 	return m
 }
 
-func (m *messenger) sendOffer(offer webrtc.SessionDescription, number uint64) (uint64, error) {
+func (m *messenger) sendOffer(offer *webrtc.SessionDescription, number uint64) (uint64, error) {
 	sdp := &message.Sdp{
 		SDP:    offer,
 		Number: number,
@@ -83,10 +84,28 @@ func (m *messenger) deregister(o msgObserver) {
 }
 
 func (m *messenger) notifyAll(msg *message.ChannelMsg) {
+	switch msg.Type {
+	case message.AnswerMsg:
+		m.handleAnswerMsg(msg)
+	default:
+		slog.Error("lobby.messenger: unknown msg type", "err", fmt.Sprintf("unknown msg type: %d", msg.Type), "dataChannel", m.sender.Label())
+	}
+}
+
+func (m *messenger) handleAnswerMsg(msg *message.ChannelMsg) {
+	jsonStr, err := json.Marshal(msg.Data)
+	if err != nil {
+		slog.Error("lobby.messenger: unmarshal answer", "err", err, "dataChannel", m.sender.Label())
+	}
+	answer, err := message.SdpUnmarshal(jsonStr)
+	if err != nil {
+		slog.Error("lobby.messenger: unmarshal sdp of answer", "err", err, "dataChannel", m.sender.Label())
+	}
+
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	for _, observer := range m.observerList {
-		observer.update(*msg)
+		observer.onAnswer(answer.SDP, answer.Number)
 	}
 }
 
@@ -102,6 +121,6 @@ type msgSender interface {
 }
 
 type msgObserver interface {
-	update(msg message.ChannelMsg)
+	onAnswer(sdp *webrtc.SessionDescription, number uint64)
 	getId() uuid.UUID
 }
