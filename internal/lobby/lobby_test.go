@@ -18,7 +18,8 @@ func testStreamLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 	lobby := newLobby(uuid.New(), engine)
 	user := uuid.New()
 	session := newSession(user, lobby.hub, engine, lobby.onSessionStoppedInternally)
-	session.sender = mockConnection(mockedAnswer)
+	session.sender = newSenderHandler(session.Id, user, nil)
+	session.sender.endpoint = mockConnection(mockedAnswer)
 	lobby.sessions.Add(session)
 	return lobby, user
 }
@@ -97,11 +98,11 @@ func TestStreamLobby(t *testing.T) {
 		case err := <-request.err:
 			assert.ErrorIs(t, err, errLobbyRequestTimeout)
 		case <-time.After(time.Second * 3):
-			t.Fail()
+			t.Fatalf("test fails because run in timeout")
 		}
 	})
 
-	t.Run("start listen lobby", func(t *testing.T) {
+	t.Run("start listen lobby but no session was started before", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -110,14 +111,42 @@ func TestStreamLobby(t *testing.T) {
 		request.data = startData
 
 		go lobby.runRequest(request)
+
+		select {
+		case err := <-request.err:
+			assert.ErrorIs(t, err, errNoSession)
+		case _ = <-startData.response:
+			t.Fatalf("test fails because no offer expected")
+		case <-time.After(time.Second * 3):
+			t.Fatalf("test fails because run in timeout")
+		}
+	})
+
+	t.Run("start listen lobby session", func(t *testing.T) {
+		lobby, _ := testStreamLobbySetup(t)
+		defer lobby.stop()
+
+		user := uuid.New()
+		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), onQuitSessionInternallyStub)
+		session.receiver = newReceiverHandler(session.Id, session.user, nil)
+		session.receiver.messenger = newMessenger(nil)
+		lobby.sessions.Add(session)
+
+		request := newLobbyRequest(context.Background(), user)
+		startData := newStartListenData()
+		request.data = startData
+
+		go lobby.runRequest(request)
 		offer := mockedAnswer // its mocked and make no different
 
 		select {
+		case err := <-request.err:
+			assert.ErrorIs(t, err, errNoSession)
 		case data := <-startData.response:
 			assert.Equal(t, offer, data.offer)
 			assert.False(t, uuid.Nil == data.RtpSessionId)
 		case <-time.After(time.Second * 3):
-			t.Fail()
+			t.Fatalf("test fails because run in timeout")
 		}
 	})
 
@@ -125,8 +154,14 @@ func TestStreamLobby(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
+		user := uuid.New()
+		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), onQuitSessionInternallyStub)
+		session.receiver = newReceiverHandler(session.Id, session.user, nil)
+		session.receiver.messenger = newMessenger(nil)
+		lobby.sessions.Add(session)
+
 		ctx, cancel := context.WithCancel(context.Background())
-		request := newLobbyRequest(ctx, uuid.New())
+		request := newLobbyRequest(ctx, user)
 		startData := newStartListenData()
 		request.data = startData
 
@@ -137,7 +172,7 @@ func TestStreamLobby(t *testing.T) {
 		case err := <-request.err:
 			assert.ErrorIs(t, err, errLobbyRequestTimeout)
 		case <-time.After(time.Second * 3):
-			t.Fail()
+			t.Fatalf("test fails because run in timeout")
 		}
 	})
 
@@ -164,7 +199,7 @@ func TestStreamLobby(t *testing.T) {
 		case success := <-leaveData.response:
 			assert.True(t, success)
 		case <-time.After(time.Second * 3):
-			t.Fail()
+			t.Fatalf("test fails because run in timeout")
 		}
 	})
 }

@@ -18,11 +18,13 @@ func testLobbyManagerSetup(t *testing.T) (*LobbyManager, *lobby, uuid.UUID) {
 	lobby := manager.lobbies.getOrCreateLobby(uuid.New())
 	user := uuid.New()
 	session := newSession(user, lobby.hub, engine, onQuitSessionInternallyStub)
-	session.sender = mockConnection(mockedAnswer)
+	session.sender = newSenderHandler(session.Id, user, nil)
+	session.sender.endpoint = mockConnection(mockedAnswer)
 	lobby.sessions.Add(session)
 
 	return manager, lobby, user
 }
+
 func TestLobbyManager(t *testing.T) {
 	t.Run("Access a Lobby with timeout", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
@@ -67,10 +69,33 @@ func TestLobbyManager(t *testing.T) {
 		assert.ErrorIs(t, err, errLobbyRequestTimeout)
 	})
 
-	t.Run("Start listen to a Lobby", func(t *testing.T) {
+	t.Run("Start listen to a Lobby, but receiver has no messenger", func(t *testing.T) {
+		manager, lobby, _ := testLobbyManagerSetup(t)
+		user := uuid.New()
+		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), onQuitSessionInternallyStub)
+		session.receiver = newReceiverHandler(session.Id, session.user, nil)
+		lobby.sessions.Add(session)
+
+		_, err := manager.StartListenLobby(context.Background(), lobby.Id, user)
+		assert.ErrorIs(t, err, errReceiverInSessionHasNoMessenger)
+	})
+
+	t.Run("Start listen to a Lobby, but no session exists", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 
-		data, err := manager.StartListenLobby(context.Background(), lobby.Id, uuid.New())
+		_, err := manager.StartListenLobby(context.Background(), lobby.Id, uuid.New())
+		assert.ErrorIs(t, err, errNoSession)
+	})
+
+	t.Run("Start listen to a Lobby", func(t *testing.T) {
+		manager, lobby, _ := testLobbyManagerSetup(t)
+		user := uuid.New()
+		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), onQuitSessionInternallyStub)
+		session.receiver = newReceiverHandler(session.Id, session.user, nil)
+		session.receiver.messenger = newMessenger(nil)
+		lobby.sessions.Add(session)
+
+		data, err := manager.StartListenLobby(context.Background(), lobby.Id, user)
 		assert.NoError(t, err)
 		assert.Equal(t, mockedAnswer, data.Offer)
 		assert.False(t, uuid.Nil == data.RtpSessionId)

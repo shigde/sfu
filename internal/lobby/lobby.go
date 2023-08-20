@@ -91,7 +91,7 @@ func (l *lobby) runRequest(req *lobbyRequest) {
 	case l.reqChan <- req:
 		slog.Debug("lobby.lobby: runRequest - request finish", "lobbyId", l.Id, "user", req.user)
 	case <-l.quit:
-		req.err <- errSessionAlreadyClosed
+		req.err <- errLobbyStopped
 		slog.Debug("lobby.lobby: runRequest - interrupted because lobby closed", "lobbyId", l.Id, "user", req.user)
 	case <-time.After(lobbyReqTimeout):
 		req.err <- errLobbyRequestTimeout
@@ -143,8 +143,8 @@ func (l *lobby) handleStartListen(req *lobbyRequest) {
 
 	session, ok := l.sessions.FindByUserId(req.user)
 	if !ok {
-		session = newSession(req.user, l.hub, l.rtpEngine, l.onSessionStoppedInternally)
-		l.sessions.Add(session)
+		req.err <- errNoSession
+		return
 	}
 	startSessionReq := newStartRequest(req.ctx)
 

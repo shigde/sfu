@@ -41,7 +41,9 @@ func TestRtpSessionOffer(t *testing.T) {
 	t.Run("offerReq to session but receiver already exists", func(t *testing.T) {
 		var offer *webrtc.SessionDescription
 		session, _ := testRtpSessionSetup(t)
-		session.receiver = mockConnection(nil)
+
+		session.receiver = newReceiverHandler(session.Id, uuid.New(), nil)
+		session.receiver.endpoint = mockConnection(nil)
 
 		req := newSessionRequest(context.Background(), offer, offerReq)
 		go session.runRequest(req)
@@ -93,7 +95,8 @@ func TestRtpSessionStartListen(t *testing.T) {
 
 	t.Run("startReq to session but sender already exists", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		session.sender = mockConnection(nil)
+		session.sender = newSenderHandler(session.Id, uuid.New(), nil)
+		session.sender.endpoint = mockConnection(nil)
 
 		req := newSessionRequest(context.Background(), nil, startReq)
 		go func() {
@@ -109,9 +112,44 @@ func TestRtpSessionStartListen(t *testing.T) {
 		}
 	})
 
+	t.Run("startReq to session and receive an offer but no receiver exists", func(t *testing.T) {
+		session, _ := testRtpSessionSetup(t)
+		req := newSessionRequest(context.Background(), nil, startReq)
+		go func() {
+			session.runRequest(req)
+		}()
+		select {
+		case <-req.respSDPChan:
+			t.Fatalf("No sdp was expected!")
+		case <-req.ctx.Done():
+			t.Fatalf("No cancel was expected!")
+		case err := <-req.err:
+			assert.ErrorIs(t, err, errReceiverInSessionHasNoMessenger)
+		}
+	})
+
+	t.Run("startReq to session and receive an offer but the receiver has no messenger", func(t *testing.T) {
+		session, _ := testRtpSessionSetup(t)
+		session.receiver = newReceiverHandler(session.Id, session.user, nil)
+		req := newSessionRequest(context.Background(), nil, startReq)
+		go func() {
+			session.runRequest(req)
+		}()
+		select {
+		case <-req.respSDPChan:
+			t.Fatalf("No sdp was expected!")
+		case <-req.ctx.Done():
+			t.Fatalf("No cancel was expected!")
+		case err := <-req.err:
+			assert.ErrorIs(t, err, errReceiverInSessionHasNoMessenger)
+		}
+	})
+
 	t.Run("startReq to session and receive an offer", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		req := newSessionRequest(context.Background(), nil, startReq)
+		session.receiver = newReceiverHandler(session.Id, session.user, nil)
+		session.receiver.messenger = newMessenger(nil)
 		go func() {
 			session.runRequest(req)
 		}()
@@ -162,7 +200,8 @@ func TestRtpSessionListen(t *testing.T) {
 
 	t.Run("answerReq to session", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		session.sender = mockConnection(mockedOffer)
+		session.sender = newSenderHandler(session.Id, uuid.New(), nil)
+		session.sender.endpoint = mockConnection(mockedOffer)
 
 		req := newSessionRequest(context.Background(), mockedAnswer, answerReq)
 		go func() {
