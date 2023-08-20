@@ -35,7 +35,7 @@ func (h *senderHandler) OnConnectionStateChange(state webrtc.ICEConnectionState)
 }
 
 func (h *senderHandler) OnNegotiationNeeded(offer webrtc.SessionDescription) {
-	if err := h.messenger.sendOffer(offer, 1); err != nil {
+	if _, err := h.messenger.sendOffer(offer, 1); err != nil {
 		slog.Error("lobby.senderHandler: on negotiated was trigger with error", "err", err, "session", h.session, "user", h.user)
 	}
 }

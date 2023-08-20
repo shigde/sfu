@@ -5,15 +5,15 @@ import (
 )
 
 type ChannelMsg struct {
-	Id   int         `json:"id"`
+	Id   uint64      `json:"id"`
 	Data interface{} `json:"data"`
-	Type msgType     `json:"type"`
+	Type MsgType     `json:"type"`
 }
-type msgType int
+type MsgType int
 
 const (
-	offer msgType = iota + 1
-	answer
+	OfferMsg MsgType = iota + 1
+	AnswerMsg
 )
 
 func Unmarshal(rawChannelMsg []byte) (*ChannelMsg, error) {

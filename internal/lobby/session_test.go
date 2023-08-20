@@ -149,7 +149,7 @@ func TestRtpSessionStartListen(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		req := newSessionRequest(context.Background(), nil, startReq)
 		session.receiver = newReceiverHandler(session.Id, session.user, nil)
-		session.receiver.messenger = newMessenger(newSendMock())
+		session.receiver.messenger = newMessenger(newSendMock(t))
 		go func() {
 			session.runRequest(req)
 		}()

@@ -129,7 +129,7 @@ func TestStreamLobby(t *testing.T) {
 		user := uuid.New()
 		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), onQuitSessionInternallyStub)
 		session.receiver = newReceiverHandler(session.Id, session.user, nil)
-		session.receiver.messenger = newMessenger(newSendMock())
+		session.receiver.messenger = newMessenger(newSendMock(t))
 		lobby.sessions.Add(session)
 
 		request := newLobbyRequest(context.Background(), user)
@@ -157,7 +157,7 @@ func TestStreamLobby(t *testing.T) {
 		user := uuid.New()
 		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), onQuitSessionInternallyStub)
 		session.receiver = newReceiverHandler(session.Id, session.user, nil)
-		session.receiver.messenger = newMessenger(newSendMock())
+		session.receiver.messenger = newMessenger(newSendMock(t))
 		lobby.sessions.Add(session)
 
 		ctx, cancel := context.WithCancel(context.Background())
