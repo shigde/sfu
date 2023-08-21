@@ -18,6 +18,7 @@ func testMessengerSetup(t *testing.T) (*messenger, *senderMock, *msgObserverMock
 	m := newMessenger(s)
 	o := newMsgObserverMock(t)
 	m.register(o)
+	s.start()
 	return m, s, o
 }
 
@@ -25,7 +26,7 @@ func TestMessenger(t *testing.T) {
 	t.Run("send Offer", func(t *testing.T) {
 		m, sender, _ := testMessengerSetup(t)
 		_, _ = m.sendOffer(mockedOffer, 2)
-		assert.Equal(t, rawOffer, sender.data[0])
+		assert.Equal(t, rawOffer, <-sender.testSendData)
 	})
 
 	t.Run("receive Answer", func(t *testing.T) {
@@ -50,14 +51,19 @@ func TestMessenger(t *testing.T) {
 }
 
 type senderMock struct {
-	data                    map[int][]byte
+	testSendData            chan []byte
 	updateOnmessageListener func(msg webrtc.DataChannelMessage)
+	start                   func()
+}
+
+func (s *senderMock) OnOpen(f func()) {
+	s.start = f
 }
 
 func newSendMock(t *testing.T) *senderMock {
 	t.Helper()
 	return &senderMock{
-		data: make(map[int][]byte),
+		testSendData: make(chan []byte, 1),
 	}
 }
 
@@ -66,8 +72,7 @@ func (s *senderMock) OnMessage(f func(msg webrtc.DataChannelMessage)) {
 }
 
 func (s *senderMock) Send(data []byte) error {
-	length := len(s.data)
-	s.data[length] = data
+	s.testSendData <- data
 	return nil
 }
 func (s *senderMock) Label() string {

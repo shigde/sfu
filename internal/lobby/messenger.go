@@ -18,6 +18,7 @@ type messenger struct {
 	sender       msgSender
 	observerList map[uuid.UUID]msgObserver
 	queueChan    chan []byte
+	quit         chan struct{}
 }
 
 func newMessenger(s msgSender) *messenger {
@@ -26,6 +27,7 @@ func newMessenger(s msgSender) *messenger {
 		sender:       s,
 		observerList: make(map[uuid.UUID]msgObserver),
 		queueChan:    make(chan []byte),
+		quit:         make(chan struct{}),
 	}
 	m.counter.Store(0)
 	s.OnMessage(m.onMessages)
@@ -39,6 +41,9 @@ func newMessenger(s msgSender) *messenger {
 					if err := s.Send(byteMsg); err != nil {
 						slog.Error("lobby.messenger: send message", "err", err)
 					}
+				case <-m.quit:
+					slog.Error("lobby.messenger: closed")
+					return
 				}
 			}
 		}()
@@ -65,8 +70,16 @@ func (m *messenger) sendOffer(offer *webrtc.SessionDescription, number uint32) (
 		return id, fmt.Errorf("marshaling offer message (msgId %d offer %d): %w", id, number, err)
 	}
 
-	m.queueChan <- byteMsg
-	slog.Debug("lobby.messenger: offer is send", "number", number)
+	select {
+	case <-m.quit:
+	default:
+		select {
+		case m.queueChan <- byteMsg:
+			slog.Debug("lobby.messenger: offer is send", "number", number)
+		case <-m.quit:
+		}
+	}
+
 	return id, nil
 }
 
@@ -125,7 +138,14 @@ func (m *messenger) handleAnswerMsg(msg *message.ChannelMsg) {
 		observer.onAnswer(answer.SDP, answer.Number)
 	}
 }
-
+func (m *messenger) close() {
+	select {
+	case <-m.quit:
+	default:
+		close(m.quit)
+		<-m.quit
+	}
+}
 func (m *messenger) count() uint32 {
 	return m.counter.Load()
 }
