@@ -48,19 +48,37 @@ func (c *Endpoint) hasTrack(track *webrtc.TrackLocalStaticRTP) bool {
 	return false
 }
 
+func (c *Endpoint) getSender(track *webrtc.TrackLocalStaticRTP) (*webrtc.RTPSender, bool) {
+	slog.Debug("rtp.connection: has Tracks")
+	rtpSenderList := c.peerConnection.GetSenders()
+	for _, rtpSender := range rtpSenderList {
+		if rtpTrack := rtpSender.Track(); rtpTrack != nil {
+			if rtpTrack.ID() == track.ID() {
+				return rtpSender, true
+			}
+		}
+	}
+	return nil, false
+}
+
 func (c *Endpoint) AddTrack(track *webrtc.TrackLocalStaticRTP) {
 	slog.Debug("rtp.connection: Add Track")
 	if has := c.hasTrack(track); !has {
-		_, err := c.peerConnection.AddTrack(track)
-		slog.Debug("rtp.connection: Add Tracks to connection", "err", err)
+		slog.Debug("rtp.connection: Add Track to connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
+		if _, err := c.peerConnection.AddTrack(track); err != nil {
+			slog.Error("rtp.connection: Add Track to connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
+		}
+
 	}
 }
 
 func (c *Endpoint) RemoveTrack(track *webrtc.TrackLocalStaticRTP) {
-	slog.Debug("rtp.connection: Add Track")
-	if has := c.hasTrack(track); !has {
-		_, err := c.peerConnection.AddTrack(track)
-		slog.Debug("rtp.connection: Add Tracks to connection", "err", err)
+	slog.Debug("rtp.connection: Remove Track")
+	if sender, has := c.getSender(track); has {
+		slog.Debug("rtp.connection: Remove Track from connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
+		if err := c.peerConnection.RemoveTrack(sender); err != nil {
+			slog.Error("rtp.connection: Remove Track from connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
+		}
 	}
 }
 
@@ -76,5 +94,6 @@ type peerConnection interface {
 	SetRemoteDescription(desc webrtc.SessionDescription) error
 	GetSenders() (result []*webrtc.RTPSender)
 	AddTrack(track webrtc.TrackLocal) (*webrtc.RTPSender, error)
+	RemoveTrack(sender *webrtc.RTPSender) error
 	Close() error
 }

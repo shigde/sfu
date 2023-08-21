@@ -50,16 +50,21 @@ func (h *senderHandler) OnNegotiationNeeded(offer webrtc.SessionDescription) {
 
 func (h *senderHandler) onAnswer(sdp *webrtc.SessionDescription, number uint32) {
 	// ignore if offer outdated
-	if h.currentOffer() != number {
+	current := h.currentOffer()
+	if current != number {
+		slog.Debug("lobby.senderHandler: onAnswer ignore", "number", number, "currentNumber", current, "session", h.session, "user", h.user)
 		return
 	}
+
+	slog.Debug("lobby.senderHandler: onAnswer set", "number", number, "currentNumber", current, "session", h.session, "user", h.user)
+
 	if err := h.endpoint.SetAnswer(sdp); err != nil {
 		slog.Error("lobby.senderHandler: on answer was trigger with error", "err", err, "session", h.session, "user", h.user)
 	}
 }
 
-func (h *senderHandler) OnOnChannel(_ *webrtc.DataChannel) {
-	slog.Debug("lobby.senderHandler: datachannel is open", "session", h.session, "user", h.user)
+func (h *senderHandler) OnChannel(_ *webrtc.DataChannel) {
+	slog.Debug("lobby.senderHandler: datachannel is open but we do not need them", "session", h.session, "user", h.user)
 
 }
 

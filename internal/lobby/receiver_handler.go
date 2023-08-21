@@ -11,18 +11,20 @@ import (
 )
 
 type receiverHandler struct {
-	session         uuid.UUID
-	user            uuid.UUID
-	endpoint        *rtp.Endpoint
-	messenger       *messenger
-	onEndpointClose onInternallyQuit
+	session           uuid.UUID
+	user              uuid.UUID
+	endpoint          *rtp.Endpoint
+	messenger         *messenger
+	onEndpointClose   onInternallyQuit
+	receivedMessenger chan struct{}
 }
 
 func newReceiverHandler(session uuid.UUID, user uuid.UUID, onEndpointClose onInternallyQuit) *receiverHandler {
 	return &receiverHandler{
-		session:         session,
-		user:            user,
-		onEndpointClose: onEndpointClose,
+		session:           session,
+		user:              user,
+		onEndpointClose:   onEndpointClose,
+		receivedMessenger: make(chan struct{}),
 	}
 }
 
@@ -40,8 +42,10 @@ func (h *receiverHandler) OnConnectionStateChange(state webrtc.ICEConnectionStat
 func (h *receiverHandler) OnNegotiationNeeded(offer webrtc.SessionDescription) {
 	slog.Warn("lobby.receiverHandler: on negotiated was trigger for static connection", "session", h.session, "user", h.user)
 }
-func (h *receiverHandler) OnOnChannel(dc *webrtc.DataChannel) {
+func (h *receiverHandler) OnChannel(dc *webrtc.DataChannel) {
+	slog.Debug("lobby.receiveHandler: get an datachannel sender and create messenger", "session", h.session, "user", h.user)
 	h.messenger = newMessenger(dc)
+	close(h.receivedMessenger)
 }
 
 func (h *receiverHandler) close() error {

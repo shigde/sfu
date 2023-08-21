@@ -42,6 +42,10 @@ func (m *mockPeerConnector) AddTrack(_ webrtc.TrackLocal) (*webrtc.RTPSender, er
 	return nil, nil
 }
 
+func (m *mockPeerConnector) RemoveTrack(_ *webrtc.RTPSender) error {
+	return nil
+}
+
 func (m *mockPeerConnector) Close() error {
 	return nil
 }

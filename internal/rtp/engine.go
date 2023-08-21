@@ -69,12 +69,8 @@ func (e *Engine) NewReceiverEndpoint(ctx context.Context, offer webrtc.SessionDe
 	peerConnection.OnICEConnectionStateChange(handler.OnConnectionStateChange)
 
 	peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
-		slog.Debug("rtp.engine: new DataChannel %s %d\n", d.Label(), d.ID())
-		// Register channel opening handling
-		d.OnOpen(func() {
-			slog.Debug("rtp.engine: data channel '%s'-'%d' open. keep-alive messages will now be sent", d.Label(), d.ID())
-			handler.OnOnChannel(d)
-		})
+		slog.Debug("rtp.engine: receiverEndpoint new DataChannel", "label", d.Label(), "id", d.ID())
+		handler.OnChannel(d)
 	})
 
 	if err := peerConnection.SetRemoteDescription(offer); err != nil {
@@ -121,8 +117,12 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.
 		offer, err := peerConnection.CreateOffer(nil)
 		if err != nil {
 			slog.Error("rtp.engine: sender OnNegotiationNeeded", "err", err)
+			return
 		}
-		handler.OnNegotiationNeeded(offer)
+		gatherComplete := webrtc.GatheringCompletePromise(peerConnection)
+		_ = peerConnection.SetLocalDescription(offer)
+		<-gatherComplete
+		handler.OnNegotiationNeeded(*peerConnection.LocalDescription())
 	})
 
 	err = creatDC(peerConnection, handler)
@@ -163,10 +163,6 @@ func creatDC(pc *webrtc.PeerConnection, handler StateEventHandler) error {
 	if err != nil {
 		return fmt.Errorf("creating data channel: %w", err)
 	}
-
-	// Register channel opening handling
-	dc.OnOpen(func() {
-		handler.OnOnChannel(dc)
-	})
+	handler.OnChannel(dc)
 	return nil
 }

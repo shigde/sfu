@@ -15,7 +15,7 @@ var (
 	errNoSession           = errors.New("no session exists")
 	errLobbyStopped        = errors.New("error because lobby stopped")
 	errLobbyRequestTimeout = errors.New("lobby request timeout error")
-	lobbyReqTimeout        = 3 * time.Second
+	lobbyReqTimeout        = 8 * time.Second
 )
 
 type lobby struct {

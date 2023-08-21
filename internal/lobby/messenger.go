@@ -17,6 +17,7 @@ type messenger struct {
 	counter      atomic.Uint32
 	sender       msgSender
 	observerList map[uuid.UUID]msgObserver
+	queueChan    chan []byte
 }
 
 func newMessenger(s msgSender) *messenger {
@@ -24,13 +25,29 @@ func newMessenger(s msgSender) *messenger {
 		locker:       sync.RWMutex{},
 		sender:       s,
 		observerList: make(map[uuid.UUID]msgObserver),
+		queueChan:    make(chan []byte),
 	}
 	m.counter.Store(0)
 	s.OnMessage(m.onMessages)
+	s.OnOpen(func() {
+		slog.Debug("lobby.messenger: sender is open start sending worker")
+		go func() {
+			for {
+				slog.Debug("lobby.messenger: sending worker running")
+				select {
+				case byteMsg := <-m.queueChan:
+					if err := s.Send(byteMsg); err != nil {
+						slog.Error("lobby.messenger: send message", "err", err)
+					}
+				}
+			}
+		}()
+	})
 	return m
 }
 
 func (m *messenger) sendOffer(offer *webrtc.SessionDescription, number uint32) (uint32, error) {
+	slog.Debug("lobby.messenger: start to send offer", "number", number)
 	sdp := &message.Sdp{
 		SDP:    offer,
 		Number: number,
@@ -48,9 +65,8 @@ func (m *messenger) sendOffer(offer *webrtc.SessionDescription, number uint32) (
 		return id, fmt.Errorf("marshaling offer message (msgId %d offer %d): %w", id, number, err)
 	}
 
-	if err = m.sender.Send(byteMsg); err != nil {
-		return id, fmt.Errorf("sending offer message (msgId %d, offer %d) : %w", id, number, err)
-	}
+	m.queueChan <- byteMsg
+	slog.Debug("lobby.messenger: offer is send", "number", number)
 	return id, nil
 }
 
@@ -101,6 +117,7 @@ func (m *messenger) handleAnswerMsg(msg *message.ChannelMsg) {
 	if err != nil {
 		slog.Error("lobby.messenger: unmarshal sdp of answer", "err", err, "dataChannel", m.sender.Label())
 	}
+	slog.Debug("lobby.messenger: handleAnswerMsg", "number", answer.Number)
 
 	m.locker.RLock()
 	defer m.locker.RUnlock()
@@ -118,6 +135,7 @@ type msgSender interface {
 	OnMessage(f func(msg webrtc.DataChannelMessage))
 	Send(data []byte) error
 	Label() string
+	OnOpen(f func())
 }
 
 type msgObserver interface {
