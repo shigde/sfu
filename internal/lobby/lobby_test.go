@@ -130,6 +130,7 @@ func TestStreamLobby(t *testing.T) {
 		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), onQuitSessionInternallyStub)
 		session.receiver = newReceiverHandler(session.Id, session.user, nil)
 		session.receiver.messenger = newMockedMessenger(t)
+		session.receiver.stopWaitingForMessenger()
 		lobby.sessions.Add(session)
 
 		request := newLobbyRequest(context.Background(), user)

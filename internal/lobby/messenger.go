@@ -138,6 +138,7 @@ func (m *messenger) handleAnswerMsg(msg *message.ChannelMsg) {
 		observer.onAnswer(answer.SDP, answer.Number)
 	}
 }
+
 func (m *messenger) close() {
 	select {
 	case <-m.quit:

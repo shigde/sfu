@@ -118,13 +118,14 @@ func TestRtpSessionStartListen(t *testing.T) {
 		go func() {
 			session.runRequest(req)
 		}()
+
 		select {
 		case <-req.respSDPChan:
 			t.Fatalf("No sdp was expected!")
 		case <-req.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errReceiverInSessionHasNoMessenger)
+			assert.ErrorIs(t, err, errNoReceiverInSession)
 		}
 	})
 
@@ -132,6 +133,9 @@ func TestRtpSessionStartListen(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		session.receiver = newReceiverHandler(session.Id, session.user, nil)
 		req := newSessionRequest(context.Background(), nil, startReq)
+
+		oldTimeOut := waitingTimeOut
+		waitingTimeOut = 0
 		go func() {
 			session.runRequest(req)
 		}()
@@ -141,8 +145,9 @@ func TestRtpSessionStartListen(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errReceiverInSessionHasNoMessenger)
+			assert.ErrorIs(t, err, errTimeoutByWaitingForMessenger)
 		}
+		waitingTimeOut = oldTimeOut
 	})
 
 	t.Run("startReq to session and receive an offer", func(t *testing.T) {
@@ -150,6 +155,8 @@ func TestRtpSessionStartListen(t *testing.T) {
 		req := newSessionRequest(context.Background(), nil, startReq)
 		session.receiver = newReceiverHandler(session.Id, session.user, nil)
 		session.receiver.messenger = newMockedMessenger(t)
+		session.receiver.stopWaitingForMessenger()
+
 		go func() {
 			session.runRequest(req)
 		}()

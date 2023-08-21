@@ -2,13 +2,18 @@ package lobby
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/rtp"
 	"golang.org/x/exp/slog"
 )
+
+var errTimeoutByWaitingForMessenger = errors.New("timeout by waiting for messenger")
+var waitingTimeOut = 3 * time.Second
 
 type receiverHandler struct {
 	session           uuid.UUID
@@ -45,16 +50,43 @@ func (h *receiverHandler) OnNegotiationNeeded(offer webrtc.SessionDescription) {
 func (h *receiverHandler) OnChannel(dc *webrtc.DataChannel) {
 	slog.Debug("lobby.receiveHandler: get an datachannel sender and create messenger", "session", h.session, "user", h.user)
 	h.messenger = newMessenger(dc)
-	close(h.receivedMessenger)
+	h.stopWaitingForMessenger()
+}
+
+func (h *receiverHandler) stopWaitingForMessenger() {
+	select {
+	case <-h.receivedMessenger:
+	default:
+		close(h.receivedMessenger)
+		<-h.receivedMessenger
+	}
 }
 
 func (h *receiverHandler) close() error {
-	if h.endpoint == nil {
-		return nil
+	h.stopWaitingForMessenger()
+
+	if h.endpoint != nil {
+		if err := h.endpoint.Close(); err != nil {
+			return fmt.Errorf("receiver handler closing endpoint: %w", err)
+		}
 	}
 
-	if err := h.endpoint.Close(); err != nil {
-		return fmt.Errorf("receiver handler closing endpoint: %w", err)
+	if h.messenger != nil {
+		h.messenger.close()
 	}
+
 	return nil
+}
+
+func (h *receiverHandler) waitForMessenger() <-chan error {
+	err := make(chan error)
+	go func() {
+		defer close(err)
+		select {
+		case <-h.receivedMessenger:
+		case <-time.After(waitingTimeOut):
+			err <- errTimeoutByWaitingForMessenger
+		}
+	}()
+	return err
 }

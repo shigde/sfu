@@ -76,8 +76,11 @@ func TestLobbyManager(t *testing.T) {
 		session.receiver = newReceiverHandler(session.Id, session.user, nil)
 		lobby.sessions.Add(session)
 
+		oldTimeOut := waitingTimeOut
+		waitingTimeOut = 0
 		_, err := manager.StartListenLobby(context.Background(), lobby.Id, user)
-		assert.ErrorIs(t, err, errReceiverInSessionHasNoMessenger)
+		assert.ErrorIs(t, err, errTimeoutByWaitingForMessenger)
+		waitingTimeOut = oldTimeOut
 	})
 
 	t.Run("Start listen to a Lobby, but no session exists", func(t *testing.T) {
@@ -93,6 +96,7 @@ func TestLobbyManager(t *testing.T) {
 		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), onQuitSessionInternallyStub)
 		session.receiver = newReceiverHandler(session.Id, session.user, nil)
 		session.receiver.messenger = newMockedMessenger(t)
+		session.receiver.stopWaitingForMessenger()
 		lobby.sessions.Add(session)
 
 		data, err := manager.StartListenLobby(context.Background(), lobby.Id, user)

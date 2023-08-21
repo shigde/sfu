@@ -13,13 +13,13 @@ import (
 )
 
 var (
-	errSessionAlreadyClosed            = errors.New("the sessions was already closed")
-	errSessionCouldNotClosed           = errors.New("the sessions could not closed in right way")
-	errReceiverInSessionAlreadyExists  = errors.New("receiver already exists")
-	errReceiverInSessionHasNoMessenger = errors.New("no receiver ore receiver has no messenger")
-	errSenderInSessionAlreadyExists    = errors.New("sender already exists")
-	errNoSenderInSession               = errors.New("no sender exists")
-	errSessionRequestTimeout           = errors.New("session request timeout error")
+	errSessionAlreadyClosed           = errors.New("the sessions was already closed")
+	errSessionCouldNotClosed          = errors.New("the sessions could not closed in right way")
+	errReceiverInSessionAlreadyExists = errors.New("receiver already exists")
+	errNoReceiverInSession            = errors.New("no receiver in session")
+	errSenderInSessionAlreadyExists   = errors.New("sender already exists")
+	errNoSenderInSession              = errors.New("no sender exists")
+	errSessionRequestTimeout          = errors.New("session request timeout error")
 )
 
 var sessionReqTimeout = 3 * time.Second
@@ -132,9 +132,6 @@ func (s *session) handleAnswerReq(req *sessionRequest) (*webrtc.SessionDescripti
 	}
 
 	s.sender.onAnswer(req.reqSDP, 0)
-	//if err := s.sender.onAnswer(req.reqSDP, 0); err != nil {
-	//	return nil, fmt.Errorf("setting answer to sender connection: %w", err)
-	//}
 	return nil, nil
 }
 
@@ -146,8 +143,19 @@ func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescriptio
 		return nil, errSenderInSessionAlreadyExists
 	}
 
-	if s.receiver == nil || s.receiver.messenger == nil {
-		return nil, errReceiverInSessionHasNoMessenger
+	if s.receiver == nil {
+		return nil, errNoReceiverInSession
+	}
+
+	select {
+	case err := <-s.receiver.waitForMessenger():
+		if err != nil {
+			return nil, fmt.Errorf("waiting for messenger: %w", err)
+		}
+	case <-s.quit:
+		return nil, errSessionAlreadyClosed
+	case <-time.After(sessionReqTimeout):
+		return nil, errSessionRequestTimeout
 	}
 
 	s.sender = newSenderHandler(s.Id, s.user, s.receiver.messenger)
