@@ -13,24 +13,24 @@ import (
 )
 
 type messenger struct {
-	lock         sync.RWMutex
-	counter      uint64
+	locker       sync.RWMutex
+	counter      atomic.Uint32
 	sender       msgSender
 	observerList map[uuid.UUID]msgObserver
 }
 
 func newMessenger(s msgSender) *messenger {
 	m := &messenger{
-		lock:         sync.RWMutex{},
+		locker:       sync.RWMutex{},
 		sender:       s,
 		observerList: make(map[uuid.UUID]msgObserver),
 	}
-	atomic.AddUint64(&m.counter, 1)
+	m.counter.Store(0)
 	s.OnMessage(m.onMessages)
 	return m
 }
 
-func (m *messenger) sendOffer(offer *webrtc.SessionDescription, number uint64) (uint64, error) {
+func (m *messenger) sendOffer(offer *webrtc.SessionDescription, number uint32) (uint32, error) {
 	sdp := &message.Sdp{
 		SDP:    offer,
 		Number: number,
@@ -68,16 +68,16 @@ func (m *messenger) onMessages(dcMsg webrtc.DataChannelMessage) {
 }
 
 func (m *messenger) register(o msgObserver) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.locker.Lock()
+	defer m.locker.Unlock()
 	if _, ok := m.observerList[o.getId()]; !ok {
 		m.observerList[o.getId()] = o
 	}
 }
 
 func (m *messenger) deregister(o msgObserver) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.locker.Lock()
+	defer m.locker.Unlock()
 	if _, ok := m.observerList[o.getId()]; ok {
 		delete(m.observerList, o.getId())
 	}
@@ -102,15 +102,15 @@ func (m *messenger) handleAnswerMsg(msg *message.ChannelMsg) {
 		slog.Error("lobby.messenger: unmarshal sdp of answer", "err", err, "dataChannel", m.sender.Label())
 	}
 
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.locker.RLock()
+	defer m.locker.RUnlock()
 	for _, observer := range m.observerList {
 		observer.onAnswer(answer.SDP, answer.Number)
 	}
 }
 
-func (m *messenger) count() uint64 {
-	return atomic.AddUint64(&m.counter, 1)
+func (m *messenger) count() uint32 {
+	return m.counter.Load()
 }
 
 // -------------- Interfaces ---------- //
@@ -121,6 +121,6 @@ type msgSender interface {
 }
 
 type msgObserver interface {
-	onAnswer(sdp *webrtc.SessionDescription, number uint64)
+	onAnswer(sdp *webrtc.SessionDescription, number uint32)
 	getId() uuid.UUID
 }

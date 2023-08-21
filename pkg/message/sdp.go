@@ -7,7 +7,7 @@ import (
 )
 
 type Sdp struct {
-	Number uint64                     `json:"number"`
+	Number uint32                     `json:"number"`
 	SDP    *webrtc.SessionDescription `json:"sdp"`
 }
 

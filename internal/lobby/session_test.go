@@ -95,7 +95,7 @@ func TestRtpSessionStartListen(t *testing.T) {
 
 	t.Run("startReq to session but sender already exists", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		session.sender = newSenderHandler(session.Id, uuid.New(), nil)
+		session.sender = newSenderHandler(session.Id, uuid.New(), newMessenger(newSendMock(t)))
 		session.sender.endpoint = mockConnection(nil)
 
 		req := newSessionRequest(context.Background(), nil, startReq)
@@ -200,7 +200,7 @@ func TestRtpSessionListen(t *testing.T) {
 
 	t.Run("answerReq to session", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		session.sender = newSenderHandler(session.Id, uuid.New(), nil)
+		session.sender = newSenderHandler(session.Id, uuid.New(), newMessenger(newSendMock(t)))
 		session.sender.endpoint = mockConnection(mockedOffer)
 
 		req := newSessionRequest(context.Background(), mockedAnswer, answerReq)

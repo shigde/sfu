@@ -5,7 +5,7 @@ import (
 )
 
 type ChannelMsg struct {
-	Id   uint64      `json:"id"`
+	Id   uint32      `json:"id"`
 	Data interface{} `json:"data"`
 	Type MsgType     `json:"type"`
 }

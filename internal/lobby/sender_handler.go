@@ -2,6 +2,7 @@ package lobby
 
 import (
 	"fmt"
+	"sync/atomic"
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
@@ -10,18 +11,25 @@ import (
 )
 
 type senderHandler struct {
-	session   uuid.UUID
-	user      uuid.UUID
-	endpoint  *rtp.Endpoint
-	messenger *messenger
+	id          uuid.UUID
+	session     uuid.UUID
+	user        uuid.UUID
+	endpoint    *rtp.Endpoint
+	messenger   *messenger
+	offerNumber atomic.Uint32
 }
 
 func newSenderHandler(session uuid.UUID, user uuid.UUID, messenger *messenger) *senderHandler {
-	return &senderHandler{
+	h := &senderHandler{
+		id:        uuid.New(),
 		session:   session,
 		user:      user,
 		messenger: messenger,
 	}
+	h.offerNumber.Store(0)
+	messenger.register(h)
+	return h
+
 }
 
 func (h *senderHandler) OnConnectionStateChange(state webrtc.ICEConnectionState) {
@@ -35,11 +43,22 @@ func (h *senderHandler) OnConnectionStateChange(state webrtc.ICEConnectionState)
 }
 
 func (h *senderHandler) OnNegotiationNeeded(offer webrtc.SessionDescription) {
-	if _, err := h.messenger.sendOffer(&offer, 1); err != nil {
+	if _, err := h.messenger.sendOffer(&offer, h.nextOffer()); err != nil {
 		slog.Error("lobby.senderHandler: on negotiated was trigger with error", "err", err, "session", h.session, "user", h.user)
 	}
 }
-func (h *senderHandler) OnOnChannel(dc *webrtc.DataChannel) {
+
+func (h *senderHandler) onAnswer(sdp *webrtc.SessionDescription, number uint32) {
+	// ignore if offer outdated
+	if h.currentOffer() != number {
+		return
+	}
+	if err := h.endpoint.SetAnswer(sdp); err != nil {
+		slog.Error("lobby.senderHandler: on answer was trigger with error", "err", err, "session", h.session, "user", h.user)
+	}
+}
+
+func (h *senderHandler) OnOnChannel(_ *webrtc.DataChannel) {
 	slog.Debug("lobby.senderHandler: datachannel is open", "session", h.session, "user", h.user)
 
 }
@@ -53,4 +72,16 @@ func (h *senderHandler) close() error {
 		return fmt.Errorf("sender handler closing endpoint: %w", err)
 	}
 	return nil
+}
+
+func (h *senderHandler) nextOffer() uint32 {
+	return h.offerNumber.Add(1)
+}
+
+func (h *senderHandler) currentOffer() uint32 {
+	return h.offerNumber.Load()
+}
+
+func (h *senderHandler) getId() uuid.UUID {
+	return h.id
 }

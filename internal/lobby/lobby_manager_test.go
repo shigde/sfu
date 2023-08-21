@@ -18,7 +18,7 @@ func testLobbyManagerSetup(t *testing.T) (*LobbyManager, *lobby, uuid.UUID) {
 	lobby := manager.lobbies.getOrCreateLobby(uuid.New())
 	user := uuid.New()
 	session := newSession(user, lobby.hub, engine, onQuitSessionInternallyStub)
-	session.sender = newSenderHandler(session.Id, user, nil)
+	session.sender = newSenderHandler(session.Id, user, newMessenger(newSendMock(t)))
 	session.sender.endpoint = mockConnection(mockedAnswer)
 	lobby.sessions.Add(session)
 

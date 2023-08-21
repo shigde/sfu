@@ -18,7 +18,7 @@ func testStreamLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 	lobby := newLobby(uuid.New(), engine)
 	user := uuid.New()
 	session := newSession(user, lobby.hub, engine, lobby.onSessionStoppedInternally)
-	session.sender = newSenderHandler(session.Id, user, nil)
+	session.sender = newSenderHandler(session.Id, user, newMessenger(newSendMock(t)))
 	session.sender.endpoint = mockConnection(mockedAnswer)
 	lobby.sessions.Add(session)
 	return lobby, user
