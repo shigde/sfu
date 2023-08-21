@@ -147,8 +147,7 @@ func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescriptio
 	}
 
 	if s.receiver == nil || s.receiver.messenger == nil {
-		<-s.receiver.receivedMessenger
-		// return nil, errReceiverInSessionHasNoMessenger
+		return nil, errReceiverInSessionHasNoMessenger
 	}
 
 	s.sender = newSenderHandler(s.Id, s.user, s.receiver.messenger)

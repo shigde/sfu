@@ -100,3 +100,11 @@ func (o *msgObserverMock) onAnswer(sdp *webrtc.SessionDescription, number uint32
 func (o *msgObserverMock) getId() uuid.UUID {
 	return o.id
 }
+
+func newMockedMessenger(t *testing.T) *messenger {
+	t.Helper()
+	s := newSendMock(t)
+	m := newMessenger(s)
+	s.start()
+	return m
+}
