@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/shigde/sfu/internal/lobby"
 	"github.com/shigde/sfu/internal/media"
 	"github.com/shigde/sfu/internal/metric"
@@ -47,13 +46,8 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 	router := media.NewRouter(config.SecurityConfig, config.RtpConfig, spaceManager)
 
 	// monitoring
-	if config.MetricConfig.Prometheus.Enable {
-		m, err := metric.NewMetric(config.MetricConfig)
-		if err != nil {
-			return nil, fmt.Errorf("creating metric setup: %w", err)
-		}
-		router.Use(metric.GetPrometheusMiddleware(m))
-		router.Path(m.Endpoint).Handler(promhttp.Handler())
+	if err := metric.ExtendRouter(router, config.MetricConfig); err != nil {
+		return nil, fmt.Errorf("handling metrics: %w", err)
 	}
 
 	tp, err := telemetry.NewTracerProvider(ctx)

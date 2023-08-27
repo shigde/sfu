@@ -6,26 +6,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-type MetricConfig struct {
-	Prometheus *PrometheusConfig `mapstructure:"prometheus"`
-}
-
-type PrometheusConfig struct {
-	Enable   bool   `mapstructure:"enable"`
-	Endpoint string `mapstructure:"endpoint"`
-}
-
-type Metric struct {
-	Endpoint string
+type HttpMetric struct {
 	// http metrics
 	totalRequests  *prometheus.CounterVec
 	responseStatus *prometheus.CounterVec
 	httpDuration   *prometheus.HistogramVec
 }
 
-func NewMetric(config *MetricConfig) (*Metric, error) {
-	Endpoint := config.Prometheus.Endpoint
-
+func NewHttpMetric() (*HttpMetric, error) {
 	totalRequests := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "http_requests_total",
@@ -58,5 +46,5 @@ func NewMetric(config *MetricConfig) (*Metric, error) {
 		return nil, fmt.Errorf("register httpDuration metric: %w", err)
 	}
 
-	return &Metric{Endpoint, totalRequests, responseStatus, httpDuration}, nil
+	return &HttpMetric{totalRequests, responseStatus, httpDuration}, nil
 }

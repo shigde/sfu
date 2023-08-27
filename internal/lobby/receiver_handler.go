@@ -38,7 +38,11 @@ func (h *receiverHandler) OnConnectionStateChange(state webrtc.ICEConnectionStat
 		slog.Warn("lobby.receiverHandler: endpoint become idle", "session", h.session, "user", h.user)
 	}
 
-	if state == webrtc.ICEConnectionStateDisconnected || state == webrtc.ICEConnectionStateClosed {
+	if state == webrtc.ICEConnectionStateClosed {
+		slog.Info("lobby.receiverHandler: connection closed", "session", h.session, "user", h.user)
+	}
+
+	if state == webrtc.ICEConnectionStateDisconnected {
 		slog.Warn("lobby.receiverHandler: endpoint lost connection", "session", h.session, "user", h.user)
 		h.onEndpointClose(context.Background(), h.user)
 	}

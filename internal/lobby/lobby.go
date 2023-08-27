@@ -210,10 +210,11 @@ func (l *lobby) handleLeave(req *lobbyRequest) {
 	slog.Info("lobby.lobby: handleLeave", "lobbyId", l.Id, "user", req.user)
 	data, _ := req.data.(*leaveData)
 	if session, ok := l.sessions.FindByUserId(req.user); ok {
+		deleted := l.sessions.Delete(session.Id)
 		if err := session.stop(); err != nil {
 			req.err <- fmt.Errorf("stopping rtp session %s for user %s: %w", session.Id, req.user, err)
 		}
-		data.response <- l.sessions.Delete(session.Id)
+		data.response <- deleted
 		return
 	}
 	req.err <- fmt.Errorf("no session existing for user %s: %w", req.user, errNoSession)
