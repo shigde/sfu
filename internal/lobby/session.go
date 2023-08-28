@@ -23,7 +23,11 @@ var (
 	errSessionRequestTimeout          = errors.New("session request timeout error")
 )
 
-var sessionReqTimeout = 3 * time.Second
+var (
+	sessionReqTimeout = 3 * time.Second
+
+	iceGatheringTimeout = 2 * time.Second
+)
 
 type session struct {
 	Id               uuid.UUID
@@ -129,7 +133,9 @@ func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescriptio
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
 	s.receiver.endpoint = endpoint
-	answer, err := s.receiver.endpoint.GetLocalDescription(ctx)
+	ctxTimeout, cancel := context.WithTimeout(ctx, iceGatheringTimeout)
+	defer cancel()
+	answer, err := s.receiver.endpoint.GetLocalDescription(ctxTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp answerReq: %w", err)
 	}
@@ -184,9 +190,9 @@ func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescriptio
 	}
 	s.sender.endpoint = endpoint
 
-	slog.Warn("####################################### Before GetLocalDescription?")
-	offer, err := s.sender.endpoint.GetLocalDescription(ctx)
-	slog.Warn("####################################### After GetLocalDescription?")
+	ctxTimeout, cancel := context.WithTimeout(ctx, iceGatheringTimeout)
+	defer cancel()
+	offer, err := s.sender.endpoint.GetLocalDescription(ctxTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp answerReq: %w", err)
 	}

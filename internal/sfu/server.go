@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/shigde/sfu/internal/lobby"
 	"github.com/shigde/sfu/internal/media"
@@ -16,6 +17,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	"golang.org/x/exp/slog"
 )
+
+var maxRequestTime = time.Second * 5
 
 type Server struct {
 	ctx    context.Context
@@ -55,11 +58,11 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 		return nil, fmt.Errorf("starting telemetry tracer provider: %w", err)
 	}
 
-	// mux := http.TimeoutHandler(router, time.Second*5, "Timeout!")
+	mux := http.TimeoutHandler(router, maxRequestTime, "Request Timeout!")
 	// start server
 	return &Server{
 		ctx:    ctx,
-		server: &http.Server{Addr: ":8080", Handler: router},
+		server: &http.Server{Addr: ":8080", Handler: mux},
 		config: config,
 		tp:     tp,
 	}, nil

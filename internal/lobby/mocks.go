@@ -47,3 +47,11 @@ func mockConnection(answer *webrtc.SessionDescription) *rtp.Endpoint {
 	close(ops.GatherComplete)
 	return rtp.NewMockConnection(ops)
 }
+
+func mockIdelConnection() *rtp.Endpoint {
+	ops := rtp.MockConnectionOps{
+		Answer:         nil,
+		GatherComplete: make(chan struct{}),
+	}
+	return rtp.NewMockConnection(ops)
+}

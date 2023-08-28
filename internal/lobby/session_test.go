@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/logging"
+	"github.com/shigde/sfu/internal/rtp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -72,6 +73,27 @@ func TestRtpSessionOffer(t *testing.T) {
 		case <-req.err:
 			t.Fatalf("No error was expected!")
 		}
+	})
+
+	t.Run("offerReq to session but receive an ice gathering timeout", func(t *testing.T) {
+		session, engine := testRtpSessionSetup(t)
+		engine.conn = mockIdelConnection()
+
+		req := newSessionRequest(context.Background(), mockedOffer, offerReq)
+		before := iceGatheringTimeout
+		iceGatheringTimeout = 0
+		go func() {
+			session.runRequest(req)
+		}()
+		select {
+		case _ = <-req.respSDPChan:
+			t.Fatalf("No answer was expected!")
+		case <-req.ctx.Done():
+			t.Fatalf("No cancel was expected!")
+		case err := <-req.err:
+			assert.ErrorIs(t, err, rtp.ErrIceGatheringInteruption)
+		}
+		iceGatheringTimeout = before
 	})
 }
 
@@ -168,6 +190,31 @@ func TestRtpSessionStartListen(t *testing.T) {
 		case <-req.err:
 			t.Fatalf("No error was expected!")
 		}
+	})
+
+	t.Run("startReq to session but receive an ice gathering timeout", func(t *testing.T) {
+		session, engine := testRtpSessionSetup(t)
+		engine.conn = mockIdelConnection()
+
+		req := newSessionRequest(context.Background(), nil, startReq)
+		session.receiver = newReceiverHandler(session.Id, session.user, nil)
+		session.receiver.messenger = newMockedMessenger(t)
+		session.receiver.stopWaitingForMessenger()
+
+		before := iceGatheringTimeout
+		iceGatheringTimeout = 0
+		go func() {
+			session.runRequest(req)
+		}()
+		select {
+		case _ = <-req.respSDPChan:
+			t.Fatalf("No answer was expected!")
+		case <-req.ctx.Done():
+			t.Fatalf("No cancel was expected!")
+		case err := <-req.err:
+			assert.ErrorIs(t, err, rtp.ErrIceGatheringInteruption)
+		}
+		iceGatheringTimeout = before
 	})
 }
 

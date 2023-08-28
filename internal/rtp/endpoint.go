@@ -10,6 +10,8 @@ import (
 	"golang.org/x/exp/slog"
 )
 
+var ErrIceGatheringInteruption = errors.New("getting ice gathering interrupted")
+
 type Endpoint struct {
 	peerConnection peerConnection
 	receiver       *receiver
@@ -29,7 +31,7 @@ func (c *Endpoint) GetLocalDescription(ctx context.Context) (*webrtc.SessionDesc
 	case <-c.gatherComplete:
 		return c.peerConnection.LocalDescription(), nil
 	case <-ctx.Done():
-		return nil, errors.New("getting answer get interrupted")
+		return nil, ErrIceGatheringInteruption
 	}
 }
 func (c *Endpoint) SetAnswer(sdp *webrtc.SessionDescription) error {
