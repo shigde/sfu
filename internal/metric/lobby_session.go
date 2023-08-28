@@ -6,9 +6,22 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+var lobbySessions *LobbySessionMetric
+
 type LobbySessionMetric struct {
 	RunningSessions prometheus.Gauge
 	SessionStates   *prometheus.GaugeVec
+}
+
+func RunningSessionsInc() {
+	if lobbySessions != nil {
+		lobbySessions.RunningSessions.Inc()
+	}
+}
+func RunningSessionsDec() {
+	if lobbySessions != nil {
+		lobbySessions.RunningSessions.Dec()
+	}
 }
 
 func NewLobbySessionMetrics() (*LobbySessionMetric, error) {

@@ -12,8 +12,6 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-var LobbySessions *LobbySessionMetric
-
 func ExtendRouter(router *mux.Router, config *MetricConfig) error {
 
 	if config.Prometheus.Enable {
@@ -24,7 +22,7 @@ func ExtendRouter(router *mux.Router, config *MetricConfig) error {
 		}
 		router.Use(GetPrometheusMiddleware(httpMetric))
 
-		LobbySessions, err = NewLobbySessionMetrics()
+		lobbySessions, err = NewLobbySessionMetrics()
 		if err != nil {
 			return fmt.Errorf("creating session metric setup: %w", err)
 		}

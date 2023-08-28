@@ -17,7 +17,7 @@ func testLobbyManagerSetup(t *testing.T) (*LobbyManager, *lobby, uuid.UUID) {
 	manager := NewLobbyManager(engine)
 	lobby := manager.lobbies.getOrCreateLobby(uuid.New())
 	user := uuid.New()
-	session := newSession(user, lobby.hub, engine, onQuitSessionInternallyStub)
+	session := newSession(user, lobby.hub, engine, nil)
 	session.sender = newSenderHandler(session.Id, user, newMockedMessenger(t))
 	session.sender.endpoint = mockConnection(mockedAnswer)
 	lobby.sessions.Add(session)
@@ -72,7 +72,7 @@ func TestLobbyManager(t *testing.T) {
 	t.Run("Start listen to a Lobby, but receiver has no messenger", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 		user := uuid.New()
-		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), onQuitSessionInternallyStub)
+		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), nil)
 		session.receiver = newReceiverHandler(session.Id, session.user, nil)
 		lobby.sessions.Add(session)
 
@@ -93,7 +93,7 @@ func TestLobbyManager(t *testing.T) {
 	t.Run("Start listen to a Lobby", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 		user := uuid.New()
-		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), onQuitSessionInternallyStub)
+		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), nil)
 		session.receiver = newReceiverHandler(session.Id, session.user, nil)
 		session.receiver.messenger = newMockedMessenger(t)
 		session.receiver.stopWaitingForMessenger()

@@ -18,7 +18,7 @@ func NewMockConnection(ops MockConnectionOps) *Endpoint {
 	if ops.GatherComplete != nil {
 		conn.gatherComplete = ops.GatherComplete
 	}
-
+	conn.initComplete = make(chan struct{})
 	return conn
 }
 

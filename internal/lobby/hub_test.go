@@ -12,8 +12,8 @@ func testHubSetup(t *testing.T) *hub {
 	sessions := newSessionRepository()
 	engine := newRtpEngineMock()
 	hub := newHub(sessions)
-	s1 := newSession(uuid.New(), hub, engine, onQuitSessionInternallyStub)
-	s2 := newSession(uuid.New(), hub, engine, onQuitSessionInternallyStub)
+	s1 := newSession(uuid.New(), hub, engine, nil)
+	s2 := newSession(uuid.New(), hub, engine, nil)
 	sessions.Add(s1)
 	sessions.Add(s2)
 	return hub
@@ -21,7 +21,7 @@ func testHubSetup(t *testing.T) *hub {
 func testHubSessionSetup(t *testing.T, hub *hub) *session {
 	t.Helper()
 	engine := newRtpEngineMock()
-	s := newSession(uuid.New(), hub, engine, onQuitSessionInternallyStub)
+	s := newSession(uuid.New(), hub, engine, nil)
 	hub.sessionRepo.Add(s)
 	return s
 }

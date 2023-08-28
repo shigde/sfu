@@ -40,7 +40,7 @@ type session struct {
 func newSession(user uuid.UUID, hub *hub, engine rtpEngine, onInternallyQuit chan<- uuid.UUID) *session {
 	quit := make(chan struct{})
 	requests := make(chan *sessionRequest)
-	metric.LobbySessions.RunningSessions.Inc()
+	metric.RunningSessionsInc()
 
 	session := &session{
 		Id:               uuid.New(),
@@ -215,7 +215,7 @@ func (s *session) stop() error {
 				slog.Error("lobby.sessions: closing receiver", "sessionId", s.Id, "user", s.user)
 			}
 		}
-		metric.LobbySessions.RunningSessions.Dec()
+		metric.RunningSessionsDec()
 	}
 	return nil
 }

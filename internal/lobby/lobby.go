@@ -244,5 +244,5 @@ func (l *lobby) deleteSessionByUserId(userId uuid.UUID) (bool, error) {
 		}
 		return deleted, nil
 	}
-	return false, nil
+	return false, errNoSession
 }
