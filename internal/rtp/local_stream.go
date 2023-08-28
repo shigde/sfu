@@ -102,6 +102,6 @@ func (s *localStream) close() {
 		s.audioWriter.close()
 	}
 	if s.videoWriter != nil && s.videoWriter.isRunning() {
-		s.audioWriter.close()
+		s.videoWriter.close()
 	}
 }
