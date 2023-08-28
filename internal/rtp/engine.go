@@ -112,16 +112,18 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.
 	sender := newSender(peerConnection)
 	peerConnection.OnICEConnectionStateChange(handler.OnConnectionStateChange)
 
+	initComplete := make(chan struct{})
 	peerConnection.OnNegotiationNeeded(func() {
+		<-initComplete
 		slog.Debug("rtp.engine: sender OnNegotiationNeeded triggered")
 		offer, err := peerConnection.CreateOffer(nil)
 		if err != nil {
 			slog.Error("rtp.engine: sender OnNegotiationNeeded", "err", err)
 			return
 		}
-		gatherComplete := webrtc.GatheringCompletePromise(peerConnection)
+		gg := webrtc.GatheringCompletePromise(peerConnection)
 		_ = peerConnection.SetLocalDescription(offer)
-		<-gatherComplete
+		<-gg
 		handler.OnNegotiationNeeded(*peerConnection.LocalDescription())
 	})
 
@@ -146,6 +148,7 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.
 		sender:         sender,
 		AddTrackChan:   sender.addTrackChan,
 		gatherComplete: gatherComplete,
+		initComplete:   initComplete,
 	}, nil
 }
 

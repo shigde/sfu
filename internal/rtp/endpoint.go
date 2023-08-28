@@ -16,6 +16,7 @@ type Endpoint struct {
 	sender         *sender
 	AddTrackChan   <-chan *webrtc.TrackLocalStaticRTP
 	gatherComplete <-chan struct{}
+	initComplete   chan struct{}
 	closed         chan struct{}
 }
 
@@ -33,6 +34,15 @@ func (c *Endpoint) GetLocalDescription(ctx context.Context) (*webrtc.SessionDesc
 }
 func (c *Endpoint) SetAnswer(sdp *webrtc.SessionDescription) error {
 	return c.peerConnection.SetRemoteDescription(*sdp)
+}
+
+func (c *Endpoint) SetInitComplete() {
+	select {
+	case <-c.initComplete:
+	default:
+		close(c.initComplete)
+		<-c.initComplete
+	}
 }
 
 func (c *Endpoint) hasTrack(track *webrtc.TrackLocalStaticRTP) bool {

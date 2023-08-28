@@ -13,34 +13,33 @@ SpaceManager "1" --> "n" Space
 Space "1"-->"n" LiveStream
 }
 
-package lobby {
-class RtpStreamLobbyManager << (S,#FF7700) Singleton >>
-class RtpStreamLobby {
+package "lobby" as X {
+class LobbyManager << (S,#FF7700) Singleton >>
+class lobby {
     id: string (LiveStreamId)
 }
-package lobby.session {
-    class rtpStream {
-        id: string
-    }
-    class rtpSession {
-        id uuid
-        user uuid
-    }
+
+class session {
+    id uuid
+    user uuid
 }
 
-SpaceManager -> RtpStreamLobbyManager
-RtpStreamLobbyManager "1" --> "n" RtpStreamLobby
-RtpStreamLobby "1" ..> "n" rtpSession : "  join with user uuid"
-
-rtpSession "1" --> "n" rtpStream
+SpaceManager -> LobbyManager
+LobbyManager "1" --> "n" lobby
+lobby "1" ..> "n" session : "  join with user uuid"
+lobby - hub
+hub --> session
+session "1" --> "1" receiverHandler
+session "1" --> "0..1" senderHandler
 }
 
 
-rtpSession -() WebRTC_Resource : "         "
+
+receiverHandler --() receiveEndpoint : "         "
+senderHandler --() sendEndpoint
 
 
-
-Space "1"->"0..1" RtpStreamLobby : access Lobby and on Join get: \nResourceId, \nAnswer,\nRtpSessionId
+Space "1"->"0..1" lobby : access Lobby and on Join get: \nResourceId, \nAnswer,\nsessionId
 
 
 @enduml

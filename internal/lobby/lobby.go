@@ -1,7 +1,6 @@
 package lobby
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -15,32 +14,35 @@ var (
 	errNoSession           = errors.New("no session exists")
 	errLobbyStopped        = errors.New("error because lobby stopped")
 	errLobbyRequestTimeout = errors.New("lobby request timeout error")
-	lobbyReqTimeout        = 8 * time.Second
+	lobbyReqTimeout        = 3 * time.Second
 )
 
 type lobby struct {
-	Id         uuid.UUID
-	sessions   *sessionRepository
-	hub        *hub
-	rtpEngine  rtpEngine
-	resourceId uuid.UUID
-	quit       chan struct{}
-	reqChan    chan *lobbyRequest
+	Id            uuid.UUID
+	sessions      *sessionRepository
+	hub           *hub
+	rtpEngine     rtpEngine
+	resourceId    uuid.UUID
+	quit          chan struct{}
+	reqChan       chan *lobbyRequest
+	childQuitChan chan uuid.UUID
 }
 
 func newLobby(id uuid.UUID, rtpEngine rtpEngine) *lobby {
 	sessions := newSessionRepository()
 	quitChan := make(chan struct{})
 	reqChan := make(chan *lobbyRequest)
+	childQuitChan := make(chan uuid.UUID)
 	hub := newHub(sessions)
 	lobby := &lobby{
-		Id:         id,
-		resourceId: uuid.New(),
-		rtpEngine:  rtpEngine,
-		sessions:   sessions,
-		hub:        hub,
-		quit:       quitChan,
-		reqChan:    reqChan,
+		Id:            id,
+		resourceId:    uuid.New(),
+		rtpEngine:     rtpEngine,
+		sessions:      sessions,
+		hub:           hub,
+		quit:          quitChan,
+		reqChan:       reqChan,
+		childQuitChan: childQuitChan,
 	}
 	go lobby.run()
 	return lobby
@@ -62,6 +64,11 @@ func (l *lobby) run() {
 				l.handleLeave(req)
 			default:
 				slog.Error("lobby.lobby: not supported request type in Lobby", "type", requestType)
+			}
+		case id := <-l.childQuitChan:
+			slog.Debug("join leave lobby")
+			if _, err := l.deleteSessionByUserId(id); err != nil {
+				slog.Error("lobby.lobby: deleting session because internally reason", "err", err)
 			}
 		case <-l.quit:
 			slog.Info("lobby.lobby: close Lobby", "lobbyId", l.Id)
@@ -108,7 +115,7 @@ func (l *lobby) handleJoin(joinReq *lobbyRequest) {
 	data, _ := joinReq.data.(*joinData)
 	session, ok := l.sessions.FindByUserId(joinReq.user)
 	if !ok {
-		session = newSession(joinReq.user, l.hub, l.rtpEngine, l.onSessionStoppedInternally)
+		session = newSession(joinReq.user, l.hub, l.rtpEngine, l.childQuitChan)
 		l.sessions.Add(session)
 	}
 	offerReq := newSessionRequest(joinReq.ctx, data.offer, offerReq)
@@ -209,36 +216,12 @@ func (l *lobby) handleListen(req *lobbyRequest) {
 func (l *lobby) handleLeave(req *lobbyRequest) {
 	slog.Info("lobby.lobby: handleLeave", "lobbyId", l.Id, "user", req.user)
 	data, _ := req.data.(*leaveData)
-	if session, ok := l.sessions.FindByUserId(req.user); ok {
-		deleted := l.sessions.Delete(session.Id)
-		if err := session.stop(); err != nil {
-			req.err <- fmt.Errorf("stopping rtp session %s for user %s: %w", session.Id, req.user, err)
-		}
-		data.response <- deleted
-		return
+
+	deleted, err := l.deleteSessionByUserId(req.user)
+	if err != nil {
+		req.err <- fmt.Errorf("no session existing for user %s: %w", req.user, errNoSession)
 	}
-	req.err <- fmt.Errorf("no session existing for user %s: %w", req.user, errNoSession)
-}
-
-// This methode triggers handleLeave because session get stopped by internal reason.
-// The internal reason gould be a connection lost or something like this.
-func (l *lobby) onSessionStoppedInternally(ctx context.Context, user uuid.UUID) bool {
-	slog.Info("lobby.lobby: onSessionStoppedInternally", "lobbyId", l.Id, "user", user)
-	ctx, span := otel.Tracer(tracerName).Start(ctx, "lobby:handleListen")
-	defer span.End()
-	request := newLobbyRequest(ctx, user)
-	leaveData := newLeaveData()
-	request.data = leaveData
-
-	go l.runRequest(request)
-
-	select {
-	case err := <-request.err:
-		slog.Error("lobby.lobby: stopping session because internally reason", "err", err, "lobbyId", l.Id, "userId", user)
-		return false
-	case success := <-leaveData.response:
-		return success
-	}
+	data.response <- deleted
 }
 
 func (l *lobby) stop() {
@@ -250,4 +233,16 @@ func (l *lobby) stop() {
 		close(l.quit)
 		slog.Info("lobby.lobby: stopped was triggered", "lobbyId", l.Id)
 	}
+}
+
+func (l *lobby) deleteSessionByUserId(userId uuid.UUID) (bool, error) {
+	if session, ok := l.sessions.FindByUserId(userId); ok {
+		deleted := l.sessions.Delete(session.Id)
+		slog.Debug("lobby.lobby: deleteSessionByUserId", "lobbyId", l.Id, "sessionId", session.Id, "userId", userId, "deleted", deleted)
+		if err := session.stop(); err != nil {
+			return deleted, fmt.Errorf("stopping rtp session (sessionId = %s for userId = %s): %w", session.Id, userId, err)
+		}
+		return deleted, nil
+	}
+	return false, nil
 }

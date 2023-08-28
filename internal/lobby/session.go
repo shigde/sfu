@@ -34,10 +34,10 @@ type session struct {
 	sender           *senderHandler
 	reqChan          chan *sessionRequest
 	quit             chan struct{}
-	onInternallyQuit onInternallyQuit
+	onInternallyQuit chan<- uuid.UUID
 }
 
-func newSession(user uuid.UUID, hub *hub, engine rtpEngine, onQuit onInternallyQuit) *session {
+func newSession(user uuid.UUID, hub *hub, engine rtpEngine, onInternallyQuit chan<- uuid.UUID) *session {
 	quit := make(chan struct{})
 	requests := make(chan *sessionRequest)
 	metric.LobbySessions.RunningSessions.Inc()
@@ -49,7 +49,7 @@ func newSession(user uuid.UUID, hub *hub, engine rtpEngine, onQuit onInternallyQ
 		hub:              hub,
 		reqChan:          requests,
 		quit:             quit,
-		onInternallyQuit: onQuit,
+		onInternallyQuit: onInternallyQuit,
 	}
 
 	go session.run()
@@ -112,7 +112,18 @@ func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescriptio
 	if s.receiver != nil {
 		return nil, errReceiverInSessionAlreadyExists
 	}
-	s.receiver = newReceiverHandler(s.Id, s.user, s.onInternallyQuit)
+	s.receiver = newReceiverHandler(s.Id, s.user, func(ctx context.Context, user uuid.UUID) bool {
+		go func() {
+			select {
+			case s.onInternallyQuit <- user:
+				slog.Debug("lobby.sessions: internally quit of session", "session id", s.Id, "user", s.user)
+			case <-s.quit:
+				slog.Debug("lobby.sessions: internally quit interrupted because session already closed", "session id", s.Id, "user", s.user)
+			}
+		}()
+		return true
+	})
+
 	endpoint, err := s.rtpEngine.NewReceiverEndpoint(ctx, *req.reqSDP, s.hub, s.receiver)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
@@ -173,7 +184,9 @@ func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescriptio
 	}
 	s.sender.endpoint = endpoint
 
+	slog.Warn("####################################### Before GetLocalDescription?")
 	offer, err := s.sender.endpoint.GetLocalDescription(ctx)
+	slog.Warn("####################################### After GetLocalDescription?")
 	if err != nil {
 		return nil, fmt.Errorf("create rtp answerReq: %w", err)
 	}

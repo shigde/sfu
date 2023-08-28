@@ -61,6 +61,7 @@ func (h *senderHandler) onAnswer(sdp *webrtc.SessionDescription, number uint32) 
 	if err := h.endpoint.SetAnswer(sdp); err != nil {
 		slog.Error("lobby.senderHandler: on answer was trigger with error", "err", err, "session", h.session, "user", h.user)
 	}
+	h.endpoint.SetInitComplete()
 }
 
 func (h *senderHandler) OnChannel(_ *webrtc.DataChannel) {

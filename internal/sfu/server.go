@@ -55,6 +55,7 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 		return nil, fmt.Errorf("starting telemetry tracer provider: %w", err)
 	}
 
+	// mux := http.TimeoutHandler(router, time.Second*5, "Timeout!")
 	// start server
 	return &Server{
 		ctx:    ctx,
