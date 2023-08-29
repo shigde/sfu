@@ -28,8 +28,10 @@ func (w *writer) writeRtp(remoteTrack *webrtc.TrackRemote, localTrack *webrtc.Tr
 	for {
 		select {
 		case <-w.globalQuit:
+			slog.Info("rtp.writer closed globally", "track id", w.id)
 			return nil
 		case <-w.quit:
+			slog.Info("rtp.writer closed locally", "track id", w.id)
 			return nil
 		default:
 			i, _, err := remoteTrack.Read(rtpBuf)
@@ -55,9 +57,9 @@ func (w *writer) close() {
 	slog.Info("rtp.writer: close", "track id", w.id)
 	select {
 	case <-w.globalQuit:
-		slog.Warn("rtp.writer the writer was already globally closed", "track id", w.id)
+		slog.Warn("rtp.writer the writer was already closed, con not close by global again", "track id", w.id)
 	case <-w.quit:
-		slog.Warn("rtp.writer the writer was already closed", "track id", w.id)
+		slog.Warn("rtp.writer the writer was already closed, con not close by local again", "track id", w.id)
 	default:
 		close(w.quit)
 		slog.Info("rtp.writer close was triggered", "track id", w.id)

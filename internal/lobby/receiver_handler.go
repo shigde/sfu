@@ -48,7 +48,7 @@ func (h *receiverHandler) OnConnectionStateChange(state webrtc.ICEConnectionStat
 	}
 }
 
-func (h *receiverHandler) OnNegotiationNeeded(offer webrtc.SessionDescription) {
+func (h *receiverHandler) OnNegotiationNeeded(_ webrtc.SessionDescription) {
 	slog.Warn("lobby.receiverHandler: on negotiated was trigger for static connection", "session", h.session, "user", h.user)
 }
 func (h *receiverHandler) OnChannel(dc *webrtc.DataChannel) {
