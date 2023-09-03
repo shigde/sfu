@@ -1,4 +1,4 @@
-# Lobby
+# Documentation
 
 ## Lobby Workflow
 

@@ -7,6 +7,7 @@ import (
 	"github.com/pion/interceptor"
 	"github.com/pion/interceptor/pkg/intervalpli"
 	"github.com/pion/webrtc/v3"
+	"github.com/shigde/sfu/internal/static"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
 )
@@ -181,4 +182,52 @@ func creatDC(pc *webrtc.PeerConnection, handler StateEventHandler) error {
 	}
 	handler.OnChannel(dc)
 	return nil
+}
+
+func (e *Engine) NewMediaSenderEndpoint(media *static.MediaFile) (*Endpoint, error) {
+	stateHandler := newMediaStateEventHandler()
+	peerConnection, err := e.api.NewPeerConnection(e.config)
+	if err != nil {
+		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
+	}
+
+	iceConnectedCtx, iceConnectedCtxCancel := context.WithCancel(context.Background())
+
+	peerConnection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
+		fmt.Printf("Connection State has changed %s \n", connectionState.String())
+		if connectionState == webrtc.ICEConnectionStateConnected {
+			iceConnectedCtxCancel()
+		}
+	})
+
+	rtpVideoSender, err := peerConnection.AddTrack(media.VideoTrack)
+	if err != nil {
+		return nil, fmt.Errorf("add video track to peer connection: %w ", err)
+	}
+	media.PlayVideo(iceConnectedCtx, rtpVideoSender)
+
+	rtpAudioSender, err := peerConnection.AddTrack(media.AudioTrack)
+	if err != nil {
+		return nil, fmt.Errorf("add audio track to peer connection: %w ", err)
+	}
+	media.PlayAudio(iceConnectedCtx, rtpAudioSender)
+
+	err = creatDC(peerConnection, stateHandler)
+
+	if err != nil {
+		return nil, fmt.Errorf("creating data channel: %w", err)
+	}
+
+	offer, err := peerConnection.CreateOffer(nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating offer: %w", err)
+	}
+
+	gatherComplete := webrtc.GatheringCompletePromise(peerConnection)
+
+	if err = peerConnection.SetLocalDescription(offer); err != nil {
+		return nil, err
+	}
+
+	return &Endpoint{peerConnection: peerConnection, gatherComplete: gatherComplete}, nil
 }

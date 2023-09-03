@@ -1,3 +1,0 @@
-# Shig Documentation
-
-# Software
