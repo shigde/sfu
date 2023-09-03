@@ -22,6 +22,8 @@ That's a trade-off we accept to avoid complex and not needed signaling logic.
 
 ### Listen a Lobby Session and receive Video/Audio 
 
+(coming soon)
+
 
 ## Live Stream vs. ActivePub Video
 
