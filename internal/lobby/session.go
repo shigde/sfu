@@ -227,13 +227,17 @@ func (s *session) stop() error {
 }
 
 func (s *session) addTrack(track *webrtc.TrackLocalStaticRTP) {
+	slog.Debug("lobby.sessions: addTrack", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
 	if s.sender != nil && s.sender.endpoint != nil {
+		slog.Debug("lobby.sessions: addTrack - to sender endpoint", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
 		s.sender.endpoint.AddTrack(track)
 	}
 }
 
 func (s *session) removeTrack(track *webrtc.TrackLocalStaticRTP) {
+	slog.Debug("lobby.sessions: removeTrack", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
 	if s.sender != nil && s.sender.endpoint != nil {
+		slog.Debug("lobby.sessions: removeTrack - from sender endpoint", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
 		s.sender.endpoint.RemoveTrack(track)
 	}
 }

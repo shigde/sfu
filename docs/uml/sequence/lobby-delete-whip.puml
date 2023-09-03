@@ -1,0 +1,32 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+'https://plantuml.com/sequence-diagram
+
+title WHIP Endpoint (https://datatracker.ietf.org/doc/draft-ietf-wish-whip/)
+participant Client
+participant Media_Server
+autonumber
+== Delete a Lobby with Stream Recource ==
+Client <-> RTP_Server: RTP/RTCP FLOW
+Client -> Media_Server: DELETE /space/<<spaceId>>/stream/<<streamId>>/whip
+note right
+__Request__:
+
+SDP (Offer)
+
+__Header__:
+- Content-Type: "application/sdp"
+- X-Req-Token: <<Request-Token>>
+- Cookie: <<Session-Cookie>>
+end note
+
+Client <-- Media_Server: 204 No Content
+
+== Other Response Cases ==
+
+Client <-- Media_Server: 400 Bad Request
+Client <-- Media_Server: 401 Unauthorised
+Client <-- Media_Server: 404 Not Found
+Client <-- Media_Server: 500 Internal Server Error
+@enduml

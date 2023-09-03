@@ -74,18 +74,17 @@ func (c *Endpoint) getSender(track *webrtc.TrackLocalStaticRTP) (*webrtc.RTPSend
 }
 
 func (c *Endpoint) AddTrack(track *webrtc.TrackLocalStaticRTP) {
-	slog.Debug("rtp.connection: Add Track")
+	slog.Debug("rtp.connection: Add Track", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
 	if has := c.hasTrack(track); !has {
-		slog.Debug("rtp.connection: Add Track to connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
+		slog.Debug("rtp.connection: Add Track to connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind(), "signalState", c.peerConnection.SignalingState().String())
 		if _, err := c.peerConnection.AddTrack(track); err != nil {
-			slog.Error("rtp.connection: Add Track to connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
+			slog.Error("rtp.connection: Add Track to connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind(), "signalState", c.peerConnection.SignalingState().String())
 		}
-
 	}
 }
 
 func (c *Endpoint) RemoveTrack(track *webrtc.TrackLocalStaticRTP) {
-	slog.Debug("rtp.connection: Remove Track")
+	slog.Debug("rtp.connection: Remove Track", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
 	if sender, has := c.getSender(track); has {
 		slog.Debug("rtp.connection: Remove Track from connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
 		if err := c.peerConnection.RemoveTrack(sender); err != nil {
@@ -107,5 +106,6 @@ type peerConnection interface {
 	GetSenders() (result []*webrtc.RTPSender)
 	AddTrack(track webrtc.TrackLocal) (*webrtc.RTPSender, error)
 	RemoveTrack(sender *webrtc.RTPSender) error
+	SignalingState() webrtc.SignalingState
 	Close() error
 }

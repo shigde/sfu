@@ -44,7 +44,7 @@ func (s *localStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemo
 		if err = s.audioWriter.writeRtp(track, s.audioTrack); err != nil {
 			slog.Error("rtp.local_stream: writing local audio track ", "streamId", s.id, "err", err)
 		}
-		slog.Debug("rtp.local_stream: stop writing local audio track ", "streamId", s.id, "trackId", s.videoTrack.ID())
+		slog.Debug("rtp.local_stream: stop writing local audio track ", "streamId", s.id, "trackId", s.audioTrack.ID())
 	}()
 	return nil
 }

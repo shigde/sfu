@@ -102,20 +102,32 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.
 	if err != nil {
 		return nil, fmt.Errorf("create sender peer connection: %w ", err)
 	}
-	if sendingTracks != nil {
-		for _, track := range sendingTracks {
-			if _, err = peerConnection.AddTrack(track); err != nil {
-				return nil, fmt.Errorf("adding track to connection: %w ", err)
-			}
-		}
-	}
+
 	sender := newSender(peerConnection)
 	peerConnection.OnICEConnectionStateChange(handler.OnConnectionStateChange)
 
 	initComplete := make(chan struct{})
+
+	//@TODO: Fix the race
+	// First we create the sender endpoint and after this we add the individual tracks.
+	// I don't know why, but Pion doesn't trigger renegotiation when creating a peer connection with tracks and the sdp
+	// exchange is not finish. A peer connection without tracks where all tracks are added afterwards triggers renegotiation.
+	// Unfortunately, "sendingTracks" could be outdated in the meantime.
+	// This creates a race between remove and add track that I still have to think about it.
+	go func() {
+		<-initComplete
+		if sendingTracks != nil {
+			for _, track := range sendingTracks {
+				if _, err = peerConnection.AddTrack(track); err != nil {
+					slog.Error("rtp.engine: adding track to connection", "err", err)
+				}
+			}
+		}
+	}()
+
 	peerConnection.OnNegotiationNeeded(func() {
 		<-initComplete
-		slog.Debug("rtp.engine: sender OnNegotiationNeeded triggered")
+		slog.Debug("rtp.engine: sender OnNegotiationNeeded was triggered")
 		offer, err := peerConnection.CreateOffer(nil)
 		if err != nil {
 			slog.Error("rtp.engine: sender OnNegotiationNeeded", "err", err)
@@ -126,6 +138,7 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.
 		<-gg
 		handler.OnNegotiationNeeded(*peerConnection.LocalDescription())
 	})
+	slog.Debug("rtp.engine: sender: OnNegotiationNeeded setup finish")
 
 	err = creatDC(peerConnection, handler)
 	if err != nil {
