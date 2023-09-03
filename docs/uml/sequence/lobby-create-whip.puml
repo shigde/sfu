@@ -21,7 +21,7 @@ __Header__:
    }
 end note
 
-Client <-- Media_Server: 200 Ok
+Client <-- Media_Server: 201 Created
 note right
 __Response__:
 
