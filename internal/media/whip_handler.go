@@ -38,6 +38,7 @@ func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 		if err != nil {
 			telemetry.RecordError(span, err)
 			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(err.Error()))
 			return
 		}
 

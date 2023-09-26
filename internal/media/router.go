@@ -18,8 +18,9 @@ func NewRouter(
 ) *mux.Router {
 	router := mux.NewRouter()
 	//cors := handlers.CORS(
-	//	handlers.AllowedOrigins(securityConfig.TrustedOrigins),
-	//	handlers.AllowedHeaders([]string{"X-Req-Token"}),
+	//	handlers.AllowedOrigins([]string{"http://localhost:3000/"}),
+	//	handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"}),
+	//	// handlers.AllowedHeaders([]string{"X-Req-Token"}),
 	//)
 	//router.Use(cors)
 
