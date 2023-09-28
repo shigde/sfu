@@ -27,6 +27,7 @@ type Actor struct {
 	OutboxIri         string         `gorm:"outboxIri"`
 	SharedInboxIri    string         `gorm:"sharedInboxIri"`
 	DisabledAt        sql.NullTime   `gorm:"disabledAt"`
+	ServerId          sql.NullInt64  `gorm:"serverId"`
 	RemoteCreatedAt   time.Time      `gorm:"remoteCreatedAt"`
 	PreferredUsername string         `gorm:"preferredUsername"`
 	gorm.Model
@@ -43,12 +44,12 @@ func newInstanceActor(instanceUrl *url.URL, name string) (*Actor, error) {
 		ActorType:      "Application",
 		PublicKey:      string(publicKey),
 		PrivateKey:     sql.NullString{String: string(privateKey), Valid: true},
-		ActorIri:       actorIri.Path,
-		FollowingIri:   buildFollowingIri(actorIri).Path,
-		FollowersIri:   buildFollowersIri(actorIri).Path,
-		InboxIri:       buildInboxIri(actorIri).Path,
-		OutboxIri:      buildOutboxIri(actorIri).Path,
-		SharedInboxIri: buildSharedInboxIri(actorIri).Path,
+		ActorIri:       actorIri.String(),
+		FollowingIri:   buildFollowingIri(actorIri).String(),
+		FollowersIri:   buildFollowersIri(actorIri).String(),
+		InboxIri:       buildInboxIri(actorIri).String(),
+		OutboxIri:      buildOutboxIri(actorIri).String(),
+		SharedInboxIri: buildSharedInboxIri(instanceUrl).String(),
 
 		DisabledAt:        sql.NullTime{},
 		RemoteCreatedAt:   now,

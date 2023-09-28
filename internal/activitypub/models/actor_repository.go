@@ -21,7 +21,7 @@ func NewActorRepository(property *instance.Property, storage instance.Storage) (
 	storage.GetDatabase()
 	db := storage.GetDatabase()
 
-	if err := db.AutoMigrate(&Actor{}); err != nil {
+	if err := db.AutoMigrate(&Actor{}, &Server{}); err != nil {
 		return nil, fmt.Errorf("migrating the space schema: %w", err)
 	}
 
