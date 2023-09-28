@@ -14,6 +14,7 @@ require (
 	github.com/prometheus/client_golang v1.11.1
 	github.com/spf13/viper v1.10.1
 	github.com/stretchr/testify v1.8.3
+	github.com/superseriousbusiness/activity v1.4.0-gts
 	go.opentelemetry.io/otel v1.16.0
 	go.opentelemetry.io/otel/exporters/jaeger v1.16.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.16.0

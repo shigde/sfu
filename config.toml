@@ -21,7 +21,7 @@ key = "SecretValueReplaceThis"
 defaultexpiretime = 604800  # 1 week not implemented et jet
 
 [metric.prometheus]
-enable = true
+enable = false
 endpoint = "/metrics" # Endpoint where the Prometheus metrics are delivered
 
 [rtp]
@@ -51,3 +51,7 @@ endpoint = "/metrics" # Endpoint where the Prometheus metrics are delivered
 # currently a more dynamic credential handling is not implemented
 #
 iceServer = [{urls=["stun:stun.l.google.com:19302"]}]
+
+# ActivityPub federation api
+[federation]
+enable = true

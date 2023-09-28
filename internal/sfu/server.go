@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/shigde/sfu/internal/activitypub"
 	"github.com/shigde/sfu/internal/lobby"
 	"github.com/shigde/sfu/internal/media"
 	"github.com/shigde/sfu/internal/metric"
@@ -47,6 +48,11 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 
 	// api endpoints
 	router := media.NewRouter(config.SecurityConfig, config.RtpConfig, spaceManager)
+
+	// federation
+	if err := activitypub.ExtendRouter(router, config.FederationConfig); err != nil {
+		return nil, fmt.Errorf("handling federation api: %w", err)
+	}
 
 	// monitoring
 	if err := metric.ExtendRouter(router, config.MetricConfig); err != nil {

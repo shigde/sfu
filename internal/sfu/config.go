@@ -1,6 +1,7 @@
 package sfu
 
 import (
+	"github.com/shigde/sfu/internal/activitypub"
 	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/logging"
 	"github.com/shigde/sfu/internal/metric"
@@ -9,9 +10,10 @@ import (
 )
 
 type Config struct {
-	*auth.SecurityConfig   `mapstructure:"security"`
-	*storage.StorageConfig `mapstructure:"store"`
-	*logging.LogConfig     `mapstructure:"log"`
-	*metric.MetricConfig   `mapstructure:"metric"`
-	*rtp.RtpConfig         `mapstructure:"rtp"`
+	*auth.SecurityConfig          `mapstructure:"security"`
+	*storage.StorageConfig        `mapstructure:"store"`
+	*logging.LogConfig            `mapstructure:"log"`
+	*metric.MetricConfig          `mapstructure:"metric"`
+	*rtp.RtpConfig                `mapstructure:"rtp"`
+	*activitypub.FederationConfig `mapstructure:"federation"`
 }
