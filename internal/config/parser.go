@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/shigde/sfu/internal/activitypub"
+	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/sfu"
@@ -57,7 +57,11 @@ func ParseConfig(file string) (*sfu.Config, error) {
 		return nil, err
 	}
 
-	if err := activitypub.ValidateFederationConfig(config.FederationConfig); err != nil {
+	if err := instance.ValidateFederationConfig(config.FederationConfig); err != nil {
+		return nil, err
+	}
+
+	if err := sfu.ValidateServerConfig(config.ServerConfig); err != nil {
 		return nil, err
 	}
 

@@ -6,10 +6,11 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/internal/activitypub/handler"
+	"github.com/shigde/sfu/internal/activitypub/instance"
 )
 
 // StartRouter will start the federation specific http router.
-func ExtendRouter(router *mux.Router, config *FederationConfig) error {
+func extendRouter(router *mux.Router, config *instance.FederationConfig) error {
 	router.HandleFunc("/.well-known/webfinger", handler.GetWebfinger(config))
 
 	//// Host Metadata

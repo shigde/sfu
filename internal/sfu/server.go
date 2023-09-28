@@ -49,9 +49,14 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 	// api endpoints
 	router := media.NewRouter(config.SecurityConfig, config.RtpConfig, spaceManager)
 
-	// federation
-	if err := activitypub.ExtendRouter(router, config.FederationConfig); err != nil {
-		return nil, fmt.Errorf("handling federation api: %w", err)
+	// federation api
+	api, err := activitypub.NewApApi(config.FederationConfig, store)
+	if err != nil {
+		return nil, fmt.Errorf("creating federation api: %w", err)
+	}
+
+	if err := api.BoostrapApi(router); err != nil {
+		return nil, fmt.Errorf("boostrapping federation api: %w", err)
 	}
 
 	// monitoring
@@ -68,7 +73,7 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 	// start server
 	return &Server{
 		ctx:    ctx,
-		server: &http.Server{Addr: ":8080", Handler: mux},
+		server: &http.Server{Addr: fmt.Sprintf("%s:%d", config.Host, config.Port), Handler: mux},
 		config: config,
 		tp:     tp,
 	}, nil

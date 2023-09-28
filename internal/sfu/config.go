@@ -1,7 +1,9 @@
 package sfu
 
 import (
-	"github.com/shigde/sfu/internal/activitypub"
+	"fmt"
+
+	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/logging"
 	"github.com/shigde/sfu/internal/metric"
@@ -10,10 +12,26 @@ import (
 )
 
 type Config struct {
-	*auth.SecurityConfig          `mapstructure:"security"`
-	*storage.StorageConfig        `mapstructure:"store"`
-	*logging.LogConfig            `mapstructure:"log"`
-	*metric.MetricConfig          `mapstructure:"metric"`
-	*rtp.RtpConfig                `mapstructure:"rtp"`
-	*activitypub.FederationConfig `mapstructure:"federation"`
+	*ServerConfig              `mapstructure:"server"`
+	*auth.SecurityConfig       `mapstructure:"security"`
+	*storage.StorageConfig     `mapstructure:"store"`
+	*logging.LogConfig         `mapstructure:"log"`
+	*metric.MetricConfig       `mapstructure:"metric"`
+	*rtp.RtpConfig             `mapstructure:"rtp"`
+	*instance.FederationConfig `mapstructure:"federation"`
+}
+
+type ServerConfig struct {
+	Host string `mapstructure:"host"`
+	Port int    `mapstructure:"port"`
+}
+
+func ValidateServerConfig(config *ServerConfig) error {
+	if len(config.Host) < 1 {
+		return fmt.Errorf("server.Host should not be empty")
+	}
+	if config.Port < 1 {
+		return fmt.Errorf("server.Port should not be empty")
+	}
+	return nil
 }

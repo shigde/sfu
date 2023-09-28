@@ -1,67 +1,75 @@
 package activitypub
 
 import (
-	"github.com/owncast/owncast/activitypub/crypto"
-	"github.com/owncast/owncast/activitypub/inbox"
-	"github.com/owncast/owncast/activitypub/outbox"
-	"github.com/owncast/owncast/activitypub/persistence"
-	"github.com/owncast/owncast/activitypub/workerpool"
+	"fmt"
 
-	"github.com/owncast/owncast/core/data"
-	"github.com/owncast/owncast/models"
-	log "github.com/sirupsen/logrus"
+	"github.com/gorilla/mux"
+	"github.com/shigde/sfu/internal/activitypub/instance"
+	"github.com/shigde/sfu/internal/activitypub/models"
 )
 
 type ApApi struct {
-	config *FederationConfig,
-	storage *storage,
+	Config           *instance.FederationConfig
+	InstanceProperty *instance.Property
+	Storage          instance.Storage
+	actorRepo        *models.ActorRepository
 }
 
-// Start will initialize and start the federation support.
-func NewApApi(config *FederationConfig, store *storage) {
+func NewApApi(config *instance.FederationConfig, storage instance.Storage) (*ApApi, error) {
+	instanceProperty := instance.NewProperty(config)
+
+	actorRepo, err := models.NewActorRepository(instanceProperty, storage)
+	if err != nil {
+		return nil, fmt.Errorf("creation actor repository: %w", err)
+	}
+
+	return &ApApi{
+		Config:           config,
+		InstanceProperty: instanceProperty,
+		Storage:          storage,
+		actorRepo:        actorRepo,
+	}, nil
 
 	// https://stackoverflow.com/questions/69204003/insert-seed-data-at-the-first-time-of-migration-in-gorm
 
-	persistence.Setup(datastore)
-	workerpool.InitOutboundWorkerPool()
-	inbox.InitInboxWorkerPool()
-	StartRouter()
+	//persistence.Setup(datastore)
+	//workerpool.InitOutboundWorkerPool()
+	//inbox.InitInboxWorkerPool()
+	//StartRouter()
 
 	// Generate the keys for signing federated activity if needed.
-	if data.GetPrivateKey() == "" {
-		privateKey, publicKey, err := crypto.GenerateKeys()
-		_ = data.SetPrivateKey(string(privateKey))
-		_ = data.SetPublicKey(string(publicKey))
-		if err != nil {
-			log.Errorln("Unable to get private key", err)
-		}
+
+}
+
+func (a *ApApi) BoostrapApi(router *mux.Router) error {
+	if err := extendRouter(router, a.Config); err != nil {
+		return fmt.Errorf("extending router with federation endpoints: %w", err)
 	}
+
+	return nil
 }
 
-func (a *ApApi) boostrap()  {
-
-}
-// SendLive will send a "Go Live" message to followers.
-func SendLive() error {
-	return outbox.SendLive()
-}
-
-// SendPublicFederatedMessage will send an arbitrary provided message to followers.
-func SendPublicFederatedMessage(message string) error {
-	return outbox.SendPublicMessage(message)
-}
-
-// SendDirectFederatedMessage will send a direct message to a single account.
-func SendDirectFederatedMessage(message, account string) error {
-	return outbox.SendDirectMessageToAccount(message, account)
-}
-
-// GetFollowerCount will return the local tracked follower count.
-func GetFollowerCount() (int64, error) {
-	return persistence.GetFollowerCount()
-}
-
-// GetPendingFollowRequests will return the pending follow requests.
-func GetPendingFollowRequests() ([]models.Follower, error) {
-	return persistence.GetPendingFollowRequests()
-}
+//// SendLive will send a "Go Live" message to followers.
+//func SendLive() error {
+//	return outbox.SendLive()
+//}
+//
+//// SendPublicFederatedMessage will send an arbitrary provided message to followers.
+//func SendPublicFederatedMessage(message string) error {
+//	return outbox.SendPublicMessage(message)
+//}
+//
+//// SendDirectFederatedMessage will send a direct message to a single account.
+//func SendDirectFederatedMessage(message, account string) error {
+//	return outbox.SendDirectMessageToAccount(message, account)
+//}
+//
+//// GetFollowerCount will return the local tracked follower count.
+//func GetFollowerCount() (int64, error) {
+//	return persistence.GetFollowerCount()
+//}
+//
+//// GetPendingFollowRequests will return the pending follow requests.
+//func GetPendingFollowRequests() ([]models.Follower, error) {
+//	return persistence.GetPendingFollowRequests()
+//}
