@@ -1,7 +1,11 @@
 package models
 
 import (
+	"context"
 	"net/url"
+
+	"github.com/superseriousbusiness/activity/streams"
+	"github.com/superseriousbusiness/activity/streams/vocab"
 )
 
 func buildAccountIri(instanceUrl *url.URL, account string) *url.URL {
@@ -32,4 +36,14 @@ func buildFollowersIri(actorUrl *url.URL) *url.URL {
 func buildFollowingIri(actorUrl *url.URL) *url.URL {
 	iri, _ := url.Parse(actorUrl.JoinPath("following").String())
 	return iri
+}
+
+func CollectIRIs(ctx context.Context, iris []*url.URL) (vocab.ActivityStreamsCollection, error) {
+	collection := streams.NewActivityStreamsCollection()
+	items := streams.NewActivityStreamsItemsProperty()
+	for _, i := range iris {
+		items.AppendIRI(i)
+	}
+	collection.SetActivityStreamsItems(items)
+	return collection, nil
 }

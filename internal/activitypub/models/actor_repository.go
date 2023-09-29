@@ -4,12 +4,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"sync"
 
 	"github.com/shigde/sfu/internal/activitypub/instance"
-	"golang.org/x/exp/slog"
 	"gorm.io/gorm"
 )
+
+type IriType int64
+
+const (
+	InboxIri IriType = iota
+	ActorIri
+)
+
+var ErrActorNotFound = errors.New("actor not found")
 
 type ActorRepository struct {
 	locker   *sync.RWMutex
@@ -17,32 +26,43 @@ type ActorRepository struct {
 	storage  instance.Storage
 }
 
-func NewActorRepository(property *instance.Property, storage instance.Storage) (*ActorRepository, error) {
-	storage.GetDatabase()
-	db := storage.GetDatabase()
-
-	if err := db.AutoMigrate(&Actor{}, &Server{}); err != nil {
-		return nil, fmt.Errorf("migrating the space schema: %w", err)
-	}
-
-	if db.Migrator().HasTable(&Actor{}) {
-		if err := db.First(&Actor{}).Error; errors.Is(err, gorm.ErrRecordNotFound) {
-			slog.Info("creating instance actor")
-			instanceActor, err := newInstanceActor(property.InstanceUrl, "shig")
-			if err != nil {
-				return nil, fmt.Errorf("creating instance actor: %w", err)
-			}
-			db.Create(instanceActor)
-		}
-	}
-
+func NewActorRepository(property *instance.Property, storage instance.Storage) *ActorRepository {
 	return &ActorRepository{
 		&sync.RWMutex{},
 		property,
 		storage,
-	}, nil
+	}
 }
 
 func (r *ActorRepository) Add(ctx context.Context, actor *Actor) (*Actor, error) {
+	return actor, nil
+}
+
+func (r *ActorRepository) GetActorForIRI(ctx context.Context, iri *url.URL, iriType IriType) (*Actor, error) {
+	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
+	defer func() {
+		defer r.locker.RUnlock()
+		cancel()
+	}()
+
+	var actor *Actor
+	switch iriType {
+	case InboxIri:
+		actor = &Actor{InboxIri: iri.String()}
+	case ActorIri:
+		actor = &Actor{InboxIri: iri.String()}
+	default:
+		return nil, errors.New(fmt.Sprintf("wrong iri type iriType: %d", iriType))
+	}
+
+	result := tx.First(actor)
+	if result.Error != nil {
+		err := fmt.Errorf("finding actor for IRI %s: %w", iri, result.Error)
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errors.Join(err, ErrActorNotFound)
+		}
+		return nil, err
+	}
+
 	return actor, nil
 }

@@ -30,6 +30,7 @@ type Actor struct {
 	ServerId          sql.NullInt64  `gorm:"serverId"`
 	RemoteCreatedAt   time.Time      `gorm:"remoteCreatedAt"`
 	PreferredUsername string         `gorm:"preferredUsername"`
+	ActorFollow       []ActorFollow  `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	gorm.Model
 }
 

@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
+	"github.com/superseriousbusiness/activity/pub"
 )
 
 type ApApi struct {
@@ -13,31 +14,32 @@ type ApApi struct {
 	InstanceProperty *instance.Property
 	Storage          instance.Storage
 	actorRepo        *models.ActorRepository
+	actor            pub.FederatingActor
 }
 
 func NewApApi(config *instance.FederationConfig, storage instance.Storage) (*ApApi, error) {
 	instanceProperty := instance.NewProperty(config)
 
-	actorRepo, err := models.NewActorRepository(instanceProperty, storage)
-	if err != nil {
-		return nil, fmt.Errorf("creation actor repository: %w", err)
+	if err := models.Migrate(instanceProperty, storage); err != nil {
+		return nil, fmt.Errorf("creation schema for federation: %w", err)
 	}
+	actorRepo := models.NewActorRepository(instanceProperty, storage)
+	actorFollowRepo := models.NewActorFollowRepository(instanceProperty, storage)
+
+	behavior := NewCommonBehavior()
+	protocol := NewFederatingProtocol()
+	database := NewDatabase(actorRepo, actorFollowRepo)
+	clock := NewClock()
+
+	actor := pub.NewFederatingActor(behavior, protocol, database, clock)
 
 	return &ApApi{
 		Config:           config,
 		InstanceProperty: instanceProperty,
 		Storage:          storage,
 		actorRepo:        actorRepo,
+		actor:            actor,
 	}, nil
-
-	// https://stackoverflow.com/questions/69204003/insert-seed-data-at-the-first-time-of-migration-in-gorm
-
-	//persistence.Setup(datastore)
-	//workerpool.InitOutboundWorkerPool()
-	//inbox.InitInboxWorkerPool()
-	//StartRouter()
-
-	// Generate the keys for signing federated activity if needed.
 
 }
 
