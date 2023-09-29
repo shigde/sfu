@@ -26,17 +26,31 @@ func NewActorFollowRepository(property *instance.Property, storage instance.Stor
 	}
 }
 
-func (r *ActorRepository) GetActorFollowForActorId(ctx context.Context, actorId uint) ([]*ActorFollow, error) {
+func (r *ActorFollowRepository) GetActorFollowsFromActorId(ctx context.Context, actorId uint) ([]*ActorFollow, error) {
 	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
-	defer func() {
-		defer r.locker.RUnlock()
-		cancel()
-	}()
+	defer cancel()
 
 	var actorFollows []*ActorFollow
 	results := tx.Where("actorId = ? AND state = ?", actorId, "accepted").Find(&actorFollows)
 	if results.Error != nil {
 		err := fmt.Errorf("finding actor follows for actor %d: %w", actorId, results.Error)
+		if errors.Is(results.Error, gorm.ErrRecordNotFound) {
+			return nil, errors.Join(err, ErrActorFollowNotFound)
+		}
+		return nil, err
+	}
+
+	return actorFollows, nil
+}
+
+func (r *ActorFollowRepository) GetActorFollowers(ctx context.Context, actorId uint) ([]*ActorFollow, error) {
+	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
+	defer cancel()
+
+	var actorFollows []*ActorFollow
+	results := tx.Where("targetActorId = ? AND state = ?", actorId, "accepted").Find(&actorFollows)
+	if results.Error != nil {
+		err := fmt.Errorf("finding follower for actor %d: %w", actorId, results.Error)
 		if errors.Is(results.Error, gorm.ErrRecordNotFound) {
 			return nil, errors.Join(err, ErrActorFollowNotFound)
 		}

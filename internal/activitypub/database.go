@@ -111,8 +111,38 @@ func (d *Database) NewID(c context.Context, t vocab.Type) (id *url.URL, err erro
 
 // --- Follow
 
-func (d *Database) Followers(c context.Context, actorIRI *url.URL) (followers vocab.ActivityStreamsCollection, err error) {
-	return nil, nil
+func (d *Database) Followers(ctx context.Context, actorIRI *url.URL) (followers vocab.ActivityStreamsCollection, err error) {
+	acct, err := d.actorPep.GetActorForIRI(ctx, actorIRI, models.ActorIri)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch followers for account from database.
+	follows, err := d.followRep.GetActorFollowers(ctx, acct.ID)
+	if err != nil {
+		return nil, fmt.Errorf("getting followers for actor id %d: %s", acct.ID, err)
+	}
+	actorIds := make([]uint, 0, len(follows))
+	for _, follow := range follows {
+		actorIds = append(actorIds, follow.ActorId)
+	}
+
+	actors, err := d.actorPep.GetAllActorsByIds(ctx, actorIds)
+	if err != nil {
+		return nil, fmt.Errorf("getting follower actors for actor ids %d: %w", acct.ID, err)
+	}
+
+	// Convert the followers to a slice of account URIs.
+	iris := make([]*url.URL, 0, len(actors))
+	for _, actor := range actors {
+		u, err := url.Parse(actor.ActorIri)
+		if err != nil {
+			return nil, fmt.Errorf("parsing invalid account uri: %w", err)
+		}
+		iris = append(iris, u)
+	}
+
+	return models.CollectIRIs(ctx, iris)
 }
 
 func (d *Database) Following(ctx context.Context, actorIRI *url.URL) (following vocab.ActivityStreamsCollection, err error) {

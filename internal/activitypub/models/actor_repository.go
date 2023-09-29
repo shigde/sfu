@@ -40,10 +40,7 @@ func (r *ActorRepository) Add(ctx context.Context, actor *Actor) (*Actor, error)
 
 func (r *ActorRepository) GetActorForIRI(ctx context.Context, iri *url.URL, iriType IriType) (*Actor, error) {
 	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
-	defer func() {
-		defer r.locker.RUnlock()
-		cancel()
-	}()
+	defer cancel()
 
 	var actor *Actor
 	switch iriType {
@@ -65,4 +62,22 @@ func (r *ActorRepository) GetActorForIRI(ctx context.Context, iri *url.URL, iriT
 	}
 
 	return actor, nil
+}
+
+func (r *ActorRepository) GetAllActorsByIds(ctx context.Context, actorIds []uint) ([]*Actor, error) {
+	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
+	defer cancel()
+
+	var actors []*Actor
+	results := tx.Where("id IN ?", actorIds).Find(&actors)
+	if results.Error != nil {
+		err := fmt.Errorf("finding actors by list: %w", results.Error)
+		if errors.Is(results.Error, gorm.ErrRecordNotFound) {
+			return nil, errors.Join(err, ErrActorNotFound)
+		}
+		return nil, err
+	}
+
+	return actors, nil
+
 }
