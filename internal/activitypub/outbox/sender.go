@@ -13,6 +13,7 @@ import (
 	"github.com/shigde/sfu/internal/activitypub/models"
 	"github.com/shigde/sfu/internal/activitypub/remote"
 	"github.com/shigde/sfu/internal/activitypub/webfinger"
+	"github.com/shigde/sfu/internal/activitypub/workerpool"
 	"github.com/superseriousbusiness/activity/streams"
 	"github.com/superseriousbusiness/activity/streams/vocab"
 	"github.com/teris-io/shortid"
@@ -98,7 +99,6 @@ func (s *Sender) SendToUser(inbox *url.URL, payload []byte) error {
 		return errors.Wrap(err, "unable to create outbox request")
 	}
 
-	// @todo refactor this
 	workerpool.AddToOutboundQueue(req)
 
 	return nil
