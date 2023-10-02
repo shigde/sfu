@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/shigde/sfu/internal/activitypub/crypto"
+	"github.com/shigde/sfu/internal/activitypub/instance"
 	"gorm.io/gorm"
 )
 
@@ -35,7 +36,7 @@ type Actor struct {
 }
 
 func newInstanceActor(instanceUrl *url.URL, name string) (*Actor, error) {
-	actorIri := buildAccountIri(instanceUrl, name)
+	actorIri := instance.BuildAccountIri(instanceUrl, name)
 	now := time.Now()
 	publicKey, privateKey, err := crypto.GenerateKeys()
 	if err != nil {
@@ -46,17 +47,26 @@ func newInstanceActor(instanceUrl *url.URL, name string) (*Actor, error) {
 		PublicKey:      string(publicKey),
 		PrivateKey:     sql.NullString{String: string(privateKey), Valid: true},
 		ActorIri:       actorIri.String(),
-		FollowingIri:   buildFollowingIri(actorIri).String(),
-		FollowersIri:   buildFollowersIri(actorIri).String(),
-		InboxIri:       buildInboxIri(actorIri).String(),
-		OutboxIri:      buildOutboxIri(actorIri).String(),
-		SharedInboxIri: buildSharedInboxIri(instanceUrl).String(),
+		FollowingIri:   instance.BuildFollowingIri(actorIri).String(),
+		FollowersIri:   instance.BuildFollowersIri(actorIri).String(),
+		InboxIri:       instance.BuildInboxIri(actorIri).String(),
+		OutboxIri:      instance.BuildOutboxIri(actorIri).String(),
+		SharedInboxIri: instance.BuildSharedInboxIri(instanceUrl).String(),
 
 		DisabledAt:        sql.NullTime{},
 		RemoteCreatedAt:   now,
 		PreferredUsername: instanceUrl.Host,
 	}, nil
+}
 
+func (s *Actor) GetActorIri() *url.URL {
+	iri, _ := url.Parse(s.ActorIri)
+	return iri
+}
+
+func (s *Actor) GetInboxIri() *url.URL {
+	iri, _ := url.Parse(s.InboxIri)
+	return iri
 }
 
 //     id                 serial primary key,

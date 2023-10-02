@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/rsa"
 	"fmt"
@@ -13,12 +14,26 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-// SignResponse will sign a response using the provided response body and public key.
-func SignResponse(w http.ResponseWriter, body []byte, publicKey PublicKey, privateKey *rsa.PrivateKey) error {
-	return signResponse(privateKey, *publicKey.ID, body, w)
+type keyGetter interface {
+	GetPublicKey(ctx context.Context, actorIRI *url.URL) (string, error)
+	GetPrivateKey(ctx context.Context, actorIRI *url.URL) (string, error)
+	GetKeyPair(ctx context.Context, actorIRI *url.URL) (publicKey string, privateKey string, err error)
 }
 
-func signResponse(privateKey crypto.PrivateKey, pubKeyID url.URL, body []byte, w http.ResponseWriter) error {
+type Signer struct {
+	keyStore keyGetter
+}
+
+func NewSigner(keyStore keyGetter) *Signer {
+	return &Signer{keyStore}
+}
+
+// SignResponse will sign a response using the provided response body and public key.
+func (s *Signer) SignResponse(w http.ResponseWriter, body []byte, publicKey PublicKey, privateKey *rsa.PrivateKey) error {
+	return s.signResponse(privateKey, *publicKey.ID, body, w)
+}
+
+func (s *Signer) signResponse(privateKey crypto.PrivateKey, pubKeyID url.URL, body []byte, w http.ResponseWriter) error {
 	prefs := []httpsig.Algorithm{httpsig.RSA_SHA256}
 	digestAlgorithm := httpsig.DigestSha256
 
@@ -38,14 +53,20 @@ func signResponse(privateKey crypto.PrivateKey, pubKeyID url.URL, body []byte, w
 }
 
 // SignRequest will sign an ounbound request given the provided body.
-func SignRequest(req *http.Request, body []byte, actorIRI *url.URL) error {
-	publicKey := GetPublicKey(actorIRI, "")
-	privateKey := GetPrivateKey("")
+func (s *Signer) SignRequest(req *http.Request, body []byte, actorIRI *url.URL) error {
+	publicKeyString, privateKeyString, err := s.keyStore.GetKeyPair(context.Background(), actorIRI)
 
-	return signRequest(privateKey, publicKey.ID.String(), body, req)
+	if err != nil {
+		return fmt.Errorf("getting crypto key pare from key store: %w", err)
+	}
+
+	publicKey := GetPublicKey(actorIRI, publicKeyString)
+	privateKey := GetPrivateKey(privateKeyString)
+
+	return s.signRequest(privateKey, publicKey.ID.String(), body, req)
 }
 
-func signRequest(privateKey crypto.PrivateKey, pubKeyID string, body []byte, r *http.Request) error {
+func (s *Signer) signRequest(privateKey crypto.PrivateKey, pubKeyID string, body []byte, r *http.Request) error {
 	prefs := []httpsig.Algorithm{httpsig.RSA_SHA256}
 	digestAlgorithm := httpsig.DigestSha256
 
@@ -70,7 +91,7 @@ func signRequest(privateKey crypto.PrivateKey, pubKeyID string, body []byte, r *
 }
 
 // CreateSignedRequest will create a signed POST request of a payload to the provided destination.
-func CreateSignedRequest(payload []byte, url *url.URL, fromActorIRI *url.URL, release string) (*http.Request, error) {
+func (s *Signer) CreateSignedRequest(payload []byte, url *url.URL, fromActorIRI *url.URL, release string) (*http.Request, error) {
 	slog.Debug("Sending", "payload", string(payload), "toUrl", url)
 
 	req, _ := http.NewRequest("POST", url.String(), bytes.NewBuffer(payload))
@@ -79,7 +100,7 @@ func CreateSignedRequest(payload []byte, url *url.URL, fromActorIRI *url.URL, re
 	req.Header.Set("User-Agent", ua)
 	req.Header.Set("Content-Type", "application/activity+json")
 
-	if err := SignRequest(req, payload, fromActorIRI); err != nil {
+	if err := s.SignRequest(req, payload, fromActorIRI); err != nil {
 		slog.Error("error signing request:", "err", err)
 		return nil, err
 	}

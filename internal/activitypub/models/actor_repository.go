@@ -81,3 +81,27 @@ func (r *ActorRepository) GetAllActorsByIds(ctx context.Context, actorIds []uint
 	return actors, nil
 
 }
+
+func (r *ActorRepository) GetPublicKey(ctx context.Context, actorIRI *url.URL) (string, error) {
+	actor, err := r.GetActorForIRI(ctx, actorIRI, ActorIri)
+	if err != nil {
+		return "", fmt.Errorf("getting public key: %w", err)
+	}
+	return actor.PublicKey, nil
+}
+
+func (r *ActorRepository) GetPrivateKey(ctx context.Context, actorIRI *url.URL) (string, error) {
+	actor, err := r.GetActorForIRI(ctx, actorIRI, ActorIri)
+	if err != nil {
+		return "", fmt.Errorf("getting private key: %w", err)
+	}
+	return actor.PrivateKey.String, nil
+}
+
+func (r *ActorRepository) GetKeyPair(ctx context.Context, actorIRI *url.URL) (publicKey string, privateKey string, err error) {
+	actor, err := r.GetActorForIRI(ctx, actorIRI, ActorIri)
+	if err != nil {
+		return "", "", fmt.Errorf("getting key pair: %w", err)
+	}
+	return actor.PublicKey, actor.PrivateKey.String, nil
+}

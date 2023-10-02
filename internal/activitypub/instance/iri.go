@@ -1,4 +1,4 @@
-package models
+package instance
 
 import (
 	"context"
@@ -8,33 +8,43 @@ import (
 	"github.com/superseriousbusiness/activity/streams/vocab"
 )
 
-func buildAccountIri(instanceUrl *url.URL, account string) *url.URL {
+func BuildAccountIri(instanceUrl *url.URL, account string) *url.URL {
 	iri, _ := url.Parse(instanceUrl.JoinPath("federation", "account", account).String())
 	return iri
 }
 
-func buildInboxIri(actorUrl *url.URL) *url.URL {
+func BuildInboxIri(actorUrl *url.URL) *url.URL {
 	iri, _ := url.Parse(actorUrl.JoinPath("inbox").String())
 	return iri
 }
 
-func buildSharedInboxIri(instanceUrl *url.URL) *url.URL {
+func BuildSharedInboxIri(instanceUrl *url.URL) *url.URL {
 	iri, _ := url.Parse(instanceUrl.JoinPath("federation", "inbox").String())
 	return iri
 }
 
-func buildOutboxIri(actorUrl *url.URL) *url.URL {
+func BuildOutboxIri(actorUrl *url.URL) *url.URL {
 	iri, _ := url.Parse(actorUrl.JoinPath("outbox").String())
 	return iri
 }
 
-func buildFollowersIri(actorUrl *url.URL) *url.URL {
+func BuildFollowersIri(actorUrl *url.URL) *url.URL {
 	iri, _ := url.Parse(actorUrl.JoinPath("followers").String())
 	return iri
 }
 
-func buildFollowingIri(actorUrl *url.URL) *url.URL {
+func BuildFollowingIri(actorUrl *url.URL) *url.URL {
 	iri, _ := url.Parse(actorUrl.JoinPath("following").String())
+	return iri
+}
+
+func BuildStreamURLIri(instanceUrl *url.URL) *url.URL {
+	iri, _ := url.Parse(instanceUrl.JoinPath("hls", "stream.m3u8").String())
+	return iri
+}
+
+func BuildResourceIri(instanceUrl *url.URL, resourcePath string) *url.URL {
+	iri, _ := url.Parse(instanceUrl.JoinPath("federation", resourcePath).String())
 	return iri
 }
 

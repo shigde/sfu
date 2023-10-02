@@ -6,7 +6,8 @@ import (
 )
 
 type Property struct {
-	InstanceUrl *url.URL
+	InstanceUrl      *url.URL
+	InstanceUsername string
 }
 
 func NewProperty(config *FederationConfig) *Property {
@@ -16,6 +17,7 @@ func NewProperty(config *FederationConfig) *Property {
 	}
 	instanceUrl, _ := url.Parse(fmt.Sprintf("%s://%s", protocol, config.Domain))
 	return &Property{
-		InstanceUrl: instanceUrl,
+		InstanceUrl:      instanceUrl,
+		InstanceUsername: config.InstanceUsername,
 	}
 }

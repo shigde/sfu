@@ -9,6 +9,7 @@ import (
 	"net/url"
 
 	"codeberg.org/gruf/go-mutexes"
+	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
 	"github.com/superseriousbusiness/activity/streams"
 	"github.com/superseriousbusiness/activity/streams/vocab"
@@ -142,7 +143,7 @@ func (d *Database) Followers(ctx context.Context, actorIRI *url.URL) (followers 
 		iris = append(iris, u)
 	}
 
-	return models.CollectIRIs(ctx, iris)
+	return instance.CollectIRIs(ctx, iris)
 }
 
 func (d *Database) Following(ctx context.Context, actorIRI *url.URL) (following vocab.ActivityStreamsCollection, err error) {
@@ -164,7 +165,7 @@ func (d *Database) Following(ctx context.Context, actorIRI *url.URL) (following 
 		iris = append(iris, u)
 	}
 
-	return models.CollectIRIs(ctx, iris)
+	return instance.CollectIRIs(ctx, iris)
 
 }
 
