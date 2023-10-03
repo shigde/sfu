@@ -4,17 +4,22 @@ import (
 	"fmt"
 
 	"github.com/gorilla/mux"
+	"github.com/shigde/sfu/internal/activitypub/crypto"
+	"github.com/shigde/sfu/internal/activitypub/inbox"
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
+	"github.com/shigde/sfu/internal/activitypub/remote"
+	"github.com/shigde/sfu/internal/activitypub/workerpool"
 	"github.com/superseriousbusiness/activity/pub"
 )
 
 type ApApi struct {
-	Config           *instance.FederationConfig
+	config           *instance.FederationConfig
 	InstanceProperty *instance.Property
 	Storage          instance.Storage
 	actorRepo        *models.ActorRepository
 	actor            pub.FederatingActor
+	signer           *crypto.Signer
 }
 
 func NewApApi(config *instance.FederationConfig, storage instance.Storage) (*ApApi, error) {
@@ -33,19 +38,28 @@ func NewApApi(config *instance.FederationConfig, storage instance.Storage) (*ApA
 
 	actor := pub.NewFederatingActor(behavior, protocol, database, clock)
 
+	signer := crypto.NewSigner(actorRepo)
+
 	return &ApApi{
-		Config:           config,
+		config:           config,
 		InstanceProperty: instanceProperty,
 		Storage:          storage,
 		actorRepo:        actorRepo,
 		actor:            actor,
+		signer:           signer,
 	}, nil
 
 }
 
 func (a *ApApi) BoostrapApi(router *mux.Router) error {
-	if err := extendRouter(router, a.Config); err != nil {
+	if err := extendRouter(router, a.config, a.actorRepo, a.signer); err != nil {
 		return fmt.Errorf("extending router with federation endpoints: %w", err)
+	}
+
+	if a.config.Enable {
+		resolver := remote.NewResolver(a.config, a.signer)
+		workerpool.InitOutboundWorkerPool()
+		inbox.InitInboxWorkerPool(resolver)
 	}
 
 	return nil

@@ -8,6 +8,7 @@ import (
 type Property struct {
 	InstanceUrl      *url.URL
 	InstanceUsername string
+	ServerName       string
 }
 
 func NewProperty(config *FederationConfig) *Property {
@@ -19,5 +20,6 @@ func NewProperty(config *FederationConfig) *Property {
 	return &Property{
 		InstanceUrl:      instanceUrl,
 		InstanceUsername: config.InstanceUsername,
+		ServerName:       config.ServerName,
 	}
 }

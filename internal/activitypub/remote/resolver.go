@@ -10,18 +10,18 @@ import (
 	"github.com/shigde/sfu/internal/activitypub/crypto"
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
-	log "github.com/sirupsen/logrus"
 	"github.com/superseriousbusiness/activity/streams"
 	"github.com/superseriousbusiness/activity/streams/vocab"
+	"golang.org/x/exp/slog"
 )
 
 type Resolver struct {
-	property *instance.Property
-	signer   *crypto.Signer
+	config *instance.FederationConfig
+	signer *crypto.Signer
 }
 
-func NewResolver(property *instance.Property, signer *crypto.Signer) *Resolver {
-	return &Resolver{property, signer}
+func NewResolver(config *instance.FederationConfig, signer *crypto.Signer) *Resolver {
+	return &Resolver{config, signer}
 }
 
 // Resolve will translate a raw ActivityPub payload and fire the callback associated with that activity type.
@@ -38,7 +38,7 @@ func (r *Resolver) Resolve(c context.Context, data []byte, callbacks ...interfac
 		return err
 	}
 
-	log.Debugln("Resolving payload...", string(data))
+	slog.Debug("Resolving payload...", "data", string(data))
 
 	// The createCallback function will be called.
 	err = jsonResolver.Resolve(c, jsonMap)
@@ -48,7 +48,7 @@ func (r *Resolver) Resolve(c context.Context, data []byte, callbacks ...interfac
 	} else if streams.IsUnmatchedErr(err) {
 		// Everything went right but the callback didn't match or the ActivityStreams
 		// type is one that wasn't code generated.
-		log.Debugln("No match: ", err)
+		slog.Debug("No match: ", "err", err)
 	}
 
 	return nil
@@ -56,11 +56,11 @@ func (r *Resolver) Resolve(c context.Context, data []byte, callbacks ...interfac
 
 // ResolveIRI will resolve an IRI ahd call the correct callback for the resolved type.
 func (r *Resolver) ResolveIRI(c context.Context, iri string, callbacks ...interface{}) error {
-	log.Debugln("Resolving", iri)
+	slog.Debug("Resolving", "iri", iri)
 
 	req, _ := http.NewRequest(http.MethodGet, iri, nil)
 
-	actor := instance.BuildAccountIri(r.property.InstanceUrl, r.property.InstanceUsername)
+	actor := instance.BuildAccountIri(r.config.InstanceUrl, r.config.InstanceUsername)
 	if err := r.signer.SignRequest(req, nil, actor); err != nil {
 		return err
 	}

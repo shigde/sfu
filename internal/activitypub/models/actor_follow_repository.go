@@ -59,3 +59,7 @@ func (r *ActorFollowRepository) GetActorFollowers(ctx context.Context, actorId u
 
 	return actorFollows, nil
 }
+
+func (r *ActorFollowRepository) UpdateFollower(ctx context.Context, falower *ActorFollow) error {
+	return nil
+}

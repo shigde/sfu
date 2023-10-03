@@ -38,6 +38,23 @@ func (r *ActorRepository) Add(ctx context.Context, actor *Actor) (*Actor, error)
 	return actor, nil
 }
 
+func (r *ActorRepository) GetActorForUserName(ctx context.Context, name string) (*Actor, error) {
+	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
+	defer cancel()
+
+	actor := &Actor{PreferredUsername: name}
+	result := tx.First(actor)
+	if result.Error != nil {
+		err := fmt.Errorf("finding actor for name %s: %w", name, result.Error)
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errors.Join(err, ErrActorNotFound)
+		}
+		return nil, err
+	}
+
+	return actor, nil
+}
+
 func (r *ActorRepository) GetActorForIRI(ctx context.Context, iri *url.URL, iriType IriType) (*Actor, error) {
 	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
 	defer cancel()

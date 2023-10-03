@@ -64,3 +64,5 @@ domain = "localhost:8080"
 https = false
 release = "v0"
 instanceUsername = "shig"
+serverName = "shig"
+private = false
