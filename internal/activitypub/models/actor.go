@@ -55,7 +55,7 @@ func newInstanceActor(instanceUrl *url.URL, name string) (*Actor, error) {
 
 		DisabledAt:        sql.NullTime{},
 		RemoteCreatedAt:   now,
-		PreferredUsername: instanceUrl.Host,
+		PreferredUsername: name,
 	}, nil
 }
 
