@@ -8,6 +8,7 @@ import (
 	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/sfu"
+	"github.com/shigde/sfu/internal/telemetry"
 	"github.com/spf13/viper"
 )
 
@@ -62,6 +63,10 @@ func ParseConfig(file string) (*sfu.Config, error) {
 	}
 
 	if err := sfu.ValidateServerConfig(config.ServerConfig); err != nil {
+		return nil, err
+	}
+
+	if err := telemetry.ValidateTelemetryConfig(config.TelemetryConfig); err != nil {
 		return nil, err
 	}
 

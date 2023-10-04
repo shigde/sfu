@@ -28,6 +28,9 @@ defaultexpiretime = 604800  # 1 week not implemented et jet
 enable = false
 endpoint = "/metrics" # Endpoint where the Prometheus metrics are delivered
 
+[telemetry]
+enable = false
+
 [rtp]
 # Setup ice server for turn and stun
 # example

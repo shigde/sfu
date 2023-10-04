@@ -64,7 +64,7 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 		return nil, fmt.Errorf("handling metrics: %w", err)
 	}
 
-	tp, err := telemetry.NewTracerProvider(ctx)
+	tp, err := telemetry.NewTracerProvider(ctx, config.TelemetryConfig)
 	if err != nil {
 		return nil, fmt.Errorf("starting telemetry tracer provider: %w", err)
 	}

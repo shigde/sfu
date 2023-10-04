@@ -9,6 +9,7 @@ import (
 	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/storage"
+	"github.com/shigde/sfu/internal/telemetry"
 )
 
 type Config struct {
@@ -17,6 +18,7 @@ type Config struct {
 	*storage.StorageConfig     `mapstructure:"store"`
 	*logging.LogConfig         `mapstructure:"log"`
 	*metric.MetricConfig       `mapstructure:"metric"`
+	*telemetry.TelemetryConfig `mapstructure:"telemetry"`
 	*rtp.RtpConfig             `mapstructure:"rtp"`
 	*instance.FederationConfig `mapstructure:"federation"`
 }
