@@ -1,11 +1,6 @@
 package activitypub
 
 import (
-	//"github.com/owncast/owncast/activitypub/controllers"
-	//"github.com/owncast/owncast/router/middleware"
-
-	"net/http"
-
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/internal/activitypub/crypto"
 	"github.com/shigde/sfu/internal/activitypub/handler"
@@ -25,13 +20,13 @@ func extendRouter(
 	router.HandleFunc("/.well-known/webfinger", handler.GetWebfinger(config))
 
 	// Single ActivityPub Actor
-	http.HandleFunc("/federation/user/", handler.GetActorHandler(config, actorRep, signer))
+	router.HandleFunc("/federation/user/", handler.GetActorHandler(config, actorRep, signer))
 
 	// Single AP object
-	http.HandleFunc("/federation/", handler.GetObjectHandler(config, signer))
+	router.HandleFunc("/federation/", handler.GetObjectHandler(config, signer))
 
 	// Register request for instances
-	http.HandleFunc("/federation/register", handler.GetRegisterHandler(config, actorRep, sender))
+	router.HandleFunc("/federation/register", handler.GetRegisterHandler(config, actorRep, sender)).Methods("GET")
 
 	return nil
 }

@@ -38,7 +38,7 @@ type Actor struct {
 func newInstanceActor(instanceUrl *url.URL, name string) (*Actor, error) {
 	actorIri := instance.BuildAccountIri(instanceUrl, name)
 	now := time.Now()
-	publicKey, privateKey, err := crypto.GenerateKeys()
+	privateKey, publicKey, err := crypto.GenerateKeys()
 	if err != nil {
 		return nil, fmt.Errorf("generation key pair")
 	}
