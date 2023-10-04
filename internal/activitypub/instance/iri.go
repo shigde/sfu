@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/url"
 
+	"github.com/google/uuid"
 	"github.com/superseriousbusiness/activity/streams"
 	"github.com/superseriousbusiness/activity/streams/vocab"
 )
@@ -45,6 +46,11 @@ func BuildStreamURLIri(instanceUrl *url.URL) *url.URL {
 
 func BuildResourceIri(instanceUrl *url.URL, resourcePath string) *url.URL {
 	iri, _ := url.Parse(instanceUrl.JoinPath("federation", resourcePath).String())
+	return iri
+}
+
+func BuildFollowActivityIri(instanceUrl *url.URL) *url.URL {
+	iri, _ := url.Parse(instanceUrl.JoinPath("activity", "follow", uuid.NewString()).String())
 	return iri
 }
 

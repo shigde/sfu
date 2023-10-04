@@ -2,6 +2,7 @@ package outbox
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -22,34 +23,43 @@ import (
 
 type Sender struct {
 	config          *instance.FederationConfig
-	property        *instance.Property
-	remoteWebfinger *webfinger.Client
+	webfingerClient *webfinger.Client
 	resolver        *remote.Resolver
 	signer          *crypto.Signer
 }
 
 func NewSender(
 	config *instance.FederationConfig,
-	property *instance.Property,
-	remoteWebfinger *webfinger.Client,
+	webfingerClient *webfinger.Client,
 	resolver *remote.Resolver,
 	signer *crypto.Signer,
 ) *Sender {
 	return &Sender{
 		config,
-		property,
-		remoteWebfinger,
+		webfingerClient,
 		resolver,
 		signer,
 	}
 }
 
+func (s *Sender) SendFollowRequest(actor *models.Actor, target *models.Actor) error {
+	follow := models.NewFollow(actor, target, s.config)
+	activity, _ := follow.ToAS(context.Background())
+	b, err := models.Serialize(activity)
+	if err != nil {
+		return fmt.Errorf("serializing custom fediverse message activity: %w", err)
+	}
+
+	return s.SendToUser(target.GetInboxIri(), b)
+
+}
+
 func (s *Sender) SendDirectMessageToAccount(textContent, account string) error {
-	links, err := s.remoteWebfinger.GetWebfingerLinks(account)
+	links, err := s.webfingerClient.GetWebfingerLinks(account)
 	if err != nil {
 		return fmt.Errorf("geting webfinger links when sending private message: %w", err)
 	}
-	user := s.remoteWebfinger.MakeWebFingerRequestResponseFromData(links)
+	user := s.webfingerClient.MakeWebFingerRequestResponseFromData(links)
 
 	iri := user.Self
 	actor, err := s.resolver.GetResolvedActorFromIRI(iri)
@@ -77,11 +87,11 @@ func (s *Sender) SendDirectMessageToAccount(textContent, account string) error {
 }
 
 func (s *Sender) createBaseOutboundMessage(textContent string) (vocab.ActivityStreamsCreate, string, vocab.ActivityStreamsNote, string) {
-	localActor := instance.BuildAccountIri(s.property.InstanceUrl, s.property.InstanceUsername)
+	localActor := instance.BuildAccountIri(s.config.InstanceUrl, s.config.InstanceUsername)
 	noteID := shortid.MustGenerate()
-	noteIRI := instance.BuildResourceIri(s.property.InstanceUrl, noteID)
+	noteIRI := instance.BuildResourceIri(s.config.InstanceUrl, noteID)
 	id := shortid.MustGenerate()
-	activity := models.CreateCreateActivity(id, s.property.InstanceUrl, localActor)
+	activity := models.CreateCreateActivity(id, s.config.InstanceUrl, localActor)
 	object := streams.NewActivityStreamsObjectProperty()
 	activity.SetActivityStreamsObject(object)
 
@@ -92,7 +102,7 @@ func (s *Sender) createBaseOutboundMessage(textContent string) (vocab.ActivitySt
 }
 
 func (s *Sender) SendToUser(inbox *url.URL, payload []byte) error {
-	localActor := instance.BuildAccountIri(s.property.InstanceUrl, s.property.InstanceUsername)
+	localActor := instance.BuildAccountIri(s.config.InstanceUrl, s.config.InstanceUsername)
 
 	req, err := s.createSignedRequest(payload, inbox, localActor)
 	if err != nil {

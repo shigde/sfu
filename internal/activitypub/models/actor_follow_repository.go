@@ -13,15 +13,15 @@ import (
 var ErrActorFollowNotFound = errors.New("actor follow not found")
 
 type ActorFollowRepository struct {
-	locker   *sync.RWMutex
-	property *instance.Property
-	storage  instance.Storage
+	locker  *sync.RWMutex
+	config  *instance.FederationConfig
+	storage instance.Storage
 }
 
-func NewActorFollowRepository(property *instance.Property, storage instance.Storage) *ActorFollowRepository {
+func NewActorFollowRepository(config *instance.FederationConfig, storage instance.Storage) *ActorFollowRepository {
 	return &ActorFollowRepository{
 		&sync.RWMutex{},
-		property,
+		config,
 		storage,
 	}
 }

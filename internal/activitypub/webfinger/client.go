@@ -11,11 +11,11 @@ import (
 )
 
 type Client struct {
-	property *instance.Property
+	config *instance.FederationConfig
 }
 
-func NewClient(property *instance.Property) *Client {
-	return &Client{property}
+func NewClient(config *instance.FederationConfig) *Client {
+	return &Client{config}
 }
 func (c *Client) GetWebfingerLinks(account string) ([]map[string]interface{}, error) {
 	type webfingerResponse struct {
@@ -62,8 +62,8 @@ func (c *Client) GetWebfingerLinks(account string) ([]map[string]interface{}, er
 
 // MakeWebfingerResponse will create a new Webfinger response.
 func (c *Client) MakeWebfingerResponse(account string, inbox string, host string) WebfingerResponse {
-	accountIRI := instance.BuildAccountIri(c.property.InstanceUrl, account)
-	streamIRI := instance.BuildStreamURLIri(c.property.InstanceUrl)
+	accountIRI := instance.BuildAccountIri(c.config.InstanceUrl, account)
+	streamIRI := instance.BuildStreamURLIri(c.config.InstanceUrl)
 	return WebfingerResponse{
 		Subject: fmt.Sprintf("acct:%s@%s", account, host),
 		Aliases: []string{
@@ -76,7 +76,7 @@ func (c *Client) MakeWebfingerResponse(account string, inbox string, host string
 				Href: accountIRI.String(),
 			},
 			{
-				Rel:  "http://webfinger.net/rel/profile-page",
+				Rel:  "https://webfinger.net/rel/profile-page",
 				Type: "text/html",
 				Href: accountIRI.String(),
 			},

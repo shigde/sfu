@@ -21,20 +21,20 @@ const (
 var ErrActorNotFound = errors.New("actor not found")
 
 type ActorRepository struct {
-	locker   *sync.RWMutex
-	property *instance.Property
-	storage  instance.Storage
+	locker  *sync.RWMutex
+	config  *instance.FederationConfig
+	storage instance.Storage
 }
 
-func NewActorRepository(property *instance.Property, storage instance.Storage) *ActorRepository {
+func NewActorRepository(config *instance.FederationConfig, storage instance.Storage) *ActorRepository {
 	return &ActorRepository{
 		&sync.RWMutex{},
-		property,
+		config,
 		storage,
 	}
 }
 
-func (r *ActorRepository) Add(ctx context.Context, actor *Actor) (*Actor, error) {
+func (r *ActorRepository) Add(_ context.Context, actor *Actor) (*Actor, error) {
 	return actor, nil
 }
 

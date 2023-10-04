@@ -11,6 +11,7 @@ import (
 	"github.com/shigde/sfu/internal/activitypub/handler"
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
+	"github.com/shigde/sfu/internal/activitypub/outbox"
 )
 
 // StartRouter will start the federation specific http router.
@@ -19,6 +20,7 @@ func extendRouter(
 	config *instance.FederationConfig,
 	actorRep *models.ActorRepository,
 	signer *crypto.Signer,
+	sender *outbox.Sender,
 ) error {
 	router.HandleFunc("/.well-known/webfinger", handler.GetWebfinger(config))
 
@@ -27,6 +29,9 @@ func extendRouter(
 
 	// Single AP object
 	http.HandleFunc("/federation/", handler.GetObjectHandler(config, signer))
+
+	// Register request for instances
+	http.HandleFunc("/federation/register", handler.GetRegisterHandler(config, actorRep, sender))
 
 	return nil
 }

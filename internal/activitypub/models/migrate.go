@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func Migrate(property *instance.Property, storage instance.Storage) error {
+func Migrate(config *instance.FederationConfig, storage instance.Storage) error {
 	storage.GetDatabase()
 	db := storage.GetDatabase()
 
@@ -20,7 +20,7 @@ func Migrate(property *instance.Property, storage instance.Storage) error {
 	if db.Migrator().HasTable(&Actor{}) {
 		if err := db.First(&Actor{}).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 			slog.Info("creating instance actor")
-			instanceActor, err := newInstanceActor(property.InstanceUrl, property.InstanceUsername)
+			instanceActor, err := newInstanceActor(config.InstanceUrl, config.InstanceUsername)
 			if err != nil {
 				return fmt.Errorf("creating instance actor: %w", err)
 			}

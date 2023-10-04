@@ -8,28 +8,29 @@ import (
 	"github.com/shigde/sfu/internal/activitypub/inbox"
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
+	"github.com/shigde/sfu/internal/activitypub/outbox"
 	"github.com/shigde/sfu/internal/activitypub/remote"
+	"github.com/shigde/sfu/internal/activitypub/webfinger"
 	"github.com/shigde/sfu/internal/activitypub/workerpool"
 	"github.com/superseriousbusiness/activity/pub"
 )
 
 type ApApi struct {
-	config           *instance.FederationConfig
-	InstanceProperty *instance.Property
-	Storage          instance.Storage
-	actorRepo        *models.ActorRepository
-	actor            pub.FederatingActor
-	signer           *crypto.Signer
+	config    *instance.FederationConfig
+	Storage   instance.Storage
+	actorRepo *models.ActorRepository
+	actor     pub.FederatingActor
+	signer    *crypto.Signer
+	sender    *outbox.Sender
 }
 
 func NewApApi(config *instance.FederationConfig, storage instance.Storage) (*ApApi, error) {
-	instanceProperty := instance.NewProperty(config)
-
-	if err := models.Migrate(instanceProperty, storage); err != nil {
+	if err := models.Migrate(config, storage); err != nil {
 		return nil, fmt.Errorf("creation schema for federation: %w", err)
 	}
-	actorRepo := models.NewActorRepository(instanceProperty, storage)
-	actorFollowRepo := models.NewActorFollowRepository(instanceProperty, storage)
+
+	actorRepo := models.NewActorRepository(config, storage)
+	actorFollowRepo := models.NewActorFollowRepository(config, storage)
 
 	behavior := NewCommonBehavior()
 	protocol := NewFederatingProtocol()
@@ -40,19 +41,25 @@ func NewApApi(config *instance.FederationConfig, storage instance.Storage) (*ApA
 
 	signer := crypto.NewSigner(actorRepo)
 
+	webfingerClient := webfinger.NewClient(config)
+
+	resolver := remote.NewResolver(config, signer)
+
+	sender := outbox.NewSender(config, webfingerClient, resolver, signer)
+
 	return &ApApi{
-		config:           config,
-		InstanceProperty: instanceProperty,
-		Storage:          storage,
-		actorRepo:        actorRepo,
-		actor:            actor,
-		signer:           signer,
+		config:    config,
+		Storage:   storage,
+		actorRepo: actorRepo,
+		actor:     actor,
+		signer:    signer,
+		sender:    sender,
 	}, nil
 
 }
 
 func (a *ApApi) BoostrapApi(router *mux.Router) error {
-	if err := extendRouter(router, a.config, a.actorRepo, a.signer); err != nil {
+	if err := extendRouter(router, a.config, a.actorRepo, a.signer, a.sender); err != nil {
 		return fmt.Errorf("extending router with federation endpoints: %w", err)
 	}
 
