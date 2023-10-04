@@ -30,7 +30,7 @@ func NewApApi(config *instance.FederationConfig, storage instance.Storage) (*ApA
 	}
 
 	actorRepo := models.NewActorRepository(config, storage)
-	actorFollowRepo := models.NewActorFollowRepository(config, storage)
+	actorFollowRepo := models.NewFollowRepository(config, storage)
 
 	behavior := NewCommonBehavior()
 	protocol := NewFederatingProtocol()

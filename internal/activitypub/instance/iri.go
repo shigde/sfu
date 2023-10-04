@@ -10,7 +10,7 @@ import (
 )
 
 func BuildAccountIri(instanceUrl *url.URL, account string) *url.URL {
-	iri, _ := url.Parse(instanceUrl.JoinPath("federation", "account", account).String())
+	iri, _ := url.Parse(instanceUrl.JoinPath("federation", "accounts", account).String())
 	return iri
 }
 
@@ -50,7 +50,7 @@ func BuildResourceIri(instanceUrl *url.URL, resourcePath string) *url.URL {
 }
 
 func BuildFollowActivityIri(instanceUrl *url.URL) *url.URL {
-	iri, _ := url.Parse(instanceUrl.JoinPath("activity", "follow", uuid.NewString()).String())
+	iri, _ := url.Parse(instanceUrl.JoinPath("federation", "follow", uuid.NewString()).String())
 	return iri
 }
 

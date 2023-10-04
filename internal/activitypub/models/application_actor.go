@@ -8,33 +8,33 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-func BuildActivityPerson(actor *Actor, config *instance.FederationConfig) vocab.ActivityStreamsService {
+func BuildActivityApplication(actor *Actor, config *instance.FederationConfig) vocab.ActivityStreamsApplication {
 	actorIRI := actor.GetActorIri()
 
-	person := streams.NewActivityStreamsService()
+	app := streams.NewActivityStreamsApplication()
 	nameProperty := streams.NewActivityStreamsNameProperty()
 	nameProperty.AppendXMLSchemaString(config.ServerName)
-	person.SetActivityStreamsName(nameProperty)
+	app.SetActivityStreamsName(nameProperty)
 
 	preferredUsernameProperty := streams.NewActivityStreamsPreferredUsernameProperty()
 	preferredUsernameProperty.SetXMLSchemaString(actor.PreferredUsername)
-	person.SetActivityStreamsPreferredUsername(preferredUsernameProperty)
+	app.SetActivityStreamsPreferredUsername(preferredUsernameProperty)
 
 	inboxProp := streams.NewActivityStreamsInboxProperty()
 	inboxProp.SetIRI(actor.GetInboxIri())
-	person.SetActivityStreamsInbox(inboxProp)
+	app.SetActivityStreamsInbox(inboxProp)
 
 	needsFollowApprovalProperty := streams.NewActivityStreamsManuallyApprovesFollowersProperty()
 	needsFollowApprovalProperty.Set(config.IsPrivate)
-	person.SetActivityStreamsManuallyApprovesFollowers(needsFollowApprovalProperty)
+	app.SetActivityStreamsManuallyApprovesFollowers(needsFollowApprovalProperty)
 
 	outboxProp := streams.NewActivityStreamsOutboxProperty()
 	outboxProp.SetIRI(actor.GetOutboxIri())
-	person.SetActivityStreamsOutbox(outboxProp)
+	app.SetActivityStreamsOutbox(outboxProp)
 
 	id := streams.NewJSONLDIdProperty()
 	id.Set(actorIRI)
-	person.SetJSONLDId(id)
+	app.SetJSONLDId(id)
 
 	publicKey := crypto.GetPublicKey(actorIRI, actor.PublicKey)
 
@@ -54,12 +54,12 @@ func BuildActivityPerson(actor *Actor, config *instance.FederationConfig) vocab.
 	publicKeyPemProp.Set(publicKey.PublicKeyPem)
 	publicKeyType.SetW3IDSecurityV1PublicKeyPem(publicKeyPemProp)
 	publicKeyProp.AppendW3IDSecurityV1PublicKey(publicKeyType)
-	person.SetW3IDSecurityV1PublicKey(publicKeyProp)
+	app.SetW3IDSecurityV1PublicKey(publicKeyProp)
 
 	if config.ServerInitTime.Valid {
 		publishedDateProp := streams.NewActivityStreamsPublishedProperty()
 		publishedDateProp.Set(config.ServerInitTime.Time)
-		person.SetActivityStreamsPublished(publishedDateProp)
+		app.SetActivityStreamsPublished(publishedDateProp)
 	} else {
 		slog.Error("unable to fetch server init time")
 	}
@@ -81,12 +81,12 @@ func BuildActivityPerson(actor *Actor, config *instance.FederationConfig) vocab.
 	//image.SetActivityStreamsUrl(imgProp)
 	//icon := streams.NewActivityStreamsIconProperty()
 	//icon.AppendActivityStreamsImage(image)
-	//person.SetActivityStreamsIcon(icon)
+	//app.SetActivityStreamsIcon(icon)
 
 	// Actor  URL
 	urlProperty := streams.NewActivityStreamsUrlProperty()
 	urlProperty.AppendIRI(actorIRI)
-	person.SetActivityStreamsUrl(urlProperty)
+	app.SetActivityStreamsUrl(urlProperty)
 
 	// Profile header
 	//headerImage := streams.NewActivityStreamsImage()
@@ -95,32 +95,32 @@ func BuildActivityPerson(actor *Actor, config *instance.FederationConfig) vocab.
 	//headerImage.SetActivityStreamsUrl(headerImgPropURL)
 	//headerImageProp := streams.NewActivityStreamsImageProperty()
 	//headerImageProp.AppendActivityStreamsImage(headerImage)
-	//person.SetActivityStreamsImage(headerImageProp)
+	//app.SetActivityStreamsImage(headerImageProp)
 
 	// Profile bio
 	//summaryProperty := streams.NewActivityStreamsSummaryProperty()
 	//summaryProperty.AppendXMLSchemaString(config.GetServerSummary())
-	//person.SetActivityStreamsSummary(summaryProperty)
+	//app.SetActivityStreamsSummary(summaryProperty)
 
 	// Links
 	//if serverURL := data.GetServerURL(); serverURL != "" {
-	//	addMetadataLinkToProfile(person, "Stream", serverURL)
+	//	addMetadataLinkToProfile(app, "Stream", serverURL)
 	//}
 	//for _, link := range data.GetSocialHandles() {
-	//	addMetadataLinkToProfile(person, link.Platform, link.URL)
+	//	addMetadataLinkToProfile(app, link.Platform, link.URL)
 	//}
 
 	// Discoverable
 	discoverableProperty := streams.NewTootDiscoverableProperty()
 	discoverableProperty.Set(true)
-	person.SetTootDiscoverable(discoverableProperty)
+	app.SetTootDiscoverable(discoverableProperty)
 
 	// Followers
 	followersProperty := streams.NewActivityStreamsFollowersProperty()
 	followersURL := *actorIRI
 	followersURL.Path = actorIRI.Path + "/followers"
 	followersProperty.SetIRI(&followersURL)
-	person.SetActivityStreamsFollowers(followersProperty)
+	app.SetActivityStreamsFollowers(followersProperty)
 
 	// Tags
 	tagProp := streams.NewActivityStreamsTagProperty()
@@ -129,13 +129,13 @@ func BuildActivityPerson(actor *Actor, config *instance.FederationConfig) vocab.
 	//	tagProp.AppendTootHashtag(hashtag)
 	//}
 
-	person.SetActivityStreamsTag(tagProp)
+	app.SetActivityStreamsTag(tagProp)
 
 	// Work around an issue where a single attachment will not serialize
 	// as an array, so add another item to the mix.
 	//if len(data.GetSocialHandles()) == 1 {
-	//	addMetadataLinkToProfile(person, "Owncast", "https://owncast.online")
+	//	addMetadataLinkToProfile(app, "Owncast", "https://owncast.online")
 	//}
 
-	return person
+	return app
 }

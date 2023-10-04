@@ -17,10 +17,13 @@ func extendRouter(
 	signer *crypto.Signer,
 	sender *outbox.Sender,
 ) error {
-	router.HandleFunc("/.well-known/webfinger", handler.GetWebfinger(config))
+	router.HandleFunc("/.well-known/webfinger", handler.GetWebfinger(config)).Methods("GET")
 
 	// Single ActivityPub Actor
-	router.HandleFunc("/federation/user/", handler.GetActorHandler(config, actorRep, signer))
+	router.HandleFunc("/federation/accounts/{accountName}", handler.GetActorHandler(config, actorRep, signer)).Methods("GET")
+	router.HandleFunc("/federation/accounts/{accountName}/inbox", handler.GetInboxHandler(config, actorRep)).Methods("POST")
+
+	//outbox, followers, following
 
 	// Single AP object
 	router.HandleFunc("/federation/", handler.GetObjectHandler(config, signer))

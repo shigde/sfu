@@ -11,7 +11,7 @@ import (
 
 type updateInbox struct {
 	resolver      *remote.Resolver
-	followerStore *models.ActorFollowRepository
+	followerStore *models.FollowRepository
 }
 
 func (u *updateInbox) handleUpdateRequest(ctx context.Context, activity vocab.ActivityStreamsUpdate) error {

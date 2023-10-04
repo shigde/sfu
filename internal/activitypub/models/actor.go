@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/shigde/sfu/internal/activitypub/crypto"
@@ -72,4 +73,34 @@ func (s *Actor) GetInboxIri() *url.URL {
 func (s *Actor) GetOutboxIri() *url.URL {
 	iri, _ := url.Parse(s.OutboxIri)
 	return iri
+}
+
+type ActorType uint
+
+const (
+	Person ActorType = iota
+	Group
+	Organization
+	Application
+	Service
+)
+
+func (at ActorType) String() string {
+	return []string{"Person", "Group", "Organization", "Application", "Service"}[at]
+}
+
+func ActorTypeFromString(str string) ActorType {
+	switch strings.ToLower(str) {
+	case "person":
+		return Person
+	case "group":
+		return Group
+	case "organization":
+		return Organization
+	case "application":
+		return Application
+	case "service":
+		return Service
+	}
+	return Person
 }

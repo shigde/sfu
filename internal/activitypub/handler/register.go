@@ -6,6 +6,7 @@ import (
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
 	"github.com/shigde/sfu/internal/activitypub/outbox"
+	"github.com/shigde/sfu/internal/activitypub/remote"
 )
 
 func GetRegisterHandler(
@@ -19,21 +20,25 @@ func GetRegisterHandler(
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-
 		instanceActor, err := actorRep.GetActorForUserName(r.Context(), config.InstanceUsername)
-
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		//http://localhost:9000/accounts/peertube
-		//http://localhost:9000/inbox
-		//http://localhost:9000/accounts/peertube/inbox
+		instanceId := "http://localhost:9000/accounts/peertube"
+		req, _ := sender.GetAccountRequest(instanceActor.GetActorIri(), instanceId)
 
-		remoteInstance := &models.Actor{
-			ActorIri: "http://localhost:9000/accounts/peertube",
-			InboxIri: "http://localhost:9000/inbox",
+		remoteInstance, err := remote.FetchAccountAsActor(r.Context(), req)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		remoteInstance, err = actorRep.Upsert(r.Context(), remoteInstance)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 
 		if err := sender.SendFollowRequest(instanceActor, remoteInstance); err != nil {

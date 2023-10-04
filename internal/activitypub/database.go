@@ -18,10 +18,10 @@ import (
 type Database struct {
 	locks     mutexes.MutexMap
 	actorPep  *models.ActorRepository
-	followRep *models.ActorFollowRepository
+	followRep *models.FollowRepository
 }
 
-func NewDatabase(actorPep *models.ActorRepository, followRep *models.ActorFollowRepository) *Database {
+func NewDatabase(actorPep *models.ActorRepository, followRep *models.FollowRepository) *Database {
 	return &Database{
 		locks:     mutexes.NewMap(-1, -1),
 		actorPep:  actorPep,

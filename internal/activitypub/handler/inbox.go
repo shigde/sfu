@@ -3,43 +3,45 @@ package handler
 import (
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/shigde/sfu/internal/activitypub/inbox"
 	"github.com/shigde/sfu/internal/activitypub/instance"
+	"github.com/shigde/sfu/internal/activitypub/models"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 )
 
 // InboxHandler handles inbound federated requests.
-func GetInboxHandler(config *instance.FederationConfig, name string) http.HandlerFunc {
+func GetInboxHandler(
+	config *instance.FederationConfig,
+	actorRep *models.ActorRepository,
+) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			acceptInboxRequest(w, r, config, name)
+			acceptInboxRequest(w, r, config, actorRep)
 		} else {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	}
 }
 
-func acceptInboxRequest(w http.ResponseWriter, r *http.Request, config *instance.FederationConfig, name string) {
+func acceptInboxRequest(w http.ResponseWriter, r *http.Request, config *instance.FederationConfig, actorRep *models.ActorRepository) {
 	if !config.Enable {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
-	urlPathComponents := strings.Split(r.URL.Path, "/")
-	var forLocalAccount string
-	if len(urlPathComponents) == 5 {
-		forLocalAccount = urlPathComponents[3]
-	} else {
-		log.Errorln("Unable to determine username from url path")
-		w.WriteHeader(http.StatusNotFound)
+	forLocalAccount, err := getAccountName(r)
+	if err != nil {
+		slog.Error("unable to determine username from url path in inbox handler")
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// The account this request is for must match the account name we have set
 	// for federation.
-	if forLocalAccount != name {
+	_, err = actorRep.GetActorForUserName(r.Context(), forLocalAccount)
+	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}

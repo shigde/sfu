@@ -1,17 +1,19 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
-	"strings"
 
+	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/internal/activitypub/crypto"
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
 	"github.com/shigde/sfu/internal/activitypub/request"
-	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slog"
 )
 
 // ActorHandler handles requests for a single actor.
+var errAccountNameNotFound = errors.New("no account name in request")
 
 func GetActorHandler(
 	config *instance.FederationConfig,
@@ -25,8 +27,12 @@ func GetActorHandler(
 			return
 		}
 
-		pathComponents := strings.Split(r.URL.Path, "/")
-		accountName := pathComponents[3]
+		accountName, err := getAccountName(r)
+		if err != nil {
+			// Account name  not found
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 
 		actor, err := actorRep.GetActorForUserName(r.Context(), accountName)
 		if err != nil {
@@ -35,35 +41,25 @@ func GetActorHandler(
 			return
 		}
 
-		// If this request is for an actor's inbox then pass
-		// the request to the inbox controller.
-		if len(pathComponents) == 5 && pathComponents[4] == "inbox" {
-			GetInboxHandler(config, accountName)(w, r)
-			return
-		} else if len(pathComponents) == 5 && pathComponents[4] == "outbox" {
-			GetOutboxHandler(signer, actor)(w, r)
-			return
-			//} else if len(pathComponents) == 5 && pathComponents[4] == "followers" {
-			//	// followers list
-			//	FollowersHandler(w, r)
-			//	return
-		} else if len(pathComponents) == 5 && pathComponents[4] == "following" {
-			// following list (none)
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-
 		actorIRI := actor.GetActorIri()
 		publicKey := crypto.GetPublicKey(actorIRI, actor.PublicKey)
 		privateKey := crypto.GetPrivateKey(actor.PrivateKey.String)
 
-		person := models.BuildActivityPerson(actor, config)
+		person := models.BuildActivityApplication(actor, config)
 		response := request.NewSignedResponse(signer)
 
 		if err := response.WriteStreamResponse(person, w, publicKey, privateKey); err != nil {
-			log.Errorln("unable to write stream response for actor handler", err)
+			slog.Error("unable to write stream response for actor handler", "err", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 	}
+}
+
+func getAccountName(r *http.Request) (string, error) {
+	spaceId, ok := mux.Vars(r)["accountName"]
+	if !ok {
+		return "", errAccountNameNotFound
+	}
+	return spaceId, nil
 }

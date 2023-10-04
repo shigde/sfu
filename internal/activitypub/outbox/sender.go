@@ -8,7 +8,6 @@ import (
 	"net/url"
 
 	"github.com/pkg/errors"
-	"github.com/prometheus/common/log"
 	"github.com/shigde/sfu/internal/activitypub/crypto"
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
@@ -54,36 +53,18 @@ func (s *Sender) SendFollowRequest(actor *models.Actor, target *models.Actor) er
 
 }
 
-func (s *Sender) SendDirectMessageToAccount(textContent, account string) error {
-	links, err := s.webfingerClient.GetWebfingerLinks(account)
-	if err != nil {
-		return fmt.Errorf("geting webfinger links when sending private message: %w", err)
-	}
-	user := s.webfingerClient.MakeWebFingerRequestResponseFromData(links)
+func (s *Sender) GetAccountRequest(fromActorIRI *url.URL, url string) (*http.Request, error) {
+	req, _ := http.NewRequest(http.MethodGet, url, bytes.NewBuffer(nil))
+	ua := fmt.Sprintf("%s; https://stream.shig.de", s.config.Release)
+	req.Header.Set("User-Agent", ua)
+	req.Header.Set("Content-Type", "application/activity+json")
 
-	iri := user.Self
-	actor, err := s.resolver.GetResolvedActorFromIRI(iri)
-	if err != nil {
-		return fmt.Errorf("resolving actor to send message to: %w", err)
+	if err := s.signer.SignRequest(req, nil, fromActorIRI); err != nil {
+		slog.Error("error signing request:", "err", err)
+		return nil, err
 	}
 
-	activity, _, note, _ := s.createBaseOutboundMessage(textContent)
-
-	actorIri := actor.GetActorIri()
-
-	// Set direct message visibility
-	activity = models.MakeActivityDirect(activity, actorIri)
-	note = models.MakeNoteDirect(note, actorIri)
-	object := activity.GetActivityStreamsObject()
-	object.SetActivityStreamsNote(0, note)
-
-	b, err := models.Serialize(activity)
-	if err != nil {
-		log.Errorln("unable to serialize custom fediverse message activity", err)
-		return errors.Wrap(err, "unable to serialize custom fediverse message activity")
-	}
-
-	return s.SendToUser(actor.GetInboxIri(), b)
+	return req, nil
 }
 
 func (s *Sender) createBaseOutboundMessage(textContent string) (vocab.ActivityStreamsCreate, string, vocab.ActivityStreamsNote, string) {
