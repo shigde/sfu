@@ -13,7 +13,6 @@ import (
 )
 
 func ExtendRouter(router *mux.Router, config *MetricConfig) error {
-
 	if config.Prometheus.Enable {
 		endpoint := config.Prometheus.Endpoint
 		httpMetric, err := NewHttpMetric()

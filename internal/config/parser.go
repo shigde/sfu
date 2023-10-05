@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/sfu"
+	"github.com/shigde/sfu/internal/telemetry"
 	"github.com/spf13/viper"
 )
 
@@ -53,6 +55,18 @@ func ParseConfig(file string) (*sfu.Config, error) {
 	}
 
 	if err := rtp.ValidateRtpConfig(config.RtpConfig); err != nil {
+		return nil, err
+	}
+
+	if err := instance.ValidateFederationConfig(config.FederationConfig); err != nil {
+		return nil, err
+	}
+
+	if err := sfu.ValidateServerConfig(config.ServerConfig); err != nil {
+		return nil, err
+	}
+
+	if err := telemetry.ValidateTelemetryConfig(config.TelemetryConfig); err != nil {
 		return nil, err
 	}
 

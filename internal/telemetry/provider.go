@@ -3,6 +3,7 @@ package telemetry
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/jaeger"
@@ -17,10 +18,26 @@ import (
 	"google.golang.org/grpc"
 )
 
-func NewTracerProvider(ctx context.Context) (*trace.TracerProvider, error) {
-	exporter, err := newTempoExporter(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("creating OTLP trace exporter: %w", err)
+const (
+	clientStartTimeout = 5 * time.Second
+)
+
+func NewTracerProvider(ctx context.Context, config *TelemetryConfig) (*trace.TracerProvider, error) {
+	var exporter trace.SpanExporter
+	var err error
+
+	if config.Enable {
+		exporter, err = newTempoExporter(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("creating OTLP trace exporter: %w", err)
+		}
+	}
+
+	if !config.Enable {
+		exporter, err = newStdoutExporter()
+		if err != nil {
+			return nil, fmt.Errorf("creating OTLP trace exporter: %w", err)
+		}
 	}
 
 	res, err := resource.New(ctx,
@@ -78,6 +95,9 @@ func newTempoExporter(ctx context.Context) (*otlptrace.Exporter, error) {
 		otlptracegrpc.WithEndpoint("localhost:4317"),
 		otlptracegrpc.WithDialOption(grpc.WithBlock()),
 	)
+	ctx, cancel := context.WithTimeout(ctx, clientStartTimeout)
+	defer cancel()
+
 	exporter, err := otlptrace.New(ctx, client)
 	if err != nil {
 		return nil, fmt.Errorf("creating HTTP trace exporter: %w", err)

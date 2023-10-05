@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/shigde/sfu/internal/activitypub"
 	"github.com/shigde/sfu/internal/lobby"
 	"github.com/shigde/sfu/internal/media"
 	"github.com/shigde/sfu/internal/metric"
@@ -48,12 +49,22 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 	// api endpoints
 	router := media.NewRouter(config.SecurityConfig, config.RtpConfig, spaceManager)
 
+	// federation api
+	api, err := activitypub.NewApApi(config.FederationConfig, store)
+	if err != nil {
+		return nil, fmt.Errorf("creating federation api: %w", err)
+	}
+
+	if err := api.BoostrapApi(router); err != nil {
+		return nil, fmt.Errorf("boostrapping federation api: %w", err)
+	}
+
 	// monitoring
 	if err := metric.ExtendRouter(router, config.MetricConfig); err != nil {
 		return nil, fmt.Errorf("handling metrics: %w", err)
 	}
 
-	tp, err := telemetry.NewTracerProvider(ctx)
+	tp, err := telemetry.NewTracerProvider(ctx, config.TelemetryConfig)
 	if err != nil {
 		return nil, fmt.Errorf("starting telemetry tracer provider: %w", err)
 	}
@@ -62,7 +73,7 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 	// start server
 	return &Server{
 		ctx:    ctx,
-		server: &http.Server{Addr: ":8080", Handler: mux},
+		server: &http.Server{Addr: fmt.Sprintf("%s:%d", config.Host, config.Port), Handler: mux},
 		config: config,
 		tp:     tp,
 	}, nil
