@@ -70,7 +70,7 @@ func (a *ApApi) BoostrapApi(router *mux.Router) error {
 	if a.config.Enable {
 		resolver := remote.NewResolver(a.config, a.signer)
 		workerpool.InitOutboundWorkerPool()
-		inbox.InitInboxWorkerPool(resolver)
+		inbox.InitInboxWorkerPool(a.followRepo, resolver)
 	}
 
 	return nil

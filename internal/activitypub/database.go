@@ -147,25 +147,27 @@ func (d *Database) Followers(ctx context.Context, actorIRI *url.URL) (followers 
 }
 
 func (d *Database) Following(ctx context.Context, actorIRI *url.URL) (following vocab.ActivityStreamsCollection, err error) {
-	acct, err := d.actorPep.GetActorForIRI(ctx, actorIRI, models.ActorIri)
-	if err != nil {
-		return nil, err
-	}
+	//acct, err := d.actorPep.GetActorForIRI(ctx, actorIRI, models.ActorIri)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	// Fetch follows for account from database.
-	follows := acct.ActorFollow
+	//follows := acct.Follow
+	//
+	//// Convert the follows to a slice of account URIs.
+	//iris := make([]*url.URL, 0, len(follows))
+	//for _, follow := range follows {
+	//	u, err := url.Parse(follow.Iri)
+	//	if err != nil {
+	//		return nil, fmt.Errorf("parsing invalid account iri: %w, err")
+	//	}
+	//	iris = append(iris, u)
+	//}
+	//
+	//return instance.CollectIRIs(ctx, iris)
 
-	// Convert the follows to a slice of account URIs.
-	iris := make([]*url.URL, 0, len(follows))
-	for _, follow := range follows {
-		u, err := url.Parse(follow.Iri)
-		if err != nil {
-			return nil, fmt.Errorf("parsing invalid account iri: %w, err")
-		}
-		iris = append(iris, u)
-	}
-
-	return instance.CollectIRIs(ctx, iris)
+	return nil, nil
 
 }
 
