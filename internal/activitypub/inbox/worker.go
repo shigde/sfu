@@ -17,7 +17,7 @@ import (
 )
 
 func handle(request InboxRequest, inboxHandler *handler) {
-	if verified, err := Verify(request.Request, inboxHandler.resolver); err != nil {
+	if verified, err := Verify(request.Request, inboxHandler.resolver, false); err != nil {
 		slog.Debug("error in attempting to verify request", "err", err)
 		return
 	} else if !verified {
@@ -33,7 +33,7 @@ func handle(request InboxRequest, inboxHandler *handler) {
 // Verify will Verify the http signature of an inbound request as well as
 // check it against the list of blocked domains.
 // nolint: cyclop
-func Verify(request *http.Request, resolver *remote.Resolver) (bool, error) {
+func Verify(request *http.Request, resolver *remote.Resolver, forceHttps bool) (bool, error) {
 	verifier, err := httpsig.NewVerifier(request)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to create key verifier for request")
@@ -44,7 +44,7 @@ func Verify(request *http.Request, resolver *remote.Resolver) (bool, error) {
 	}
 
 	// Force federation only via servers using https.
-	if pubKeyID.Scheme != "https" {
+	if forceHttps && pubKeyID.Scheme != "https" {
 		return false, errors.New("federated servers must use https: " + pubKeyID.String())
 	}
 

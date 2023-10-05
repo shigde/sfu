@@ -23,12 +23,12 @@ func (fs FollowState) String() string {
 }
 
 type Follow struct {
-	Iri           string   `gorm:"iri;not null;index"`
-	ActorId       uint     `gorm:"actor_id;not null"`
-	TargetActorId uint     `gorm:"target_actor_id;not null"`
-	State         string   `gorm:"state;not null"`
-	Actor         *Actor   `gorm:"foreignKey:ActorId"`
-	TargetActor   *Actor   `gorm:"foreignKey:TargetActorId"`
+	Iri           string   `gorm:"iri;not null;index;"`
+	ActorId       uint     `gorm:"actor_id;not null;"`
+	TargetActorId uint     `gorm:"target_actor_id;not null;"`
+	State         string   `gorm:"state;not null;"`
+	Actor         *Actor   `gorm:"foreignKey:ActorId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	TargetActor   *Actor   `gorm:"foreignKey:TargetActorId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	iriUrl        *url.URL `gorm:"-"`
 	gorm.Model
 }

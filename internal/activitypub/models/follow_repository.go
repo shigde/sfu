@@ -55,7 +55,7 @@ func (r *FollowRepository) GetFollowByIri(ctx context.Context, iri string) (*Fol
 	defer cancel()
 
 	actorFollow := &Follow{Iri: iri}
-	result := tx.First(actorFollow)
+	result := tx.Preload("Actor").Preload("TargetActor").First(actorFollow)
 	if result.Error != nil {
 		err := fmt.Errorf("finding actor follow for iri %s: %w", iri, result.Error)
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {

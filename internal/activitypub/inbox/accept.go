@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
+	"github.com/superseriousbusiness/activity/pub"
 	"github.com/superseriousbusiness/activity/streams/vocab"
 	"golang.org/x/exp/slog"
 )
@@ -41,6 +43,7 @@ func (ai *acceptInbox) handleAcceptRequest(ctx context.Context, activity vocab.A
 	}
 
 	for iter := acceptObject.Begin(); iter != acceptObject.End(); iter = iter.Next() {
+
 		if iter.IsIRI() {
 			acceptedObjectIRI := iter.GetIRI()
 
@@ -55,108 +58,96 @@ func (ai *acceptInbox) handleAcceptRequest(ctx context.Context, activity vocab.A
 				//	return errors.New("inbox accept: follow object account and inbox account were not the same")
 				//}
 
-				follow.State = models.Accepted.String()
-				_, err = ai.followStore.Update(ctx, follow)
-				if err != nil {
-					return fmt.Errorf("inbox accept: updating follow request with id %s in the database: %w", acceptedObjectIRI.String(), err)
+				if err = ai.saveFollowAsAccepted(ctx, follow); err != nil {
+					return fmt.Errorf("saving follow in case one: %w", err)
 				}
 			}
+		}
 
+		if iter.GetType() == nil {
+			continue
+		}
+		if iter.GetType().GetTypeName() == "Follow" {
+			// ACCEPT FOLLOW
+			asFollow, ok := iter.GetType().(vocab.ActivityStreamsFollow)
+			if !ok {
+				return errors.New("inbox accept: couldn't parse follow into vocab.ActivityStreamsFollow")
+			}
+			asFollow.GetTypeName()
+			idProp := asFollow.GetJSONLDId()
+			if idProp == nil || !idProp.IsIRI() {
+				return errors.New("no id property set on follow, or was not an iri")
+			}
+			uri := idProp.GetIRI().String()
+			follow, err := ai.followStore.GetFollowByIri(ctx, uri)
+			if err != nil {
+				return fmt.Errorf("inbox accept: getting follow request with id %s from the database: %w", uri, err)
+			}
+
+			if actorIri, err := extractActorURI(asFollow); err != nil || actorIri.String() != follow.Actor.ActorIri {
+				return fmt.Errorf("comparing actor with follow actvity: %w", err)
+			}
+
+			if targetIri, err := extractObjectURI(asFollow); err != nil || targetIri.String() != follow.TargetActor.ActorIri {
+				return fmt.Errorf("comparing target actor with follow actvity: %w", err)
+			}
+
+			if err = ai.saveFollowAsAccepted(ctx, follow); err != nil {
+				return fmt.Errorf("saving follow in case two: %w", err)
+			}
 		}
 	}
 
 	return nil
 }
 
-func (ai *acceptInbox) Accept(ctx context.Context, accept vocab.ActivityStreamsAccept) error {
-	//if log.Level() >= level.DEBUG {
-	//	i, err := marshalItem(accept)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	l := log.WithContext(ctx).
-	//		WithField("accept", i)
-	//	l.Debug("entering Accept")
-	//}
-
-	//receivingAccount, _, internal := extractFromCtx(ctx)
-	//if internal {
-	//	return nil // Already processed.
-	//}
-
-	acceptObject := accept.GetActivityStreamsObject()
-	if acceptObject == nil {
-		return errors.New("inbox accept: no object set on vocab.ActivityStreamsAccept")
+func (ai *acceptInbox) saveFollowAsAccepted(ctx context.Context, follow *models.Follow) error {
+	follow.State = models.Accepted.String()
+	_, err := ai.followStore.Update(ctx, follow)
+	if err != nil {
+		return fmt.Errorf("inbox accept: updating follow request with id %s in the database: %w", follow.Iri, err)
 	}
-	//
-	//for iter := acceptObject.Begin(); iter != acceptObject.End(); iter = iter.Next() {
-	//	// check if the object is an IRI
-	//	if iter.IsIRI() {
-	//		// we have just the URI of whatever is being accepted, so we need to find out what it is
-	//		acceptedObjectIRI := iter.GetIRI()
-	//
-	//		ai.followStore.g
-	//		if uris.IsFollowPath(acceptedObjectIRI) {
-	//			// ACCEPT FOLLOW
-	//			followReq, err := f.state.DB.GetFollowRequestByURI(ctx, acceptedObjectIRI.String())
-	//			if err != nil {
-	//				return fmt.Errorf("ACCEPT: couldn't get follow request with id %s from the database: %s", acceptedObjectIRI.String(), err)
-	//			}
-	//
-	//			// make sure the addressee of the original follow is the same as whatever inbox this landed in
-	//			if followReq.AccountID != receivingAccount.ID {
-	//				return errors.New("ACCEPT: follow object account and inbox account were not the same")
-	//			}
-	//			follow, err := f.state.DB.AcceptFollowRequest(ctx, followReq.AccountID, followReq.TargetAccountID)
-	//			if err != nil {
-	//				return err
-	//			}
-	//
-	//			f.state.Workers.EnqueueFediAPI(ctx, messages.FromFediAPI{
-	//				APObjectType:     ap.ActivityFollow,
-	//				APActivityType:   ap.ActivityAccept,
-	//				GTSModel:         follow,
-	//				ReceivingAccount: receivingAccount,
-	//			})
-	//
-	//			return nil
-	//		}
-	//	}
-	//
-	//	// check if iter is an AP object / type
-	//	if iter.GetType() == nil {
-	//		continue
-	//	}
-	//	if iter.GetType().GetTypeName() == ap.ActivityFollow {
-	//		// ACCEPT FOLLOW
-	//		asFollow, ok := iter.GetType().(vocab.ActivityStreamsFollow)
-	//		if !ok {
-	//			return errors.New("ACCEPT: couldn't parse follow into vocab.ActivityStreamsFollow")
-	//		}
-	//		// convert the follow to something we can understand
-	//		gtsFollow, err := f.converter.ASFollowToFollow(ctx, asFollow)
-	//		if err != nil {
-	//			return fmt.Errorf("ACCEPT: error converting asfollow to gtsfollow: %s", err)
-	//		}
-	//		// make sure the addressee of the original follow is the same as whatever inbox this landed in
-	//		if gtsFollow.AccountID != receivingAccount.ID {
-	//			return errors.New("ACCEPT: follow object account and inbox account were not the same")
-	//		}
-	//		follow, err := f.state.DB.AcceptFollowRequest(ctx, gtsFollow.AccountID, gtsFollow.TargetAccountID)
-	//		if err != nil {
-	//			return err
-	//		}
-	//
-	//		f.state.Workers.EnqueueFediAPI(ctx, messages.FromFediAPI{
-	//			APObjectType:     ap.ActivityFollow,
-	//			APActivityType:   ap.ActivityAccept,
-	//			GTSModel:         follow,
-	//			ReceivingAccount: receivingAccount,
-	//		})
-	//
-	//		return nil
-	//	}
-	//}
-
 	return nil
+}
+
+func extractActorURI(withActor withActor) (*url.URL, error) {
+	actorProp := withActor.GetActivityStreamsActor()
+	if actorProp == nil {
+		return nil, errors.New("actor property was nil")
+	}
+
+	for iter := actorProp.Begin(); iter != actorProp.End(); iter = iter.Next() {
+		id, err := pub.ToId(iter)
+		if err == nil {
+			// Found one we can use.
+			return id, nil
+		}
+	}
+
+	return nil, errors.New("no iri found for actor prop")
+}
+
+func extractObjectURI(withObject withObject) (*url.URL, error) {
+	objectProp := withObject.GetActivityStreamsObject()
+	if objectProp == nil {
+		return nil, errors.New("object property was nil")
+	}
+
+	for iter := objectProp.Begin(); iter != objectProp.End(); iter = iter.Next() {
+		id, err := pub.ToId(iter)
+		if err == nil {
+			// Found one we can use.
+			return id, nil
+		}
+	}
+
+	return nil, errors.New("no iri found for object prop")
+}
+
+type withActor interface {
+	GetActivityStreamsActor() vocab.ActivityStreamsActorProperty
+}
+
+type withObject interface {
+	GetActivityStreamsObject() vocab.ActivityStreamsObjectProperty
 }

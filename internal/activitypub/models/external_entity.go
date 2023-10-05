@@ -39,7 +39,7 @@ func MakeActorFromExernalAPEntity(entity ExternalEntity) (*Actor, error) {
 	//}
 
 	apActor := Actor{
-		ActorType:         "person",
+		ActorType:         "Person",
 		PublicKey:         entity.GetW3IDSecurityV1PublicKey().Name(),
 		PrivateKey:        sql.NullString{},
 		ActorIri:          entity.GetJSONLDId().Get().String(),
@@ -52,7 +52,6 @@ func MakeActorFromExernalAPEntity(entity ExternalEntity) (*Actor, error) {
 		ServerId:          sql.NullInt64{},
 		RemoteCreatedAt:   time.Time{},
 		PreferredUsername: entity.GetActivityStreamsPreferredUsername().GetXMLSchemaString(),
-		ActorFollow:       nil,
 	}
 
 	return &apActor, nil
