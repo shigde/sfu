@@ -2,7 +2,6 @@ package outbox
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -41,15 +40,17 @@ func NewSender(
 	}
 }
 
-func (s *Sender) SendFollowRequest(actor *models.Actor, target *models.Actor) error {
-	follow := models.NewFollow(actor, target, s.config)
-	activity, _ := follow.ToAS(context.Background())
+func (s *Sender) SendFollowRequest(follow *models.Follow) error {
+	activity, err := follow.ToAS()
+	if err != nil {
+		return fmt.Errorf("bilding follow activiy stream: %w", err)
+	}
 	b, err := models.Serialize(activity)
 	if err != nil {
 		return fmt.Errorf("serializing custom fediverse message activity: %w", err)
 	}
 
-	return s.SendToUser(target.GetInboxIri(), b)
+	return s.SendToUser(follow.TargetActor.GetInboxIri(), b)
 
 }
 

@@ -16,17 +16,17 @@ import (
 	"github.com/go-fed/httpsig"
 )
 
-func handle(request InboxRequest, resolver *remote.Resolver) {
-	if verified, err := Verify(request.Request, resolver); err != nil {
-		slog.Debug("Error in attempting to verify request", "err", err)
+func handle(request InboxRequest, inboxHandler *handler) {
+	if verified, err := Verify(request.Request, inboxHandler.resolver); err != nil {
+		slog.Debug("error in attempting to verify request", "err", err)
 		return
 	} else if !verified {
-		slog.Debug("Request failed verification", "err", err)
+		slog.Debug("request failed verification", "err", err)
 		return
 	}
 
-	if err := resolver.Resolve(context.Background(), request.Body, handleCreateRequest); err != nil {
-		slog.Debug("resolver error:", "err", err)
+	if err := inboxHandler.resolve(context.Background(), request); err != nil {
+		slog.Debug("inbox resolver error:", "err", err)
 	}
 }
 

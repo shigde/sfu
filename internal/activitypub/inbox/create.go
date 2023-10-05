@@ -7,7 +7,14 @@ import (
 	"github.com/superseriousbusiness/activity/streams/vocab"
 )
 
-func handleCreateRequest(c context.Context, activity vocab.ActivityStreamsCreate) error {
+type createInbox struct {
+}
+
+func newCreateInbox() *createInbox {
+	return &createInbox{}
+}
+
+func (cr *createInbox) handleCreateRequest(ctx context.Context, activity vocab.ActivityStreamsCreate) error {
 	iri := activity.GetJSONLDId().GetIRI().String()
 	return errors.New("not handling create request of: " + iri)
 }

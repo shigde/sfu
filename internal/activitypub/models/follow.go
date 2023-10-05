@@ -1,7 +1,6 @@
 package models
 
 import (
-	"context"
 	"fmt"
 	"net/url"
 
@@ -23,42 +22,37 @@ func (fs FollowState) String() string {
 	return []string{"accepted", "pending", "rejected"}[fs]
 }
 
-type ActorFollow struct {
-	Iri           string `gorm:"iri;not null;index"`
-	ActorId       uint   `gorm:"actor_id;not null"`
-	TargetActorId uint   `gorm:"target_actor_id;not null"`
-	State         string `gorm:"state;not null"`
-	Actor         *Actor `gorm:"foreignKey:ActorId"`
-	TargetActor   *Actor `gorm:"foreignKey:TargetActorId"`
-	gorm.Model
-}
-
 type Follow struct {
-	Iri         *url.URL
-	Actor       *Actor
-	TargetActor *Actor
-	State       FollowState
+	Iri           string   `gorm:"iri;not null;index"`
+	ActorId       uint     `gorm:"actor_id;not null"`
+	TargetActorId uint     `gorm:"target_actor_id;not null"`
+	State         string   `gorm:"state;not null"`
+	Actor         *Actor   `gorm:"foreignKey:ActorId"`
+	TargetActor   *Actor   `gorm:"foreignKey:TargetActorId"`
+	iriUrl        *url.URL `gorm:"-"`
+	gorm.Model
 }
 
 func NewFollow(actor *Actor, target *Actor, config *instance.FederationConfig) *Follow {
 	iri := instance.BuildFollowActivityIri(config.InstanceUrl)
 	return &Follow{
-		Iri:         iri,
-		Actor:       actor,
-		TargetActor: target,
-		State:       Pending,
+		Iri:           iri.String(),
+		ActorId:       actor.ID,
+		TargetActorId: target.ID,
+		Actor:         actor,
+		TargetActor:   target,
+		State:         Pending.String(),
+		iriUrl:        iri,
 	}
 }
-func (f *Follow) ToActorFollow() ActorFollow {
-	return ActorFollow{
-		Iri:           f.Iri.String(),
-		ActorId:       f.Actor.ID,
-		TargetActorId: f.TargetActor.ID,
-		State:         f.State.String(),
+func (f *Follow) GetIri() *url.URL {
+	if f.iriUrl == nil {
+		f.iriUrl, _ = url.Parse(f.Iri)
 	}
+	return f.iriUrl
 }
 
-func (f *Follow) ToAS(ctx context.Context) (vocab.ActivityStreamsFollow, error) {
+func (f *Follow) ToAS() (vocab.ActivityStreamsFollow, error) {
 	//if err := c.state.DB.PopulateFollow(ctx, f); err != nil {
 	//	return nil, gtserror.Newf("error populating follow: %w", err)
 	//}
@@ -79,7 +73,7 @@ func (f *Follow) ToAS(ctx context.Context) (vocab.ActivityStreamsFollow, error) 
 	}
 
 	// uri of the follow activity itself
-	followURI, err := url.Parse(f.Iri.String())
+	followURI, err := url.Parse(f.Iri)
 	if err != nil {
 		return nil, fmt.Errorf("followtoasfollow: error parsing follow uri: %s", err)
 	}

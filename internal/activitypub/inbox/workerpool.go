@@ -3,6 +3,7 @@ package inbox
 import (
 	"runtime"
 
+	"github.com/shigde/sfu/internal/activitypub/models"
 	"github.com/shigde/sfu/internal/activitypub/remote"
 	"golang.org/x/exp/slog"
 )
@@ -18,12 +19,16 @@ type Job struct {
 var queue chan Job
 
 // InitInboxWorkerPool starts n go routines that await ActivityPub jobs.
-func InitInboxWorkerPool(resolver *remote.Resolver) {
+func InitInboxWorkerPool(
+	follower *models.FollowRepository,
+	resolver *remote.Resolver,
+) {
 	queue = make(chan Job)
 
+	handler := newHandler(follower, resolver)
 	// start workers
 	for i := 1; i <= workerPoolSize; i++ {
-		go worker(i, queue, resolver)
+		go worker(i, queue, handler)
 	}
 }
 
@@ -33,11 +38,11 @@ func AddToQueue(req InboxRequest) {
 	queue <- Job{req}
 }
 
-func worker(workerID int, queue <-chan Job, resolver *remote.Resolver) {
+func worker(workerID int, queue <-chan Job, handler *handler) {
 	slog.Debug("Started ActivityPub inbox worker", "workerId", workerID)
 
 	for job := range queue {
-		handle(job.request, resolver)
+		handle(job.request, handler)
 
 		slog.Info("Done with ActivityPub inbox handler using worker", "workerId", workerID)
 	}

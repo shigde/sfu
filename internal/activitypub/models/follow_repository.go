@@ -26,11 +26,35 @@ func NewFollowRepository(config *instance.FederationConfig, storage instance.Sto
 	}
 }
 
-func (r *FollowRepository) GetActorFollowByIri(ctx context.Context, iri string) (*ActorFollow, error) {
+func (r *FollowRepository) Add(ctx context.Context, follow *Follow) (*Follow, error) {
 	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
 	defer cancel()
 
-	actorFollow := &ActorFollow{Iri: iri}
+	results := tx.Create(follow)
+	if results.Error != nil {
+		return nil, fmt.Errorf("adding new actor follows for actor %d: %w", follow.ActorId, results.Error)
+	}
+
+	return follow, nil
+}
+
+func (r *FollowRepository) Update(ctx context.Context, follow *Follow) (*Follow, error) {
+	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
+	defer cancel()
+
+	results := tx.Save(follow)
+	if results.Error != nil {
+		return nil, fmt.Errorf("update actor follows for actor %d: %w", follow.ActorId, results.Error)
+	}
+
+	return follow, nil
+}
+
+func (r *FollowRepository) GetFollowByIri(ctx context.Context, iri string) (*Follow, error) {
+	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
+	defer cancel()
+
+	actorFollow := &Follow{Iri: iri}
 	result := tx.First(actorFollow)
 	if result.Error != nil {
 		err := fmt.Errorf("finding actor follow for iri %s: %w", iri, result.Error)
@@ -43,32 +67,11 @@ func (r *FollowRepository) GetActorFollowByIri(ctx context.Context, iri string) 
 	return actorFollow, nil
 }
 
-func (r *FollowRepository) GetFollowByIri(ctx context.Context, iri string) (*Follow, error) {
-	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
-	defer cancel()
-	//Iri           string `gorm:"iri;not null;index"`
-	//ActorId       uint   `gorm:"actor_id;not null"`
-	//TargetActorId uint   `gorm:"target_actor_id;not null"`
-	//State         string `gorm:"state;not null"`
-	follow := &Follow{}
-	result := tx.Table("actor_fallows").Select("actor_fallows.iri, actors.target_actor_id").Joins("left join emails on emails.user_id = users.id").Scan(&follow)
-
-	if result.Error != nil {
-		err := fmt.Errorf("finding actor follow for iri %s: %w", iri, result.Error)
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, errors.Join(err, ErrActorNotFound)
-		}
-		return nil, err
-	}
-
-	return follow, nil
-}
-
-func (r *FollowRepository) GetActorFollowsFromActorId(ctx context.Context, actorId uint) ([]*ActorFollow, error) {
+func (r *FollowRepository) GetActorFollowsFromActorId(ctx context.Context, actorId uint) ([]*Follow, error) {
 	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
 	defer cancel()
 
-	var actorFollows []*ActorFollow
+	var actorFollows []*Follow
 	results := tx.Where("actorId = ? AND state = ?", actorId, "accepted").Find(&actorFollows)
 	if results.Error != nil {
 		err := fmt.Errorf("finding actor follows for actor %d: %w", actorId, results.Error)
@@ -81,11 +84,11 @@ func (r *FollowRepository) GetActorFollowsFromActorId(ctx context.Context, actor
 	return actorFollows, nil
 }
 
-func (r *FollowRepository) GetActorFollowers(ctx context.Context, actorId uint) ([]*ActorFollow, error) {
+func (r *FollowRepository) GetActorFollowers(ctx context.Context, actorId uint) ([]*Follow, error) {
 	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
 	defer cancel()
 
-	var actorFollows []*ActorFollow
+	var actorFollows []*Follow
 	results := tx.Where("targetActorId = ? AND state = ?", actorId, "accepted").Find(&actorFollows)
 	if results.Error != nil {
 		err := fmt.Errorf("finding follower for actor %d: %w", actorId, results.Error)
@@ -98,6 +101,6 @@ func (r *FollowRepository) GetActorFollowers(ctx context.Context, actorId uint) 
 	return actorFollows, nil
 }
 
-func (r *FollowRepository) UpdateFollower(ctx context.Context, falower *ActorFollow) error {
+func (r *FollowRepository) UpdateFollower(ctx context.Context, falower *Follow) error {
 	return nil
 }

@@ -2,15 +2,21 @@ package inbox
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
+	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
-	"github.com/shigde/sfu/internal/activitypub/remote"
 	"github.com/superseriousbusiness/activity/streams/vocab"
+	"golang.org/x/exp/slog"
 )
 
 type acceptInbox struct {
-	resolver    *remote.Resolver
 	followStore *models.FollowRepository
+}
+
+func newAcceptInbox(followStore *models.FollowRepository) *acceptInbox {
+	return &acceptInbox{followStore: followStore}
 }
 
 /*
@@ -26,20 +32,39 @@ type acceptInbox struct {
 		}
 	}
 */
-func (ai *acceptInbox) handleAcceptRequest(c context.Context, activity vocab.ActivityStreamsAccept) error {
+func (ai *acceptInbox) handleAcceptRequest(ctx context.Context, activity vocab.ActivityStreamsAccept) error {
+	slog.Debug("inbox accept: receive accept activity", "activity", activity)
 
-	//object := activity.GetActivityStreamsObject()
-	//object.
-	//	actor, err := ai.resolver.GetResolvedActorFromActorProperty(activity.GetActivityStreamsActor())
-	//if err != nil {
-	//	slog.Error(err)
-	//	return err
-	//}
-	//
-	//actor := activity.GetActivityStreamsActor()
-	//
-	//iri := activity.GetJSONLDId().GetIRI().String()
-	//return errors.New("not handling create request of: " + iri)
+	acceptObject := activity.GetActivityStreamsObject()
+	if acceptObject == nil {
+		return errors.New("inbox accept: no object set on vocab.ActivityStreamsAccept")
+	}
+
+	for iter := acceptObject.Begin(); iter != acceptObject.End(); iter = iter.Next() {
+		if iter.IsIRI() {
+			acceptedObjectIRI := iter.GetIRI()
+
+			if instance.IsFollowActivityIri(acceptedObjectIRI) {
+				// ACCEPT FOLLOW
+				follow, err := ai.followStore.GetFollowByIri(ctx, acceptedObjectIRI.String())
+				if err != nil {
+					return fmt.Errorf("inbox accept: getting follow request with id %s from the database: %w", acceptedObjectIRI.String(), err)
+				}
+
+				//if follow.ActorId != receivingAccount.ID {
+				//	return errors.New("inbox accept: follow object account and inbox account were not the same")
+				//}
+
+				follow.State = models.Accepted.String()
+				_, err = ai.followStore.Update(ctx, follow)
+				if err != nil {
+					return fmt.Errorf("inbox accept: updating follow request with id %s in the database: %w", acceptedObjectIRI.String(), err)
+				}
+			}
+
+		}
+	}
+
 	return nil
 }
 
@@ -59,10 +84,10 @@ func (ai *acceptInbox) Accept(ctx context.Context, accept vocab.ActivityStreamsA
 	//	return nil // Already processed.
 	//}
 
-	//acceptObject := accept.GetActivityStreamsObject()
-	//if acceptObject == nil {
-	//	return errors.New("inbox accept: no object set on vocab.ActivityStreamsAccept")
-	//}
+	acceptObject := accept.GetActivityStreamsObject()
+	if acceptObject == nil {
+		return errors.New("inbox accept: no object set on vocab.ActivityStreamsAccept")
+	}
 	//
 	//for iter := acceptObject.Begin(); iter != acceptObject.End(); iter = iter.Next() {
 	//	// check if the object is an IRI

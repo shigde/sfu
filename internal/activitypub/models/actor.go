@@ -32,7 +32,8 @@ type Actor struct {
 	ServerId          sql.NullInt64  `gorm:"serverId"`
 	RemoteCreatedAt   time.Time      `gorm:"remoteCreatedAt"`
 	PreferredUsername string         `gorm:"preferredUsername"`
-	ActorFollow       []ActorFollow  `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Follower          []Follow       `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Following         []Follow       `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	gorm.Model
 }
 
@@ -44,16 +45,15 @@ func newInstanceActor(instanceUrl *url.URL, name string) (*Actor, error) {
 		return nil, fmt.Errorf("generation key pair")
 	}
 	return &Actor{
-		ActorType:      "Application",
-		PublicKey:      string(publicKey),
-		PrivateKey:     sql.NullString{String: string(privateKey), Valid: true},
-		ActorIri:       actorIri.String(),
-		FollowingIri:   instance.BuildFollowingIri(actorIri).String(),
-		FollowersIri:   instance.BuildFollowersIri(actorIri).String(),
-		InboxIri:       instance.BuildInboxIri(actorIri).String(),
-		OutboxIri:      instance.BuildOutboxIri(actorIri).String(),
-		SharedInboxIri: instance.BuildSharedInboxIri(instanceUrl).String(),
-
+		ActorType:         "Application",
+		PublicKey:         string(publicKey),
+		PrivateKey:        sql.NullString{String: string(privateKey), Valid: true},
+		ActorIri:          actorIri.String(),
+		FollowingIri:      instance.BuildFollowingIri(actorIri).String(),
+		FollowersIri:      instance.BuildFollowersIri(actorIri).String(),
+		InboxIri:          instance.BuildInboxIri(actorIri).String(),
+		OutboxIri:         instance.BuildOutboxIri(actorIri).String(),
+		SharedInboxIri:    instance.BuildSharedInboxIri(instanceUrl).String(),
 		DisabledAt:        sql.NullTime{},
 		RemoteCreatedAt:   now,
 		PreferredUsername: name,

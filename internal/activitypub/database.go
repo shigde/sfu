@@ -110,7 +110,7 @@ func (d *Database) NewID(c context.Context, t vocab.Type) (id *url.URL, err erro
 	return nil, nil
 }
 
-// --- Follow
+// --- FollowX
 
 func (d *Database) Followers(ctx context.Context, actorIRI *url.URL) (followers vocab.ActivityStreamsCollection, err error) {
 	acct, err := d.actorPep.GetActorForIRI(ctx, actorIRI, models.ActorIri)

@@ -14,6 +14,7 @@ func extendRouter(
 	router *mux.Router,
 	config *instance.FederationConfig,
 	actorRep *models.ActorRepository,
+	followRep *models.FollowRepository,
 	signer *crypto.Signer,
 	sender *outbox.Sender,
 ) error {
@@ -29,7 +30,7 @@ func extendRouter(
 	router.HandleFunc("/federation/", handler.GetObjectHandler(config, signer))
 
 	// Register request for instances
-	router.HandleFunc("/federation/register", handler.GetRegisterHandler(config, actorRep, sender)).Methods("GET")
+	router.HandleFunc("/federation/register", handler.GetRegisterHandler(config, actorRep, followRep, sender)).Methods("GET")
 
 	return nil
 }

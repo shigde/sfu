@@ -3,6 +3,7 @@ package instance
 import (
 	"context"
 	"net/url"
+	"regexp"
 
 	"github.com/google/uuid"
 	"github.com/superseriousbusiness/activity/streams"
@@ -52,6 +53,12 @@ func BuildResourceIri(instanceUrl *url.URL, resourcePath string) *url.URL {
 func BuildFollowActivityIri(instanceUrl *url.URL) *url.URL {
 	iri, _ := url.Parse(instanceUrl.JoinPath("federation", "follow", uuid.NewString()).String())
 	return iri
+}
+
+var followPath = regexp.MustCompile("^/federation/follow/[0123456789abcdefABCDEF-]{36}")
+
+func IsFollowActivityIri(iri *url.URL) bool {
+	return followPath.MatchString(iri.Path)
 }
 
 func CollectIRIs(ctx context.Context, iris []*url.URL) (vocab.ActivityStreamsCollection, error) {
