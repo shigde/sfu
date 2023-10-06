@@ -3,29 +3,24 @@ package inbox
 import (
 	"context"
 
-	"github.com/shigde/sfu/internal/activitypub/remote"
+	"github.com/shigde/sfu/internal/activitypub/services"
 	"github.com/superseriousbusiness/activity/streams/vocab"
-	"golang.org/x/exp/slog"
 )
 
 type updateInbox struct {
-	resolver *remote.Resolver
+	videoService *services.VideoService
 }
 
-func newUpdateInbox(resolver *remote.Resolver) *updateInbox {
-	return &updateInbox{resolver: resolver}
+func newUpdateInbox(videoService *services.VideoService) *updateInbox {
+	return &updateInbox{
+		videoService: videoService,
+	}
 }
 
 func (u *updateInbox) handleUpdateRequest(ctx context.Context, activity vocab.ActivityStreamsUpdate) error {
-	// We only care about update events to followers.
-	if !activity.GetActivityStreamsObject().At(0).IsActivityStreamsPerson() {
+	// We only care about video updates.
+	if !activity.GetActivityStreamsObject().At(0).IsActivityStreamsVideo() {
 		return nil
-	}
-
-	_, err := u.resolver.GetResolvedActorFromActorProperty(activity.GetActivityStreamsActor())
-	if err != nil {
-		slog.Error("err", err)
-		return err
 	}
 
 	return nil

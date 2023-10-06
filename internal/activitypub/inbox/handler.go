@@ -6,6 +6,7 @@ import (
 
 	"github.com/shigde/sfu/internal/activitypub/models"
 	"github.com/shigde/sfu/internal/activitypub/remote"
+	"github.com/shigde/sfu/internal/activitypub/services"
 )
 
 type handler struct {
@@ -16,14 +17,15 @@ type handler struct {
 }
 
 func newHandler(
-	followStore *models.FollowRepository,
+	followRep *models.FollowRepository,
+	videoService *services.VideoService,
 	resolver *remote.Resolver,
 ) *handler {
 	return &handler{
 		resolver:    resolver,
-		acceptInbox: newAcceptInbox(followStore),
-		createInbox: newCreateInbox(),
-		updateInbox: newUpdateInbox(resolver),
+		acceptInbox: newAcceptInbox(followRep),
+		createInbox: newCreateInbox(videoService),
+		updateInbox: newUpdateInbox(videoService),
 	}
 }
 

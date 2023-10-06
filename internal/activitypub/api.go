@@ -21,10 +21,12 @@ type ApApi struct {
 	Storage      instance.Storage
 	actorRepo    *models.ActorRepository
 	followRepo   *models.FollowRepository
+	videoRepo    *models.VideoRepository
 	actor        pub.FederatingActor
 	signer       *crypto.Signer
 	sender       *outbox.Sender
 	actorService *services.ActorService
+	videoService *services.VideoService
 }
 
 func NewApApi(config *instance.FederationConfig, storage instance.Storage) (*ApApi, error) {
@@ -34,6 +36,7 @@ func NewApApi(config *instance.FederationConfig, storage instance.Storage) (*ApA
 
 	actorRepo := models.NewActorRepository(config, storage)
 	followRepo := models.NewFollowRepository(config, storage)
+	videoRepo := models.NewVideoRepository(config, storage)
 
 	// @TODO this is a skeleton, please use this as blueprint to clean up the source
 	// @TODO currently we follow the implementation from Owncast, which is little tricky but was faster to implement
@@ -54,15 +57,19 @@ func NewApApi(config *instance.FederationConfig, storage instance.Storage) (*ApA
 
 	actorService := services.NewActorService(config, actorRepo, sender)
 
+	videoService := services.NewVideoService(config, actorService, videoRepo)
+
 	return &ApApi{
 		config:       config,
 		Storage:      storage,
 		actorRepo:    actorRepo,
 		followRepo:   followRepo,
+		videoRepo:    videoRepo,
 		actor:        actor,
 		signer:       signer,
 		sender:       sender,
 		actorService: actorService,
+		videoService: videoService,
 	}, nil
 
 }
@@ -75,7 +82,7 @@ func (a *ApApi) BoostrapApi(router *mux.Router) error {
 	if a.config.Enable {
 		resolver := remote.NewResolver(a.config, a.signer)
 		workerpool.InitOutboundWorkerPool()
-		inbox.InitInboxWorkerPool(a.followRepo, resolver)
+		inbox.InitInboxWorkerPool(a.followRepo, a.videoService, resolver)
 	}
 
 	return nil
