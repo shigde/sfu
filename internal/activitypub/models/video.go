@@ -10,16 +10,19 @@ import (
 type Video struct {
 	Iri             string       `gorm:"not null;index;unique;"`
 	Uuid            string       `gorm:"not null;index;unique;"`
-	ShigActive      bool         `gorm:"not null;"`
+	Name            string       `gorm:""`
+	ShigActive      bool         `gorm:"not null;default:false;"`
 	OwnerId         uint         `gorm:"not null;"`
 	Owner           *Actor       `gorm:"foreignKey:OwnerId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	ChannelId       uint         `gorm:"not null;"`
+	Channel         *Actor       `gorm:"foreignKey:ChannelId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Guests          []*Actor     `gorm:"many2many:video_guests;"`
-	IsLiveBroadcast bool         `gorm:"not null;"`
-	LiveSaveReplay  bool         `gorm:"not null;"`
+	IsLiveBroadcast bool         `gorm:"not null;default:false;"`
+	LiveSaveReplay  bool         `gorm:"not null;default:false;"`
 	PermanentLive   bool         `gorm:""`
 	LatencyMode     uint         `gorm:"not null;default:1;"`
-	Published       sql.NullTime `gorm:"not null;"`
-	State           uint         `gorm:"not null;"`
+	Published       sql.NullTime `gorm:""`
+	State           uint         `gorm:"not null;default:0"`
 	iriUrl          *url.URL     `gorm:"-"`
 	gorm.Model
 }

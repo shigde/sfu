@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
-	"github.com/superseriousbusiness/activity/pub"
+	"github.com/shigde/sfu/internal/activitypub/parser"
 	"github.com/superseriousbusiness/activity/streams/vocab"
 	"golang.org/x/exp/slog"
 )
@@ -73,7 +72,6 @@ func (ai *acceptInbox) handleAcceptRequest(ctx context.Context, activity vocab.A
 			if !ok {
 				return errors.New("inbox accept: couldn't parse follow into vocab.ActivityStreamsFollow")
 			}
-			asFollow.GetTypeName()
 			idProp := asFollow.GetJSONLDId()
 			if idProp == nil || !idProp.IsIRI() {
 				return errors.New("no id property set on follow, or was not an iri")
@@ -84,11 +82,11 @@ func (ai *acceptInbox) handleAcceptRequest(ctx context.Context, activity vocab.A
 				return fmt.Errorf("inbox accept: getting follow request with id %s from the database: %w", uri, err)
 			}
 
-			if actorIri, err := extractActorURI(asFollow); err != nil || actorIri.String() != follow.Actor.ActorIri {
+			if actorIri, err := parser.ExtractActorURI(asFollow); err != nil || actorIri.String() != follow.Actor.ActorIri {
 				return fmt.Errorf("comparing actor with follow actvity: %w", err)
 			}
 
-			if targetIri, err := extractObjectURI(asFollow); err != nil || targetIri.String() != follow.TargetActor.ActorIri {
+			if targetIri, err := parser.ExtractObjectURI(asFollow); err != nil || targetIri.String() != follow.TargetActor.ActorIri {
 				return fmt.Errorf("comparing target actor with follow actvity: %w", err)
 			}
 
@@ -108,46 +106,4 @@ func (ai *acceptInbox) saveFollowAsAccepted(ctx context.Context, follow *models.
 		return fmt.Errorf("inbox accept: updating follow request with id %s in the database: %w", follow.Iri, err)
 	}
 	return nil
-}
-
-func extractActorURI(withActor withActor) (*url.URL, error) {
-	actorProp := withActor.GetActivityStreamsActor()
-	if actorProp == nil {
-		return nil, errors.New("actor property was nil")
-	}
-
-	for iter := actorProp.Begin(); iter != actorProp.End(); iter = iter.Next() {
-		id, err := pub.ToId(iter)
-		if err == nil {
-			// Found one we can use.
-			return id, nil
-		}
-	}
-
-	return nil, errors.New("no iri found for actor prop")
-}
-
-func extractObjectURI(withObject withObject) (*url.URL, error) {
-	objectProp := withObject.GetActivityStreamsObject()
-	if objectProp == nil {
-		return nil, errors.New("object property was nil")
-	}
-
-	for iter := objectProp.Begin(); iter != objectProp.End(); iter = iter.Next() {
-		id, err := pub.ToId(iter)
-		if err == nil {
-			// Found one we can use.
-			return id, nil
-		}
-	}
-
-	return nil, errors.New("no iri found for object prop")
-}
-
-type withActor interface {
-	GetActivityStreamsActor() vocab.ActivityStreamsActorProperty
-}
-
-type withObject interface {
-	GetActivityStreamsObject() vocab.ActivityStreamsObjectProperty
 }

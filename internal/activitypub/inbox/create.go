@@ -2,8 +2,9 @@ package inbox
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/shigde/sfu/internal/activitypub/services"
 	"github.com/superseriousbusiness/activity/streams/vocab"
 )
@@ -23,7 +24,14 @@ func (cr *createInbox) handleCreateRequest(ctx context.Context, activity vocab.A
 	if !activity.GetActivityStreamsObject().At(0).IsActivityStreamsVideo() {
 		return nil
 	}
+	asObject := activity.GetActivityStreamsObject()
+	if asObject == nil {
+		return errors.New("no object set on vocab.ActivityStreamsCreate")
+	}
 
-	iri := activity.GetJSONLDId().GetIRI().String()
-	return errors.New("not handling create request of: " + iri)
+	if err := cr.videoService.UpsertVideo(ctx, asObject); err != nil {
+		return fmt.Errorf("inbox update video: %w", err)
+	}
+
+	return nil
 }

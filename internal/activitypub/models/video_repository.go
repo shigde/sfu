@@ -28,7 +28,7 @@ func (r *VideoRepository) Upsert(ctx context.Context, video *Video) (*Video, err
 	defer cancel()
 
 	result := tx.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "iri"}},
+		Columns:   []clause.Column{{Name: "iri"}, {Name: "uuid"}},
 		UpdateAll: true,
 	}).Create(&video)
 	if result.Error != nil {
