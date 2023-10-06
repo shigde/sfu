@@ -9,6 +9,7 @@ import (
 
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type IriType int64
@@ -41,21 +42,15 @@ func (r *ActorRepository) Add(_ context.Context, actor *Actor) (*Actor, error) {
 func (r *ActorRepository) Upsert(ctx context.Context, actor *Actor) (*Actor, error) {
 	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
 	defer cancel()
-	actorTest := &Actor{ActorIri: actor.ActorIri}
-	result := tx.First(actorTest)
 
-	if result.Error == nil {
-		result = tx.Save(actor)
-		if result.Error != nil {
-			return nil, fmt.Errorf("updating actor for name %s: %w", actor.PreferredUsername, result.Error)
-		}
-		return actor, nil
-	}
-
-	result = tx.Create(actor)
+	result := tx.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "actor_iri"}},
+		UpdateAll: true,
+	}).Create(&actor)
 	if result.Error != nil {
 		return nil, fmt.Errorf("creating actor for name %s: %w", actor.PreferredUsername, result.Error)
 	}
+
 	return actor, nil
 }
 

@@ -10,19 +10,21 @@ import (
 	"github.com/shigde/sfu/internal/activitypub/models"
 	"github.com/shigde/sfu/internal/activitypub/outbox"
 	"github.com/shigde/sfu/internal/activitypub/remote"
+	"github.com/shigde/sfu/internal/activitypub/services"
 	"github.com/shigde/sfu/internal/activitypub/webfinger"
 	"github.com/shigde/sfu/internal/activitypub/workerpool"
 	"github.com/superseriousbusiness/activity/pub"
 )
 
 type ApApi struct {
-	config     *instance.FederationConfig
-	Storage    instance.Storage
-	actorRepo  *models.ActorRepository
-	followRepo *models.FollowRepository
-	actor      pub.FederatingActor
-	signer     *crypto.Signer
-	sender     *outbox.Sender
+	config       *instance.FederationConfig
+	Storage      instance.Storage
+	actorRepo    *models.ActorRepository
+	followRepo   *models.FollowRepository
+	actor        pub.FederatingActor
+	signer       *crypto.Signer
+	sender       *outbox.Sender
+	actorService *services.ActorService
 }
 
 func NewApApi(config *instance.FederationConfig, storage instance.Storage) (*ApApi, error) {
@@ -50,20 +52,23 @@ func NewApApi(config *instance.FederationConfig, storage instance.Storage) (*ApA
 
 	sender := outbox.NewSender(config, webfingerClient, resolver, signer)
 
+	actorService := services.NewActorService(config, actorRepo, sender)
+
 	return &ApApi{
-		config:     config,
-		Storage:    storage,
-		actorRepo:  actorRepo,
-		followRepo: followRepo,
-		actor:      actor,
-		signer:     signer,
-		sender:     sender,
+		config:       config,
+		Storage:      storage,
+		actorRepo:    actorRepo,
+		followRepo:   followRepo,
+		actor:        actor,
+		signer:       signer,
+		sender:       sender,
+		actorService: actorService,
 	}, nil
 
 }
 
 func (a *ApApi) BoostrapApi(router *mux.Router) error {
-	if err := extendRouter(router, a.config, a.actorRepo, a.followRepo, a.signer, a.sender); err != nil {
+	if err := extendRouter(router, a.config, a.actorRepo, a.followRepo, a.signer, a.sender, a.actorService); err != nil {
 		return fmt.Errorf("extending router with federation endpoints: %w", err)
 	}
 

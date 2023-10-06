@@ -55,14 +55,16 @@ func (s *Sender) SendFollowRequest(follow *models.Follow) error {
 }
 
 func (s *Sender) GetAccountRequest(fromActorIRI *url.URL, url string) (*http.Request, error) {
-	req, _ := http.NewRequest(http.MethodGet, url, bytes.NewBuffer(nil))
+	req, err := http.NewRequest(http.MethodGet, url, bytes.NewBuffer(nil))
+	if err != nil {
+		return nil, fmt.Errorf("building account request object: %w", err)
+	}
 	ua := fmt.Sprintf("%s; https://stream.shig.de", s.config.Release)
 	req.Header.Set("User-Agent", ua)
 	req.Header.Set("Content-Type", "application/activity+json")
 
 	if err := s.signer.SignRequest(req, nil, fromActorIRI); err != nil {
-		slog.Error("error signing request:", "err", err)
-		return nil, err
+		return nil, fmt.Errorf("signing account request object: %w", err)
 	}
 
 	return req, nil

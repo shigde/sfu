@@ -22,7 +22,7 @@ type Actor struct {
 	ActorType         string         `gorm:"type"`
 	PublicKey         string         `gorm:"publicKey"`
 	PrivateKey        sql.NullString `gorm:"privateKey"`
-	ActorIri          string         `gorm:"actorIri"`
+	ActorIri          string         `gorm:"actorIri;index;unique;"`
 	FollowingIri      string         `gorm:"followingIri"`
 	FollowersIri      string         `gorm:"followersIri"`
 	InboxIri          string         `gorm:"inboxIri"`
@@ -32,8 +32,9 @@ type Actor struct {
 	ServerId          sql.NullInt64  `gorm:"serverId"`
 	RemoteCreatedAt   time.Time      `gorm:"remoteCreatedAt"`
 	PreferredUsername string         `gorm:"preferredUsername"`
-	Follower          []Follow       `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	Following         []Follow       `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Follower          []*Follow      `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Following         []*Follow      `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	VideoGuest        []*Video       `gorm:"many2many:video_guests;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	gorm.Model
 }
 
