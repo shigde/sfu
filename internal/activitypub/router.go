@@ -23,6 +23,7 @@ func extendRouter(
 	// Single ActivityPub Actor
 	router.HandleFunc("/federation/accounts/{accountName}", handler.GetActorHandler(config, actorRep, signer)).Methods("GET")
 	router.HandleFunc("/federation/accounts/{accountName}/inbox", handler.GetInboxHandler(config, actorRep)).Methods("POST")
+	router.HandleFunc("/federation/inbox", handler.GetSharedInboxHandler(config)).Methods("POST")
 
 	//outbox, followers, following
 

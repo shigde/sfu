@@ -75,6 +75,11 @@ func (s *Actor) GetOutboxIri() *url.URL {
 	return iri
 }
 
+func (s *Actor) GetSharedInboxIri() *url.URL {
+	iri, _ := url.Parse(s.SharedInboxIri)
+	return iri
+}
+
 type ActorType uint
 
 const (
