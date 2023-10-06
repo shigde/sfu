@@ -19,19 +19,19 @@ var (
 )
 
 type Actor struct {
-	ActorType         string         `gorm:"type"`
-	PublicKey         string         `gorm:"publicKey"`
-	PrivateKey        sql.NullString `gorm:"privateKey"`
-	ActorIri          string         `gorm:"actorIri;index;unique;"`
-	FollowingIri      string         `gorm:"followingIri"`
-	FollowersIri      string         `gorm:"followersIri"`
-	InboxIri          string         `gorm:"inboxIri"`
-	OutboxIri         string         `gorm:"outboxIri"`
-	SharedInboxIri    string         `gorm:"sharedInboxIri"`
-	DisabledAt        sql.NullTime   `gorm:"disabledAt"`
-	ServerId          sql.NullInt64  `gorm:"serverId"`
-	RemoteCreatedAt   time.Time      `gorm:"remoteCreatedAt"`
-	PreferredUsername string         `gorm:"preferredUsername"`
+	ActorType         string         `gorm:""`
+	PublicKey         string         `gorm:""`
+	PrivateKey        sql.NullString `gorm:""`
+	ActorIri          string         `gorm:"index;unique;"`
+	FollowingIri      string         `gorm:""`
+	FollowersIri      string         `gorm:""`
+	InboxIri          string         `gorm:""`
+	OutboxIri         string         `gorm:""`
+	SharedInboxIri    string         `gorm:""`
+	DisabledAt        sql.NullTime   `gorm:""`
+	ServerId          sql.NullInt64  `gorm:""`
+	RemoteCreatedAt   time.Time      `gorm:""`
+	PreferredUsername string         `gorm:""`
 	Follower          []*Follow      `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Following         []*Follow      `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	VideoGuest        []*Video       `gorm:"many2many:video_guests;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
