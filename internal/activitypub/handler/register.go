@@ -38,26 +38,26 @@ func GetRegisterHandler(
 			return
 		}
 
-		_, err = actorService.CreateActorFromRemoteAccount(r.Context(), accountIri.String(), instanceActor)
+		remoteInstance, err := actorService.CreateActorFromRemoteAccount(r.Context(), accountIri.String(), instanceActor)
 		if err != nil {
 			slog.Error("getting remote account as actor", "err", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		//follow := models.NewFollow(instanceActor, remoteInstance, config)
-		//follow, err = followRep.Add(r.Context(), follow)
-		//if err != nil {
-		//	slog.Error("saving fallow", "err", err)
-		//	w.WriteHeader(http.StatusInternalServerError)
-		//	return
-		//}
-		//
-		//if err := sender.SendFollowRequest(follow); err != nil {
-		//	slog.Error("sending fallow request", "err", err)
-		//	w.WriteHeader(http.StatusInternalServerError)
-		//	return
-		//}
+		follow := models.NewFollow(instanceActor, remoteInstance, config)
+		follow, err = followRep.Add(r.Context(), follow)
+		if err != nil {
+			slog.Error("saving fallow", "err", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if err := sender.SendFollowRequest(follow); err != nil {
+			slog.Error("sending fallow request", "err", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		w.WriteHeader(http.StatusCreated)
 		return
 	}
