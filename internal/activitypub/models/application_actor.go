@@ -137,5 +137,15 @@ func BuildActivityApplication(actor *Actor, config *instance.FederationConfig) v
 	//	addMetadataLinkToProfile(app, "Owncast", "https://owncast.online")
 	//}
 
+	sharedInbox := streams.NewActivityStreamsSharedInboxProperty()
+	sharedInboxIri := actor.GetSharedInboxIri()
+	sharedInbox.SetIRI(sharedInboxIri)
+
+	endpoints := streams.NewActivityStreamsEndpointsProperty()
+	sharedInboxEndpoint := streams.NewActivityStreamsEndpoints()
+	sharedInboxEndpoint.SetActivityStreamsSharedInbox(sharedInbox)
+	endpoints.AppendActivityStreamsEndpoints(sharedInboxEndpoint)
+	app.SetActivityStreamsEndpoints(endpoints)
+
 	return app
 }

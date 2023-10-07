@@ -1,52 +1,46 @@
 package handler
 
 import (
+	"html"
 	"net/http"
+	"net/url"
 
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
 	"github.com/shigde/sfu/internal/activitypub/outbox"
-	"github.com/shigde/sfu/internal/activitypub/remote"
+	"github.com/shigde/sfu/internal/activitypub/services"
 	"golang.org/x/exp/slog"
 )
 
 func GetRegisterHandler(
 	config *instance.FederationConfig,
-	actorRep *models.ActorRepository,
+	actorService *services.ActorService,
 	followRep *models.FollowRepository,
 	sender *outbox.Sender,
 ) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !config.Enable {
-			w.WriteHeader(http.StatusMethodNotAllowed)
+			http.Error(w, errNoFederationSupport.Error(), http.StatusMethodNotAllowed)
 			return
 		}
-		// @TODO put all this logic in a background worker
-		instanceActor, err := actorRep.GetActorForUserName(r.Context(), config.InstanceUsername)
+
+		accountIri, err := getAccountIriFromGet(r)
 		if err != nil {
-			slog.Error("reading local instance actor for username from db", "err", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		instanceActor, err := actorService.GetLocalInstanceActor(r.Context())
+		if err != nil {
+			slog.Error("getting local instance actor", "err", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		instanceId := "http://localhost:9000/accounts/peertube"
-		req, err := sender.GetAccountRequest(instanceActor.GetActorIri(), instanceId)
+		remoteInstance, err := actorService.CreateActorFromRemoteAccount(r.Context(), accountIri.String(), instanceActor)
 		if err != nil {
-			slog.Error("building sign actor request for remote", "err", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		remoteInstance, err := remote.FetchAccountAsActor(r.Context(), req)
-		if err != nil {
-			slog.Error("fetching actor from remote", "err", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		remoteInstance, err = actorRep.Upsert(r.Context(), remoteInstance)
-		if err != nil {
+			slog.Error("getting remote account as actor", "err", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -67,4 +61,18 @@ func GetRegisterHandler(
 		w.WriteHeader(http.StatusCreated)
 		return
 	}
+}
+
+func getAccountIriFromGet(r *http.Request) (*url.URL, error) {
+	iriString := r.URL.Query().Get("accountIri")
+	if len(iriString) == 0 {
+		return nil, errAccountIriNotFound
+	}
+	iri := html.UnescapeString(iriString)
+	iriUrl, err := url.ParseRequestURI(iri)
+	if err != nil {
+		return nil, errAccountIriInvalid
+	}
+
+	return iriUrl, nil
 }

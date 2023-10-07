@@ -5,6 +5,7 @@ import (
 
 	"github.com/shigde/sfu/internal/activitypub/models"
 	"github.com/shigde/sfu/internal/activitypub/remote"
+	"github.com/shigde/sfu/internal/activitypub/services"
 	"golang.org/x/exp/slog"
 )
 
@@ -20,12 +21,13 @@ var queue chan Job
 
 // InitInboxWorkerPool starts n go routines that await ActivityPub jobs.
 func InitInboxWorkerPool(
-	follower *models.FollowRepository,
+	followRep *models.FollowRepository,
+	videoService *services.VideoService,
 	resolver *remote.Resolver,
 ) {
 	queue = make(chan Job)
 
-	handler := newHandler(follower, resolver)
+	handler := newHandler(followRep, videoService, resolver)
 	// start workers
 	for i := 1; i <= workerPoolSize; i++ {
 		go worker(i, queue, handler)

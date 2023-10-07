@@ -13,7 +13,7 @@ func Migrate(config *instance.FederationConfig, storage instance.Storage) error 
 	storage.GetDatabase()
 	db := storage.GetDatabase()
 
-	if err := db.AutoMigrate(&Follow{}, &Actor{}, &Server{}); err != nil {
+	if err := db.AutoMigrate(&Video{}, &Follow{}, &Actor{}, &Server{}); err != nil {
 		return fmt.Errorf("migrating the space schema: %w", err)
 	}
 

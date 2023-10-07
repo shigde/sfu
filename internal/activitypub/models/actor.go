@@ -19,21 +19,22 @@ var (
 )
 
 type Actor struct {
-	ActorType         string         `gorm:"type"`
-	PublicKey         string         `gorm:"publicKey"`
-	PrivateKey        sql.NullString `gorm:"privateKey"`
-	ActorIri          string         `gorm:"actorIri"`
-	FollowingIri      string         `gorm:"followingIri"`
-	FollowersIri      string         `gorm:"followersIri"`
-	InboxIri          string         `gorm:"inboxIri"`
-	OutboxIri         string         `gorm:"outboxIri"`
-	SharedInboxIri    string         `gorm:"sharedInboxIri"`
-	DisabledAt        sql.NullTime   `gorm:"disabledAt"`
-	ServerId          sql.NullInt64  `gorm:"serverId"`
-	RemoteCreatedAt   time.Time      `gorm:"remoteCreatedAt"`
-	PreferredUsername string         `gorm:"preferredUsername"`
-	Follower          []Follow       `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	Following         []Follow       `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	ActorType         string         `gorm:""`
+	PublicKey         string         `gorm:""`
+	PrivateKey        sql.NullString `gorm:""`
+	ActorIri          string         `gorm:"index;unique;"`
+	FollowingIri      string         `gorm:""`
+	FollowersIri      string         `gorm:""`
+	InboxIri          string         `gorm:""`
+	OutboxIri         string         `gorm:""`
+	SharedInboxIri    string         `gorm:""`
+	DisabledAt        sql.NullTime   `gorm:""`
+	ServerId          sql.NullInt64  `gorm:""`
+	RemoteCreatedAt   time.Time      `gorm:""`
+	PreferredUsername string         `gorm:""`
+	Follower          []*Follow      `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Following         []*Follow      `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	VideoGuest        []*Video       `gorm:"many2many:video_guests;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	gorm.Model
 }
 
@@ -75,6 +76,15 @@ func (s *Actor) GetOutboxIri() *url.URL {
 	return iri
 }
 
+func (s *Actor) GetSharedInboxIri() *url.URL {
+	iri, _ := url.Parse(s.SharedInboxIri)
+	return iri
+}
+
+func (s *Actor) GetActorType() ActorType {
+	return ActorTypeFromString(s.ActorType)
+}
+
 type ActorType uint
 
 const (
@@ -83,10 +93,11 @@ const (
 	Organization
 	Application
 	Service
+	Bot
 )
 
 func (at ActorType) String() string {
-	return []string{"Person", "Group", "Organization", "Application", "Service"}[at]
+	return []string{"Person", "Group", "Organization", "Application", "Service", "Bot"}[at]
 }
 
 func ActorTypeFromString(str string) ActorType {
@@ -102,5 +113,5 @@ func ActorTypeFromString(str string) ActorType {
 	case "service":
 		return Service
 	}
-	return Person
+	return Bot
 }

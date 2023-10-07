@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -13,7 +12,6 @@ import (
 )
 
 // ActorHandler handles requests for a single actor.
-var errAccountNameNotFound = errors.New("no account name in request")
 
 func GetActorHandler(
 	config *instance.FederationConfig,
@@ -23,14 +21,13 @@ func GetActorHandler(
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !config.Enable {
-			w.WriteHeader(http.StatusMethodNotAllowed)
+			http.Error(w, errNoFederationSupport.Error(), http.StatusMethodNotAllowed)
 			return
 		}
 
 		accountName, err := getAccountName(r)
 		if err != nil {
-			// Account name  not found
-			w.WriteHeader(http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -57,9 +54,9 @@ func GetActorHandler(
 }
 
 func getAccountName(r *http.Request) (string, error) {
-	spaceId, ok := mux.Vars(r)["accountName"]
+	account, ok := mux.Vars(r)["accountName"]
 	if !ok {
 		return "", errAccountNameNotFound
 	}
-	return spaceId, nil
+	return account, nil
 }
