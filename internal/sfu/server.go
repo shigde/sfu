@@ -8,9 +8,11 @@ import (
 	"time"
 
 	"github.com/shigde/sfu/internal/activitypub"
+	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/lobby"
 	"github.com/shigde/sfu/internal/media"
 	"github.com/shigde/sfu/internal/metric"
+	"github.com/shigde/sfu/internal/migration"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/storage"
 	"github.com/shigde/sfu/internal/stream"
@@ -29,6 +31,15 @@ type Server struct {
 }
 
 func NewServer(ctx context.Context, config *Config) (*Server, error) {
+	store, err := storage.NewStore(config.StorageConfig)
+	if err != nil {
+		return nil, fmt.Errorf("setup storage %w", err)
+	}
+
+	if err := migration.Migrate(config.FederationConfig, store); err != nil {
+		return nil, fmt.Errorf("bild database shema %w", err)
+	}
+
 	// RTP lobby
 	engine, err := rtp.NewEngine(config.RtpConfig)
 	if err != nil {
@@ -36,21 +47,30 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 	}
 	lobbyManager := lobby.NewLobbyManager(engine)
 
-	// Live streams and space
-	store, err := storage.NewStore(config.StorageConfig)
+	// @TODO Please do the more simple!!!! To complicated
+	repo := stream.NewLiveStreamRepository(store)
+	liveStreamService := stream.NewLiveStreamService(repo)
+	spaceManager := stream.NewSpaceManager(lobbyManager, store, repo)
+
+	// Auth provider
+	accountService, err := auth.NewAccountService(store)
 	if err != nil {
-		return nil, fmt.Errorf("setup storage %w", err)
-	}
-	spaceManager, err := stream.NewSpaceManager(lobbyManager, store)
-	if err != nil {
-		return nil, fmt.Errorf("setup space manager %w", err)
+		return nil, fmt.Errorf("creating acoount service %w", err)
 	}
 
-	// api endpoints
-	router := media.NewRouter(config.SecurityConfig, config.RtpConfig, spaceManager)
+	router := media.NewRouter(
+		config.SecurityConfig,
+		config.RtpConfig,
+		accountService,
+		spaceManager,
+	)
 
 	// federation api
-	api, err := activitypub.NewApApi(config.FederationConfig, store)
+	api, err := activitypub.NewApApi(
+		config.FederationConfig,
+		store,
+		liveStreamService,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("creating federation api: %w", err)
 	}

@@ -12,22 +12,19 @@ import (
 var ErrSpaceNotFound = errors.New("reading unknown space in store")
 
 type SpaceRepository struct {
-	locker *sync.RWMutex
-	store  storage
-	lobby  lobbyListenAccessor
+	locker   *sync.RWMutex
+	store    storage
+	lobby    lobbyListenAccessor
+	liveRepo *LiveStreamRepository
 }
 
-func newSpaceRepository(lobby lobbyListenAccessor, store storage) (*SpaceRepository, error) {
-	db := store.GetDatabase()
-	if err := db.AutoMigrate(&Space{}); err != nil {
-		return nil, fmt.Errorf("migrating the space schema: %w", err)
-	}
-
+func newSpaceRepository(lobby lobbyListenAccessor, store storage, liveRepo *LiveStreamRepository) *SpaceRepository {
 	return &SpaceRepository{
 		&sync.RWMutex{},
 		store,
 		lobby,
-	}, nil
+		liveRepo,
+	}
 }
 
 func (r *SpaceRepository) GetOrCreateSpace(ctx context.Context, id string) (*Space, error) {
@@ -38,7 +35,7 @@ func (r *SpaceRepository) GetOrCreateSpace(ctx context.Context, id string) (*Spa
 		cancel()
 	}()
 
-	space, err := newSpace(id, r.lobby, r.store)
+	space, err := newSpace(id, r.lobby, r.store, r.liveRepo)
 	if err != nil {
 		return nil, fmt.Errorf("get or creating space by id %s: %w", id, err)
 	}
@@ -61,7 +58,7 @@ func (r *SpaceRepository) GetSpace(ctx context.Context, id string) (*Space, erro
 		cancel()
 	}()
 
-	space, err := newSpace(id, r.lobby, r.store)
+	space, err := newSpace(id, r.lobby, r.store, r.liveRepo)
 	if err != nil {
 		return nil, fmt.Errorf("finding space by space id %s: %w", id, err)
 	}
@@ -86,7 +83,7 @@ func (r *SpaceRepository) Delete(ctx context.Context, id string) error {
 		cancel()
 	}()
 
-	space, err := newSpace(id, r.lobby, r.store)
+	space, err := newSpace(id, r.lobby, r.store, r.liveRepo)
 	if err != nil {
 		return fmt.Errorf("deleting space by space id %s: %w", id, err)
 	}

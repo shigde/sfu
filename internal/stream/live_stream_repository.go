@@ -17,15 +17,11 @@ type LiveStreamRepository struct {
 	store  storage
 }
 
-func NewLiveStreamRepository(store storage) (*LiveStreamRepository, error) {
-	db := store.GetDatabase()
-	if err := db.AutoMigrate(&LiveStream{}); err != nil {
-		return nil, fmt.Errorf("migrating the space schema: %w", err)
-	}
+func NewLiveStreamRepository(store storage) *LiveStreamRepository {
 	return &LiveStreamRepository{
 		&sync.RWMutex{},
 		store,
-	}, nil
+	}
 }
 
 func (r *LiveStreamRepository) Add(ctx context.Context, liveStream *LiveStream) (string, error) {
@@ -152,4 +148,8 @@ func (r *LiveStreamRepository) getStoreWithContext(ctx context.Context) (*gorm.D
 	db := r.store.GetDatabase()
 	tx := db.WithContext(ctx)
 	return tx, cancel
+}
+
+func (r *LiveStreamRepository) UpsertLiveStream(ctx context.Context, stream *LiveStream) error {
+	return nil
 }

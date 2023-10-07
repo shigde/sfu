@@ -35,17 +35,13 @@ type lobbyListenAccessor interface {
 
 type Space struct {
 	Id             string                `json:"Id" gorm:"primaryKey"`
-	LiveStreamRepo *LiveStreamRepository `gorm:"-"`
+	LiveStreamRepo *LiveStreamRepository `gorm:"-"` // @TODO Space should not have access to repos. Redactor this. This make a lot of trouble
 	lobby          lobbyListenAccessor   `gorm:"-"`
 	store          storage               `gorm:"-"`
 	entity
 }
 
-func newSpace(id string, lobby lobbyListenAccessor, store storage) (*Space, error) {
-	repo, err := NewLiveStreamRepository(store)
-	if err != nil {
-		return nil, fmt.Errorf("creating live stream repository")
-	}
+func newSpace(id string, lobby lobbyListenAccessor, store storage, repo *LiveStreamRepository) (*Space, error) {
 	return &Space{Id: id, LiveStreamRepo: repo, lobby: lobby, store: store}, nil
 }
 

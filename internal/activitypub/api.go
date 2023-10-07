@@ -13,6 +13,7 @@ import (
 	"github.com/shigde/sfu/internal/activitypub/services"
 	"github.com/shigde/sfu/internal/activitypub/webfinger"
 	"github.com/shigde/sfu/internal/activitypub/workerpool"
+	"github.com/shigde/sfu/internal/migration"
 	"github.com/superseriousbusiness/activity/pub"
 )
 
@@ -29,8 +30,12 @@ type ApApi struct {
 	videoService *services.VideoService
 }
 
-func NewApApi(config *instance.FederationConfig, storage instance.Storage) (*ApApi, error) {
-	if err := models.Migrate(config, storage); err != nil {
+func NewApApi(
+	config *instance.FederationConfig,
+	storage instance.Storage,
+	streamService services.StreamService,
+) (*ApApi, error) {
+	if err := migration.Migrate(config, storage); err != nil {
 		return nil, fmt.Errorf("creation schema for federation: %w", err)
 	}
 
@@ -57,7 +62,7 @@ func NewApApi(config *instance.FederationConfig, storage instance.Storage) (*ApA
 
 	actorService := services.NewActorService(config, actorRepo, sender)
 
-	videoService := services.NewVideoService(config, actorService, videoRepo)
+	videoService := services.NewVideoService(config, actorService, videoRepo, streamService)
 
 	return &ApApi{
 		config:       config,

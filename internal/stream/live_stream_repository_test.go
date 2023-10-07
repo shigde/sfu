@@ -10,7 +10,7 @@ import (
 
 func testLiveStreamRepositorySetup(t *testing.T) (*LiveStreamRepository, string) {
 	t.Helper()
-	repository, _ := NewLiveStreamRepository(newTestStore())
+	repository := NewLiveStreamRepository(newTestStore())
 	s := &LiveStream{}
 	streamId, _ := repository.Add(context.Background(), s)
 
