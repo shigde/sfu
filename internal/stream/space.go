@@ -7,6 +7,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
+	"github.com/shigde/sfu/internal/activitypub/models"
+	"github.com/shigde/sfu/internal/auth"
 )
 
 var ErrLobbyNotActive = errors.New("lobby not active")
@@ -34,11 +36,16 @@ type lobbyListenAccessor interface {
 }
 
 type Space struct {
-	Id             string                `json:"Id" gorm:"primaryKey"`
-	LiveStreamRepo *LiveStreamRepository `gorm:"-"` // @TODO Space should not have access to repos. Redactor this. This make a lot of trouble
+	Id        string        `json:"Id" gorm:"primaryKey"`
+	ChannelId uint          `json:"-" gorm:"not null"`
+	Channel   *models.Actor `json:"-" gorm:"foreignKey:ChannelId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	AccountId uint          `json:"-" gorm:"not null;"`
+	Account   *auth.Account `json:"-" gorm:"foreignKey:AccountId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+
+	// @TODO Space should not have this properties. Redactor this. This make a lot of trouble
+	LiveStreamRepo *LiveStreamRepository `gorm:"-"`
 	lobby          lobbyListenAccessor   `gorm:"-"`
 	store          storage               `gorm:"-"`
-	entity
 }
 
 func newSpace(id string, lobby lobbyListenAccessor, store storage, repo *LiveStreamRepository) (*Space, error) {
