@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/auth"
 	"gorm.io/gorm"
 )
 
@@ -151,5 +152,38 @@ func (r *LiveStreamRepository) getStoreWithContext(ctx context.Context) (*gorm.D
 }
 
 func (r *LiveStreamRepository) UpsertLiveStream(ctx context.Context, stream *LiveStream) error {
+	tx, cancel := r.getStoreWithContext(ctx)
+	defer func() {
+		cancel()
+	}()
+
+	account := auth.Account{User: stream.User}
+	resultAc := tx.First(&account)
+	if resultAc.Error != nil {
+		return fmt.Errorf("serching account: %w", resultAc.Error)
+	}
+
+	if resultAc.RowsAffected > 0 {
+		stream.AccountId = account.ID
+	}
+
+	result := tx.Create(stream)
+	if result.Error != nil || result.RowsAffected != 1 {
+		return fmt.Errorf("adding live stream: %w", result.Error)
+	}
 	return nil
+}
+
+func (r *LiveStreamRepository) DeleteByUuid(ctx context.Context, videoUuid uuid.UUID) error {
+	tx, cancel := r.getStoreWithContext(ctx)
+	defer func() {
+		cancel()
+	}()
+
+	result := tx.Delete(&LiveStream{UUID: videoUuid})
+	if result.Error != nil {
+		return fmt.Errorf("deleting stream by uuid %s: %w", videoUuid.String(), result.Error)
+	}
+	return nil
+
 }

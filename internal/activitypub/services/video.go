@@ -140,9 +140,10 @@ func (s *VideoService) DeleteVideo(ctx context.Context, deleteObject vocab.Activ
 			if err := s.videoRep.DeleteByIri(ctx, videoIri.String()); err != nil {
 				return fmt.Errorf("saving video: %w", err)
 			}
-			// if err := s.streamService.DeleteStreamAccessByVideo(ctx, video); err != nil {
-			//	return fmt.Errorf("remove stream acces for new video: %w", err)
-			// }
+
+			if err := s.streamService.DeleteStreamAccessByVideo(ctx, videoIri.String()); err != nil {
+				return fmt.Errorf("remove stream access for video: %w", err)
+			}
 		}
 	}
 
