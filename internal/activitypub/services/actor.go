@@ -29,7 +29,7 @@ func (a *ActorService) GetLocalInstanceActor(ctx context.Context) (*models.Actor
 }
 
 func (a *ActorService) CreateActorFromRemoteAccount(ctx context.Context, accountIri string, localInstanceActor *models.Actor) (*models.Actor, error) {
-	req, err := a.sender.GetAccountRequest(localInstanceActor.GetActorIri(), accountIri)
+	req, err := a.sender.GetSignedRequest(localInstanceActor.GetActorIri(), accountIri)
 	if err != nil {
 		return nil, fmt.Errorf("building signed actor request to fetch remote account: %w", err)
 	}

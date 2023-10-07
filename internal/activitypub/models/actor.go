@@ -81,6 +81,10 @@ func (s *Actor) GetSharedInboxIri() *url.URL {
 	return iri
 }
 
+func (s *Actor) GetActorType() ActorType {
+	return ActorTypeFromString(s.ActorType)
+}
+
 type ActorType uint
 
 const (
@@ -89,10 +93,11 @@ const (
 	Organization
 	Application
 	Service
+	Bot
 )
 
 func (at ActorType) String() string {
-	return []string{"Person", "Group", "Organization", "Application", "Service"}[at]
+	return []string{"Person", "Group", "Organization", "Application", "Service", "Bot"}[at]
 }
 
 func ActorTypeFromString(str string) ActorType {
@@ -108,5 +113,5 @@ func ActorTypeFromString(str string) ActorType {
 	case "service":
 		return Service
 	}
-	return Person
+	return Bot
 }

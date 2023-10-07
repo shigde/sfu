@@ -12,7 +12,7 @@ import (
 type handler struct {
 	resolver    *remote.Resolver
 	acceptInbox *acceptInbox
-	createInbox *createInbox
+	createInbox *announceInbox
 	updateInbox *updateInbox
 }
 
@@ -24,14 +24,14 @@ func newHandler(
 	return &handler{
 		resolver:    resolver,
 		acceptInbox: newAcceptInbox(followRep),
-		createInbox: newCreateInbox(videoService),
+		createInbox: newAnnounceInbox(videoService),
 		updateInbox: newUpdateInbox(videoService),
 	}
 }
 
 func (h *handler) resolve(ctx context.Context, request InboxRequest) error {
 	if err := h.resolver.Resolve(ctx, request.Body,
-		h.createInbox.handleCreateRequest,
+		h.createInbox.handleAnnounceRequest,
 		h.updateInbox.handleUpdateRequest,
 		h.acceptInbox.handleAcceptRequest,
 	); err != nil {

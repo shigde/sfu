@@ -1,12 +1,14 @@
 package parser
 
 import (
-	"errors"
+	"database/sql"
+	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 )
 
-type VideoProperties struct {
+type VideoPropertiesUnknown struct {
 	// OriginallyPublishedAt *time.Time
 	ShigActive      bool
 	LatencyMode     uint
@@ -24,62 +26,36 @@ type ShigGuests struct {
 	ThirdGuest  string
 }
 
-func ExtractVideoUnknownProperties(withUnknown WithUnknown) (*VideoProperties, error) {
-	unknownProps := withUnknown.GetUnknownProperties()
-
-	video := &VideoProperties{}
-	//-------
-	//originallyPublishedAt, ok := unknownProps["originallyPublishedAt"].(*time.Time)
-	//if !ok {
-	//	return nil, errors.New("cannot parsing 'originallyPublishedAt'")
-	//}
-	//videoProps.OriginallyPublishedAt = originallyPublishedAt
+func ExtractVideoUnknownProperties(unknownProps map[string]interface{}) (*VideoPropertiesUnknown, error) {
+	video := &VideoPropertiesUnknown{}
+	var err error
 
 	//-------
-	latencyMode, ok := unknownProps["latencyMode"].(float64)
-	if !ok {
-		return nil, errors.New("cannot parsing 'latencyMode'")
+	if video.LatencyMode, err = ExcludeUnknownUint(unknownProps, "latencyMode"); err != nil {
+		return nil, err
 	}
-	video.LatencyMode = uint(latencyMode)
 
-	//-------
-	uuidString, ok := unknownProps["uuid"].(string)
-	if !ok {
-		return nil, errors.New("cannot parsing 'uuid'")
-	}
-	uuidObj, err := uuid.Parse(uuidString)
+	uuidVal, err := ExcludeUnknownUuid(unknownProps, "uuid")
 	if err != nil {
-		return nil, errors.New("cannot converting  'uuid'")
+		return nil, err
 	}
-	video.Uuid = uuidObj.String()
+	video.Uuid = uuidVal.String()
 
-	//-------
-	state, ok := unknownProps["state"].(float64)
-	if !ok {
-		return nil, errors.New("cannot parsing 'state'")
+	if video.State, err = ExcludeUnknownUint(unknownProps, "state"); err != nil {
+		return nil, err
 	}
-	video.State = uint(state)
 
-	//-------
-	isLiveBroadcast, ok := unknownProps["isLiveBroadcast"].(bool)
-	if !ok {
-		return nil, errors.New("cannot parsing 'isLiveBroadcast'")
+	if video.IsLiveBroadcast, err = ExcludeUnknownBool(unknownProps, "isLiveBroadcast"); err != nil {
+		return nil, err
 	}
-	video.IsLiveBroadcast = isLiveBroadcast
 
-	//-------
-	permanentLive, ok := unknownProps["permanentLive"].(bool)
-	if !ok {
-		return nil, errors.New("cannot parsing 'permanentLive'")
+	if video.PermanentLive, err = ExcludeUnknownBool(unknownProps, "permanentLive"); err != nil {
+		return nil, err
 	}
-	video.PermanentLive = permanentLive
 
-	//-------
-	liveSaveReplay, ok := unknownProps["liveSaveReplay"].(bool)
-	if !ok {
-		return nil, errors.New("cannot parsing 'liveSaveReplay'")
+	if video.LiveSaveReplay, err = ExcludeUnknownBool(unknownProps, "liveSaveReplay"); err != nil {
+		return nil, err
 	}
-	video.LiveSaveReplay = liveSaveReplay
 
 	//-------
 	shigData, ok := unknownProps["peertubeShig"].(map[string]interface{})
@@ -91,35 +67,81 @@ func ExtractVideoUnknownProperties(withUnknown WithUnknown) (*VideoProperties, e
 	return extractShigData(shigData, video)
 }
 
-func extractShigData(props map[string]interface{}, video *VideoProperties) (*VideoProperties, error) {
+func extractShigData(props map[string]interface{}, video *VideoPropertiesUnknown) (*VideoPropertiesUnknown, error) {
 	video.Shig = &ShigGuests{}
-	shigActive, ok := props["shigActive"].(bool)
-	if !ok {
-		return nil, errors.New("cannot parsing 'shig.shigActive'")
-	}
-	video.ShigActive = shigActive
 
-	firstGuest, ok := props["firstGuest"].(string)
-	if !ok {
-		return nil, errors.New("cannot parsing 'shig.firstGuest'")
+	var err error
+	if video.ShigActive, err = ExcludeUnknownBool(props, "shigActive"); err != nil {
+		return nil, err
 	}
-	video.Shig.FirstGuest = firstGuest
 
-	secondGuest, ok := props["secondGuest"].(string)
-	if !ok {
-		return nil, errors.New("cannot parsing 'shig.firstGuest'")
+	if video.Shig.FirstGuest, err = ExcludeUnknownString(props, "firstGuest"); err != nil {
+		return nil, err
 	}
-	video.Shig.SecondGuest = secondGuest
 
-	thirdGuest, ok := props["thirdGuest"].(string)
-	if !ok {
-		return nil, errors.New("cannot parsing 'shig.firstGuest'")
+	if video.Shig.SecondGuest, err = ExcludeUnknownString(props, "secondGuest"); err != nil {
+		return nil, err
 	}
-	video.Shig.ThirdGuest = thirdGuest
 
+	if video.Shig.ThirdGuest, err = ExcludeUnknownString(props, "thirdGuest"); err != nil {
+		return nil, err
+	}
 	return video, nil
 }
 
 type WithUnknown interface {
 	GetUnknownProperties() map[string]interface{}
+}
+
+func ExcludeUnknownBool(unknownProps map[string]interface{}, key string) (bool, error) {
+	value, ok := unknownProps[key].(bool)
+	if !ok {
+		return false, fmt.Errorf("cannot parsing '%s'", key)
+	}
+	return value, nil
+}
+
+func ExcludeUnknownString(unknownProps map[string]interface{}, key string) (string, error) {
+	value, ok := unknownProps[key].(string)
+	if !ok {
+		return "", fmt.Errorf("cannot parsing '%s'", key)
+	}
+	return value, nil
+}
+
+func ExcludeUnknownUint(unknownProps map[string]interface{}, key string) (uint, error) {
+	value, ok := unknownProps[key].(float64)
+	if !ok {
+		return 0, fmt.Errorf("cannot parsing '%s'", key)
+	}
+	return uint(value), nil
+}
+
+func ExcludeUnknownTime(unknownProps map[string]interface{}, key string) (*time.Time, error) {
+	value, ok := unknownProps[key].(*time.Time)
+	if !ok {
+		return nil, fmt.Errorf("cannot parsing '%s'", key)
+	}
+	return value, nil
+}
+
+func ExcludeUnknownNullTime(unknownProps map[string]interface{}, key string) sql.NullTime {
+	value, err := ExcludeUnknownTime(unknownProps, key)
+	if err != nil {
+		return sql.NullTime{Valid: false}
+	}
+	return sql.NullTime{Time: *value, Valid: true}
+}
+
+func ExcludeUnknownUuid(unknownProps map[string]interface{}, key string) (*uuid.UUID, error) {
+	value, ok := unknownProps[key].(string)
+	if !ok {
+		return nil, fmt.Errorf("cannot parsing '%s'", key)
+	}
+
+	uuidObj, err := uuid.Parse(value)
+	if err != nil {
+		return nil, fmt.Errorf("is not an uuid '%s'", key)
+	}
+	return &uuidObj, nil
 }

@@ -2,7 +2,9 @@ package outbox
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -54,7 +56,7 @@ func (s *Sender) SendFollowRequest(follow *models.Follow) error {
 
 }
 
-func (s *Sender) GetAccountRequest(fromActorIRI *url.URL, url string) (*http.Request, error) {
+func (s *Sender) GetSignedRequest(fromActorIRI *url.URL, url string) (*http.Request, error) {
 	req, err := http.NewRequest(http.MethodGet, url, bytes.NewBuffer(nil))
 	if err != nil {
 		return nil, fmt.Errorf("building account request object: %w", err)
@@ -68,6 +70,26 @@ func (s *Sender) GetAccountRequest(fromActorIRI *url.URL, url string) (*http.Req
 	}
 
 	return req, nil
+}
+
+func (s *Sender) DoRequest(req *http.Request) (map[string]interface{}, error) {
+	client := &http.Client{}
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("doing request: %w", err)
+	}
+	b, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading boosy request: %w", err)
+	}
+
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return nil, fmt.Errorf("unmarshalling request body: %w", err)
+	}
+
+	return raw, nil
+
 }
 
 func (s *Sender) createBaseOutboundMessage(textContent string) (vocab.ActivityStreamsCreate, string, vocab.ActivityStreamsNote, string) {
