@@ -37,3 +37,14 @@ func (r *VideoRepository) Upsert(ctx context.Context, video *Video) (*Video, err
 
 	return video, nil
 }
+
+func (r *VideoRepository) DeleteByIri(ctx context.Context, iri string) error {
+	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
+	defer cancel()
+
+	result := tx.Unscoped().Delete(&Video{}, "iri = ?", iri)
+	if result.Error != nil {
+		return fmt.Errorf("delete video for iri %s: %w", iri, result.Error)
+	}
+	return nil
+}

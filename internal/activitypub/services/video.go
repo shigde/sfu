@@ -24,7 +24,7 @@ func NewVideoService(config *instance.FederationConfig, actorService *ActorServi
 	return &VideoService{config: config, actorService: actorService, videoRep: videoRep}
 }
 
-func (s *VideoService) AddVideo(ctx context.Context, updateObject vocab.ActivityStreamsObjectProperty, toFollowerIris []*url.URL) error {
+func (s *VideoService) AddVideo(ctx context.Context, announceObject vocab.ActivityStreamsObjectProperty, toFollowerIris []*url.URL) error {
 	video := &models.Video{}
 
 	owners := s.buildOwnerIrisFromFollower(toFollowerIris)
@@ -36,7 +36,7 @@ func (s *VideoService) AddVideo(ctx context.Context, updateObject vocab.Activity
 		return fmt.Errorf("determining owner of video: %w", err)
 	}
 
-	for iter := updateObject.Begin(); iter != updateObject.End(); iter = iter.Next() {
+	for iter := announceObject.Begin(); iter != announceObject.End(); iter = iter.Next() {
 		if iter.IsIRI() {
 			videoIriObjectIRI := iter.GetIRI()
 
@@ -47,6 +47,10 @@ func (s *VideoService) AddVideo(ctx context.Context, updateObject vocab.Activity
 			rawVideo, err := s.actorService.sender.DoRequest(req)
 			if err != nil {
 				return fmt.Errorf("requesting video object: %w", err)
+			}
+
+			if objType, err := parser.ExcludeUnknownString(rawVideo, "type"); err != nil || strings.ToLower(objType) != "video" {
+				return fmt.Errorf("object is no video: %w", err)
 			}
 
 			video.Iri = videoIriObjectIRI.String()
@@ -73,7 +77,6 @@ func (s *VideoService) AddVideo(ctx context.Context, updateObject vocab.Activity
 func (s *VideoService) UpsertVideo(ctx context.Context, updateObject vocab.ActivityStreamsObjectProperty) error {
 	video := &models.Video{}
 	for iter := updateObject.Begin(); iter != updateObject.End(); iter = iter.Next() {
-
 		if iter.GetType() == nil {
 			continue
 		}
@@ -125,8 +128,20 @@ func (s *VideoService) UpsertVideo(ctx context.Context, updateObject vocab.Activ
 	return nil
 }
 
-func (s *VideoService) addOwnerAndChannel(ctx context.Context, owners []*url.URL, video *models.Video, instAct *models.Actor) error {
+func (s *VideoService) DeleteVideo(ctx context.Context, deleteObject vocab.ActivityStreamsObjectProperty) error {
+	for iter := deleteObject.Begin(); iter != deleteObject.End(); iter = iter.Next() {
+		if iter.IsIRI() {
+			videoIri := iter.GetIRI()
+			if err := s.videoRep.DeleteByIri(ctx, videoIri.String()); err != nil {
+				return fmt.Errorf("saving video: %w", err)
+			}
+		}
+	}
 
+	return nil
+}
+
+func (s *VideoService) addOwnerAndChannel(ctx context.Context, owners []*url.URL, video *models.Video, instAct *models.Actor) error {
 	for _, iri := range owners {
 		if actor, err := s.createActor(ctx, iri, instAct); err == nil {
 			if actor.GetActorType() == models.Person {

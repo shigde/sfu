@@ -10,10 +10,11 @@ import (
 )
 
 type handler struct {
-	resolver    *remote.Resolver
-	acceptInbox *acceptInbox
-	createInbox *announceInbox
-	updateInbox *updateInbox
+	resolver      *remote.Resolver
+	acceptInbox   *acceptInbox
+	announceInbox *announceInbox
+	updateInbox   *updateInbox
+	deleteInbox   *deleteInbox
 }
 
 func newHandler(
@@ -22,17 +23,19 @@ func newHandler(
 	resolver *remote.Resolver,
 ) *handler {
 	return &handler{
-		resolver:    resolver,
-		acceptInbox: newAcceptInbox(followRep),
-		createInbox: newAnnounceInbox(videoService),
-		updateInbox: newUpdateInbox(videoService),
+		resolver:      resolver,
+		acceptInbox:   newAcceptInbox(followRep),
+		announceInbox: newAnnounceInbox(videoService),
+		updateInbox:   newUpdateInbox(videoService),
+		deleteInbox:   newDeleteInbox(videoService),
 	}
 }
 
 func (h *handler) resolve(ctx context.Context, request InboxRequest) error {
 	if err := h.resolver.Resolve(ctx, request.Body,
-		h.createInbox.handleAnnounceRequest,
+		h.announceInbox.handleAnnounceRequest,
 		h.updateInbox.handleUpdateRequest,
+		h.deleteInbox.handleDeleteRequest,
 		h.acceptInbox.handleAcceptRequest,
 	); err != nil {
 		return fmt.Errorf("handel resolve: %w", err)
