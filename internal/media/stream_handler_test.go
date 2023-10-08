@@ -86,7 +86,7 @@ func TestCreateStreamReq(t *testing.T) {
 func TestUpdateStreamReq(t *testing.T) {
 	streamId, router, repository := testStreamsReqSetup(t)
 
-	p, _ := repository.FindById(context.Background(), streamId)
+	p, _ := repository.FindByUuid(context.Background(), streamId)
 	jsonStream, _ := json.Marshal(p)
 	body := bytes.NewBuffer(jsonStream)
 	req := newJsonContentRequest("PUT", fmt.Sprintf("/space/%s/stream", spaceId), body)

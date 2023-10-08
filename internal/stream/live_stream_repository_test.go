@@ -34,14 +34,14 @@ func TestLiveStreamRepository(t *testing.T) {
 
 	assertRepoHasStream := func(t testing.TB, repo *LiveStreamRepository, want *LiveStream) {
 		t.Helper()
-		got, err := repo.FindById(context.Background(), want.Id)
+		got, err := repo.FindByUuid(context.Background(), want.UUID.String())
 		assert.NoError(t, err)
 		assertRtpStream(t, want, got)
 	}
 
 	t.Run("Get not existing Stream", func(t *testing.T) {
 		repo, _ := testLiveStreamRepositorySetup(t)
-		stream, err := repo.FindById(context.Background(), "123")
+		stream, err := repo.FindByUuid(context.Background(), "123")
 		assert.Error(t, err, ErrStreamNotFound)
 		assert.Nil(t, stream)
 	})
@@ -80,8 +80,8 @@ func TestLiveStreamRepository(t *testing.T) {
 		want := &LiveStream{}
 		id, _ := repo.Add(context.Background(), want)
 
-		_, err := repo.FindById(context.Background(), streamId)
-		got, _ := repo.FindById(context.Background(), id)
+		_, err := repo.FindByUuid(context.Background(), streamId)
+		got, _ := repo.FindByUuid(context.Background(), id)
 
 		assert.NoError(t, err)
 		assertRtpStream(t, got, want)
@@ -90,10 +90,10 @@ func TestLiveStreamRepository(t *testing.T) {
 	t.Run("Update Stream", func(t *testing.T) {
 		repo, streamId := testLiveStreamRepositorySetup(t)
 
-		want, _ := repo.FindById(context.Background(), streamId)
+		want, _ := repo.FindByUuid(context.Background(), streamId)
 		assert.NoError(t, repo.Update(context.Background(), want))
 
-		got, _ := repo.FindById(context.Background(), streamId)
+		got, _ := repo.FindByUuid(context.Background(), streamId)
 		assertRtpStream(t, got, want)
 	})
 

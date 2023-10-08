@@ -33,19 +33,19 @@ func (r *LiveStreamRepository) Add(ctx context.Context, liveStream *LiveStream) 
 		cancel()
 	}()
 
-	if liveStream.Id == "" {
-		liveStream.Id = uuid.New().String()
+	if len(liveStream.UUID.String()) == 0 {
+		liveStream.UUID = uuid.New()
 	}
 
 	if liveStream.UUID == uuid.Nil {
-		liveStream.Id = uuid.New().String()
+		liveStream.UUID = uuid.New()
 	}
 
 	result := tx.Create(liveStream)
 	if result.Error != nil || result.RowsAffected != 1 {
 		return "", fmt.Errorf("adding live stream: %w", result.Error)
 	}
-	return liveStream.Id, nil
+	return liveStream.UUID.String(), nil
 }
 
 func (r *LiveStreamRepository) All(ctx context.Context) ([]LiveStream, error) {
@@ -66,19 +66,23 @@ func (r *LiveStreamRepository) All(ctx context.Context) ([]LiveStream, error) {
 	return streams, nil
 }
 
-func (r *LiveStreamRepository) FindById(ctx context.Context, id string) (*LiveStream, error) {
+func (r *LiveStreamRepository) FindByUuid(ctx context.Context, streamUUID string) (*LiveStream, error) {
 	r.locker.RLock()
 	tx, cancel := r.getStoreWithContext(ctx)
 	defer func() {
 		defer r.locker.RUnlock()
 		cancel()
 	}()
+	UUID, err := uuid.Parse(streamUUID)
+	if err != nil {
+		return nil, fmt.Errorf("parsing UUID: %w", err)
+	}
 
-	liveStream := &LiveStream{Id: id}
+	liveStream := &LiveStream{UUID: UUID}
 
 	result := tx.First(liveStream)
 	if result.Error != nil {
-		err := fmt.Errorf("finding stream by id %s: %w", id, result.Error)
+		err := fmt.Errorf("finding stream by uuid %s: %w", streamUUID, result.Error)
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, errors.Join(err, ErrStreamNotFound)
 		}
@@ -88,22 +92,25 @@ func (r *LiveStreamRepository) FindById(ctx context.Context, id string) (*LiveSt
 	return liveStream, nil
 }
 
-func (r *LiveStreamRepository) Delete(ctx context.Context, id string) error {
+func (r *LiveStreamRepository) Delete(ctx context.Context, streamUUID string) error {
 	r.locker.Lock()
 	tx, cancel := r.getStoreWithContext(ctx)
 	defer func() {
 		defer r.locker.Unlock()
 		cancel()
 	}()
-
-	result := tx.Delete(&LiveStream{Id: id})
+	UUID, err := uuid.Parse(streamUUID)
+	if err != nil {
+		return fmt.Errorf("parsing UUID: %w", err)
+	}
+	result := tx.Delete(&LiveStream{UUID: UUID})
 	if result.Error != nil {
-		return fmt.Errorf("deleting stream by id %s: %w", id, result.Error)
+		return fmt.Errorf("deleting stream by id %s: %w", streamUUID, result.Error)
 	}
 	return nil
 }
 
-func (r *LiveStreamRepository) Contains(ctx context.Context, id string) bool {
+func (r *LiveStreamRepository) Contains(ctx context.Context, streamUUID string) bool {
 	r.locker.RLock()
 	tx, cancel := r.getStoreWithContext(ctx)
 	defer func() {
@@ -111,8 +118,13 @@ func (r *LiveStreamRepository) Contains(ctx context.Context, id string) bool {
 		cancel()
 	}()
 
+	UUID, err := uuid.Parse(streamUUID)
+	if err != nil {
+		return false
+	}
+
 	var count int64
-	tx.Find(&LiveStream{Id: id}).Count(&count)
+	tx.Find(&LiveStream{UUID: UUID}).Count(&count)
 	return count == 1
 }
 
@@ -126,7 +138,7 @@ func (r *LiveStreamRepository) Update(ctx context.Context, stream *LiveStream) e
 
 	result := tx.Save(stream)
 	if result.Error != nil {
-		return fmt.Errorf("updating stream %s: %w", stream.Id, result.Error)
+		return fmt.Errorf("updating stream %s: %w", stream.UUID, result.Error)
 	}
 	return nil
 }
@@ -159,30 +171,40 @@ func (r *LiveStreamRepository) UpsertLiveStream(ctx context.Context, stream *Liv
 
 	account := auth.Account{User: stream.User}
 	resultAc := tx.First(&account)
-	if resultAc.Error != nil {
+	if resultAc.Error != nil && !errors.Is(resultAc.Error, gorm.ErrRecordNotFound) {
 		return fmt.Errorf("serching account: %w", resultAc.Error)
 	}
 
+	space := Space{Identifier: stream.Space.Identifier}
+	resultSp := tx.First(&space)
+	if resultSp.Error != nil && !errors.Is(resultSp.Error, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("serching space: %w", resultAc.Error)
+	}
+
 	if resultAc.RowsAffected > 0 {
-		stream.AccountId = account.ID
+		stream.Account = &account
+	}
+
+	if resultSp.RowsAffected > 0 {
+		stream.Space = &space
 	}
 
 	result := tx.Create(stream)
-	if result.Error != nil || result.RowsAffected != 1 {
+	if result.Error != nil || result.RowsAffected == 0 {
 		return fmt.Errorf("adding live stream: %w", result.Error)
 	}
 	return nil
 }
 
-func (r *LiveStreamRepository) DeleteByUuid(ctx context.Context, videoUuid uuid.UUID) error {
+func (r *LiveStreamRepository) DeleteByUuid(ctx context.Context, streamUUID string) error {
 	tx, cancel := r.getStoreWithContext(ctx)
 	defer func() {
 		cancel()
 	}()
 
-	result := tx.Delete(&LiveStream{UUID: videoUuid})
+	result := tx.Unscoped().Delete(&LiveStream{}, "uuid = ?", streamUUID)
 	if result.Error != nil {
-		return fmt.Errorf("deleting stream by uuid %s: %w", videoUuid.String(), result.Error)
+		return fmt.Errorf("deleting stream by uuid %s: %w", streamUUID, result.Error)
 	}
 	return nil
 
