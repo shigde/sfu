@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/shigde/sfu/internal/config"
 	"github.com/shigde/sfu/internal/rtp"
@@ -34,8 +33,7 @@ func main() {
 
 	conf, err := config.ParseConfig(cli.Config)
 	if err != nil {
-		panic(fmt.Errorf("parsing config: %w", err))
-		return
+		panic(err)
 	}
 
 	engine, err := rtp.NewEngine(conf.RtpConfig)
@@ -43,7 +41,7 @@ func main() {
 		panic(err)
 	}
 
-	endpoint, err := engine.NewMediaSenderEndpoint(media)
+	endpoint, err := engine.NewStaticMediaSenderEndpoint(media)
 	if err != nil {
 		panic(err)
 	}

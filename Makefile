@@ -32,3 +32,9 @@ monitor:
 
 monitor-stop:
 	docker-compose -f ./mon/dev/docker-compose.yml down -v
+
+build-streamer: go_init
+	go build -o ./bin/media_streamer ./cmd/media_streamer
+
+run-streamer: build-streamer
+	 ./bin/media_streamer -c config.toml

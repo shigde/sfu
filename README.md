@@ -51,3 +51,8 @@ See the [ffmpeg documentation](https://ffmpeg.org/ffmpeg.html#Options) for more 
 go build -o ./bin/media_runner ./cmd/media_runner
 ./bin/media_runner -c config.toml -v output.ivf -a output.ogg
 ```
+##### Run the Media Streamer
+```shell
+go build -o ./bin/media_streamer ./cmd/media_streamer
+./bin/media_streamer -c config.toml
+```

@@ -109,7 +109,7 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.
 
 	initComplete := make(chan struct{})
 
-	//@TODO: Fix the race
+	// @TODO: Fix the race
 	// First we create the sender endpoint and after this we add the individual tracks.
 	// I don't know why, but Pion doesn't trigger renegotiation when creating a peer connection with tracks and the sdp
 	// exchange is not finish. A peer connection without tracks where all tracks are added afterwards triggers renegotiation.
@@ -184,7 +184,10 @@ func creatDC(pc *webrtc.PeerConnection, handler StateEventHandler) error {
 	return nil
 }
 
-func (e *Engine) NewMediaSenderEndpoint(media *static.MediaFile) (*Endpoint, error) {
+// Special Static Endpoints
+
+// NewStaticMediaSenderEndpoint can be used to send static streams from file in a lobby
+func (e *Engine) NewStaticMediaSenderEndpoint(media *static.MediaFile) (*Endpoint, error) {
 	stateHandler := newMediaStateEventHandler()
 	peerConnection, err := e.api.NewPeerConnection(e.config)
 	if err != nil {
@@ -230,4 +233,85 @@ func (e *Engine) NewMediaSenderEndpoint(media *static.MediaFile) (*Endpoint, err
 	}
 
 	return &Endpoint{peerConnection: peerConnection, gatherComplete: gatherComplete}, nil
+}
+
+// NewStaticSignalEndpoint can be used to listen on lobby events
+func (e *Engine) NewStaticSignalEndpoint(ctx context.Context, handler StateEventHandler) (*Endpoint, error) {
+	peerConnection, err := e.api.NewPeerConnection(e.config)
+	if err != nil {
+		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
+	}
+
+	_, iceConnectedCtxCancel := context.WithCancel(ctx)
+
+	peerConnection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
+		// fmt.Printf("Connection State has changed %s \n", connectionState.String())
+		if connectionState == webrtc.ICEConnectionStateConnected {
+			iceConnectedCtxCancel()
+		}
+	})
+
+	err = creatDC(peerConnection, handler)
+
+	if err != nil {
+		return nil, fmt.Errorf("creating data channel: %w", err)
+	}
+
+	offer, err := peerConnection.CreateOffer(nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating offer: %w", err)
+	}
+
+	gatherComplete := webrtc.GatheringCompletePromise(peerConnection)
+
+	if err = peerConnection.SetLocalDescription(offer); err != nil {
+		return nil, err
+	}
+
+	return &Endpoint{peerConnection: peerConnection, gatherComplete: gatherComplete}, nil
+}
+
+// NewStaticReceiverEndpoint can be used to receive Medias from a lobby
+func (e *Engine) NewStaticReceiverEndpoint(ctx context.Context, offer webrtc.SessionDescription, handler StateEventHandler, rtmpEndpoint string) (*Endpoint, error) {
+
+	peerConnection, err := e.api.NewPeerConnection(e.config)
+	if err != nil {
+		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
+	}
+
+	peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
+		slog.Debug("rtp.engine: receiverEndpoint new DataChannel", "label", d.Label(), "id", d.ID())
+		handler.OnChannel(d)
+	})
+	// Allow us to receive 1 audio track, and 1 video track
+	if _, err = peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio); err != nil {
+		panic(err)
+	} else if _, err = peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo); err != nil {
+		panic(err)
+	}
+
+	go startFFmpeg(ctx, rtmpEndpoint)
+
+	go func(ctx context.Context, pc *webrtc.PeerConnection, rtmp string) {
+		rtmpListener(ctx, pc, rtmp)
+	}(ctx, peerConnection, rtmpEndpoint)
+
+	if err := peerConnection.SetRemoteDescription(offer); err != nil {
+		return nil, err
+	}
+
+	gatherComplete := webrtc.GatheringCompletePromise(peerConnection)
+	answer, err := peerConnection.CreateAnswer(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = peerConnection.SetLocalDescription(answer); err != nil {
+		return nil, err
+	}
+
+	return &Endpoint{
+		peerConnection: peerConnection,
+		gatherComplete: gatherComplete,
+	}, nil
 }
