@@ -2,7 +2,6 @@ package stream
 
 import (
 	"context"
-	"fmt"
 )
 
 type SpaceManager struct {
@@ -10,12 +9,9 @@ type SpaceManager struct {
 	lobby  lobbyListenAccessor
 }
 
-func NewSpaceManager(lobby lobbyListenAccessor, store storage) (*SpaceManager, error) {
-	spaces, err := newSpaceRepository(lobby, store)
-	if err != nil {
-		return nil, fmt.Errorf("creating space repository: %w", err)
-	}
-	return &SpaceManager{spaces, lobby}, nil
+func NewSpaceManager(lobby lobbyListenAccessor, store storage, liveRepo *LiveStreamRepository) *SpaceManager {
+	spaces := newSpaceRepository(lobby, store, liveRepo)
+	return &SpaceManager{spaces, lobby}
 }
 
 func (m *SpaceManager) GetSpace(ctx context.Context, id string) (*Space, error) {

@@ -15,13 +15,14 @@ import (
 )
 
 type VideoService struct {
-	config       *instance.FederationConfig
-	actorService *ActorService
-	videoRep     *models.VideoRepository
+	config        *instance.FederationConfig
+	actorService  *ActorService
+	videoRep      *models.VideoRepository
+	streamService StreamService
 }
 
-func NewVideoService(config *instance.FederationConfig, actorService *ActorService, videoRep *models.VideoRepository) *VideoService {
-	return &VideoService{config: config, actorService: actorService, videoRep: videoRep}
+func NewVideoService(config *instance.FederationConfig, actorService *ActorService, videoRep *models.VideoRepository, streamService StreamService) *VideoService {
+	return &VideoService{config: config, actorService: actorService, videoRep: videoRep, streamService: streamService}
 }
 
 func (s *VideoService) AddVideo(ctx context.Context, announceObject vocab.ActivityStreamsObjectProperty, toFollowerIris []*url.URL) error {
@@ -67,8 +68,12 @@ func (s *VideoService) AddVideo(ctx context.Context, announceObject vocab.Activi
 		}
 	}
 
-	if _, err := s.videoRep.Upsert(ctx, video); err != nil {
+	if video, err = s.videoRep.Upsert(ctx, video); err != nil {
 		return fmt.Errorf("creating video: %w", err)
+	}
+
+	if err = s.streamService.CreateStreamAccessByVideo(ctx, video); err != nil {
+		return fmt.Errorf("stream acces for new video: %w", err)
 	}
 
 	return nil
@@ -134,6 +139,10 @@ func (s *VideoService) DeleteVideo(ctx context.Context, deleteObject vocab.Activ
 			videoIri := iter.GetIRI()
 			if err := s.videoRep.DeleteByIri(ctx, videoIri.String()); err != nil {
 				return fmt.Errorf("saving video: %w", err)
+			}
+
+			if err := s.streamService.DeleteStreamAccessByVideo(ctx, videoIri.String()); err != nil {
+				return fmt.Errorf("remove stream access for video: %w", err)
 			}
 		}
 	}

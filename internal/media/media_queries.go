@@ -28,7 +28,7 @@ func getLiveStream(r *http.Request, manager spaceGetCreator) (*stream.LiveStream
 		return nil, nil, errStreamRequestIdNotFound
 	}
 
-	streamResource, err := space.LiveStreamRepo.FindById(r.Context(), id)
+	streamResource, err := space.LiveStreamRepo.FindByUuid(r.Context(), id)
 	if err != nil && errors.Is(err, stream.ErrStreamNotFound) {
 		return nil, nil, errors.Join(err, errStreamNotFound)
 	}

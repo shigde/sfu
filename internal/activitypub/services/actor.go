@@ -17,7 +17,8 @@ type ActorService struct {
 }
 
 func NewActorService(config *instance.FederationConfig, actorRep *models.ActorRepository, sender *outbox.Sender) *ActorService {
-	return &ActorService{config: config, actorRep: actorRep, sender: sender}
+	return &ActorService{
+		config: config, actorRep: actorRep, sender: sender}
 }
 
 func (a *ActorService) GetLocalInstanceActor(ctx context.Context) (*models.Actor, error) {

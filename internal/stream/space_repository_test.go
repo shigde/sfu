@@ -16,7 +16,7 @@ func testSpaceRepositorySetup(t *testing.T) *SpaceRepository {
 	var lobby lobbyListenAccessor
 	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	store := &testStore{db}
-	repository, _ := newSpaceRepository(lobby, store)
+	repository := newSpaceRepository(lobby, store, nil)
 	return repository
 }
 func TestSpaceRepository(t *testing.T) {

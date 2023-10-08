@@ -38,7 +38,7 @@ type Actor struct {
 	gorm.Model
 }
 
-func newInstanceActor(instanceUrl *url.URL, name string) (*Actor, error) {
+func NewInstanceActor(instanceUrl *url.URL, name string) (*Actor, error) {
 	actorIri := instance.BuildAccountIri(instanceUrl, name)
 	now := time.Now()
 	privateKey, publicKey, err := crypto.GenerateKeys()

@@ -14,6 +14,7 @@ const tracerName = "github.com/shigde/sfu/internal/media"
 func NewRouter(
 	securityConfig *auth.SecurityConfig,
 	rtpConfig *rtp.RtpConfig,
+	accountServive *auth.AccountService,
 	spaceManager spaceGetCreator,
 ) *mux.Router {
 	router := mux.NewRouter()
@@ -23,6 +24,8 @@ func NewRouter(
 	//	// handlers.AllowedHeaders([]string{"X-Req-Token"}),
 	//)
 	//router.Use(cors)
+	// Auth
+	router.HandleFunc("authtehnticate", getAuthenticationHandler(accountServive)).Methods("POST")
 
 	// Space
 	router.HandleFunc("/space/{space}/streams", auth.HttpMiddleware(securityConfig, getStreamList(spaceManager))).Methods("GET")

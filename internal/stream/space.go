@@ -7,6 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
+	"github.com/shigde/sfu/internal/activitypub/models"
+	"github.com/shigde/sfu/internal/auth"
+	"gorm.io/gorm"
 )
 
 var ErrLobbyNotActive = errors.New("lobby not active")
@@ -34,19 +37,21 @@ type lobbyListenAccessor interface {
 }
 
 type Space struct {
-	Id             string                `json:"Id" gorm:"primaryKey"`
+	Identifier string        `gorm:"not null;unique;"`
+	ChannelId  uint          `json:"-" gorm:"not null"`
+	Channel    *models.Actor `json:"-" gorm:"foreignKey:ChannelId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	AccountId  uint          `json:"-" gorm:"not null;"`
+	Account    *auth.Account `json:"-" gorm:"foreignKey:AccountId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	gorm.Model
+
+	// @TODO Space should not have this properties. Redactor this. This make a lot of trouble
 	LiveStreamRepo *LiveStreamRepository `gorm:"-"`
 	lobby          lobbyListenAccessor   `gorm:"-"`
 	store          storage               `gorm:"-"`
-	entity
 }
 
-func newSpace(id string, lobby lobbyListenAccessor, store storage) (*Space, error) {
-	repo, err := NewLiveStreamRepository(store)
-	if err != nil {
-		return nil, fmt.Errorf("creating live stream repository")
-	}
-	return &Space{Id: id, LiveStreamRepo: repo, lobby: lobby, store: store}, nil
+func newSpace(id string, lobby lobbyListenAccessor, store storage, repo *LiveStreamRepository) (*Space, error) {
+	return &Space{Identifier: id, LiveStreamRepo: repo, lobby: lobby, store: store}, nil
 }
 
 func (s *Space) EnterLobby(ctx context.Context, sdp *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, string, error) {
