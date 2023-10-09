@@ -235,8 +235,8 @@ func (e *Engine) NewStaticMediaSenderEndpoint(media *static.MediaFile) (*Endpoin
 	return &Endpoint{peerConnection: peerConnection, gatherComplete: gatherComplete}, nil
 }
 
-// NewStaticSignalEndpoint can be used to listen on lobby events
-func (e *Engine) NewStaticSignalEndpoint(ctx context.Context, handler StateEventHandler) (*Endpoint, error) {
+// NewSignalConnetcion can be used to listen on lobby events
+func (e *Engine) NewSignalConnection(ctx context.Context, handler StateEventHandler) (*Connetcion, error) {
 	peerConnection, err := e.api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
@@ -268,12 +268,11 @@ func (e *Engine) NewStaticSignalEndpoint(ctx context.Context, handler StateEvent
 		return nil, err
 	}
 
-	return &Endpoint{peerConnection: peerConnection, gatherComplete: gatherComplete}, nil
+	return &Connetcion{PeerConnection: peerConnection, GatherComplete: gatherComplete}, nil
 }
 
 // NewStaticReceiverEndpoint can be used to receive Medias from a lobby
-func (e *Engine) NewStaticReceiverEndpoint(ctx context.Context, offer webrtc.SessionDescription, handler StateEventHandler, rtmpEndpoint string) (*Endpoint, error) {
-
+func (e *Engine) NewReceiverConnection(ctx context.Context, offer webrtc.SessionDescription, handler StateEventHandler, rtmpEndpoint string) (*Connetcion, error) {
 	peerConnection, err := e.api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
@@ -289,8 +288,6 @@ func (e *Engine) NewStaticReceiverEndpoint(ctx context.Context, offer webrtc.Ses
 	} else if _, err = peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo); err != nil {
 		panic(err)
 	}
-
-	go startFFmpeg(ctx, rtmpEndpoint)
 
 	go func(ctx context.Context, pc *webrtc.PeerConnection, rtmp string) {
 		rtmpListener(ctx, pc, rtmp)
@@ -310,8 +307,8 @@ func (e *Engine) NewStaticReceiverEndpoint(ctx context.Context, offer webrtc.Ses
 		return nil, err
 	}
 
-	return &Endpoint{
-		peerConnection: peerConnection,
-		gatherComplete: gatherComplete,
+	return &Connetcion{
+		PeerConnection: peerConnection,
+		GatherComplete: gatherComplete,
 	}, nil
 }

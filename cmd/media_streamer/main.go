@@ -2,12 +2,16 @@ package main
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/config"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/runner"
 	"github.com/shigde/sfu/pkg/client"
+	"github.com/shigde/sfu/pkg/media"
+	"golang.org/x/exp/slog"
 )
 
 const (
@@ -33,7 +37,10 @@ func main() {
 		panic(err)
 	}
 
-	signalEndpoint, err := engine.NewStaticSignalEndpoint(ctx, newMediaStateEventHandler())
+	signalmesenger := media.NewMessenger()
+	handler := media.NewMediaStateEventHandler(signalmesenger)
+
+	signalEndpoint, err := engine.NewSignalConnection(ctx, handler)
 	if err != nil {
 		panic(err)
 	}
@@ -49,7 +56,7 @@ func main() {
 		panic(err)
 	}
 	println("Answer", signalAnswer.SDP)
-	err = signalEndpoint.SetAnswer(signalAnswer)
+	err = signalEndpoint.PeerConnection.SetRemoteDescription(*signalAnswer)
 	if err != nil {
 		panic(err)
 	}
@@ -62,7 +69,7 @@ func main() {
 		panic(err)
 	}
 
-	receiveEndpoint, err := engine.NewStaticReceiverEndpoint(ctx, *offer, newMediaStateEventHandler(), rtmpEndpoint)
+	receiveEndpoint, err := engine.NewReceiverConnection(ctx, *offer, &media.EmptyStateHandler{}, rtmpEndpoint)
 	if err != nil {
 		panic(err)
 	}
@@ -76,18 +83,42 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	observer := newMediaObserver(receiveEndpoint)
+	signalmesenger.Register(observer)
 
 	select {}
 }
 
-type mediaStateEventHandler struct {
+type mediaObserver struct {
+	id       uuid.UUID
+	endpoint *rtp.Connetcion
 }
 
-func newMediaStateEventHandler() *mediaStateEventHandler {
-	return &mediaStateEventHandler{}
+func newMediaObserver(endpoint *rtp.Connetcion) *mediaObserver {
+	return &mediaObserver{id: uuid.New(), endpoint: endpoint}
 }
 
-func (h *mediaStateEventHandler) OnConnectionStateChange(state webrtc.ICEConnectionState) {
+func (o *mediaObserver) OnOffer(sdp *webrtc.SessionDescription, number uint32) {
+	fmt.Println("Receive New Offer:")
+	if err := o.endpoint.PeerConnection.SetRemoteDescription(*sdp); err != nil {
+		slog.Error("set retedescription", "err", err)
+		return
+	}
+
+	o.endpoint.GatherComplete = webrtc.GatheringCompletePromise(o.endpoint.PeerConnection)
+	answer, err := o.endpoint.PeerConnection.CreateAnswer(nil)
+	if err != nil {
+		slog.Error("create answer", "err", err)
+		return
+	}
+
+	if err = o.endpoint.PeerConnection.SetLocalDescription(answer); err != nil {
+		slog.Error("set answer", "err", err)
+	}
+
 }
-func (h *mediaStateEventHandler) OnNegotiationNeeded(offer webrtc.SessionDescription) {}
-func (h *mediaStateEventHandler) OnChannel(dc *webrtc.DataChannel)                    {}
+func (o *mediaObserver) OnAnswer(sdp *webrtc.SessionDescription, number uint32) {
+}
+func (o *mediaObserver) GetId() uuid.UUID {
+	return o.id
+}

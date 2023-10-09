@@ -56,3 +56,8 @@ go build -o ./bin/media_runner ./cmd/media_runner
 go build -o ./bin/media_streamer ./cmd/media_streamer
 ./bin/media_streamer -c config.toml
 ```
+
+
+```shell
+ffmpeg -protocol_whitelist file,udp,rtp -i rtp-forwarder.sdp -c:v libx264 -preset veryfast -b:v 3000k -maxrate 3000k -bufsize 6000k -pix_fmt yuv420p -g 50 -c:a aac -b:a 160k -ac 2 -ar 44100 -f flv rtmp://127.0.0.1:1935/live/15d2f10a-ba68-46c7-8755-52e9320cbd47 
+```
