@@ -184,9 +184,7 @@ func creatDC(pc *webrtc.PeerConnection, handler StateEventHandler) error {
 	return nil
 }
 
-// Special Static Endpoints
-
-// NewStaticMediaSenderEndpoint can be used to send static streams from file in a lobby
+// NewStaticMediaSenderEndpoint can be used to send static streams from file in a lobby.
 func (e *Engine) NewStaticMediaSenderEndpoint(media *static.MediaFile) (*Endpoint, error) {
 	stateHandler := newMediaStateEventHandler()
 	peerConnection, err := e.api.NewPeerConnection(e.config)
@@ -197,7 +195,7 @@ func (e *Engine) NewStaticMediaSenderEndpoint(media *static.MediaFile) (*Endpoin
 	iceConnectedCtx, iceConnectedCtxCancel := context.WithCancel(context.Background())
 
 	peerConnection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
-		fmt.Printf("Connection State has changed %s \n", connectionState.String())
+		slog.Debug("rtp.engine: connection State has changed", "state", connectionState.String())
 		if connectionState == webrtc.ICEConnectionStateConnected {
 			iceConnectedCtxCancel()
 		}
@@ -235,7 +233,7 @@ func (e *Engine) NewStaticMediaSenderEndpoint(media *static.MediaFile) (*Endpoin
 	return &Endpoint{peerConnection: peerConnection, gatherComplete: gatherComplete}, nil
 }
 
-// NewSignalConnetcion can be used to listen on lobby events
+// NewSignalConnection can be used to listen on lobby events.
 func (e *Engine) NewSignalConnection(ctx context.Context, handler StateEventHandler) (*Connetcion, error) {
 	peerConnection, err := e.api.NewPeerConnection(e.config)
 	if err != nil {
@@ -271,7 +269,7 @@ func (e *Engine) NewSignalConnection(ctx context.Context, handler StateEventHand
 	return &Connetcion{PeerConnection: peerConnection, GatherComplete: gatherComplete}, nil
 }
 
-// NewStaticReceiverEndpoint can be used to receive Medias from a lobby
+// NewStaticReceiverEndpoint can be used to receive Medias from a lobby.
 func (e *Engine) NewReceiverConnection(ctx context.Context, offer webrtc.SessionDescription, handler StateEventHandler, rtmpEndpoint string) (*Connetcion, error) {
 	peerConnection, err := e.api.NewPeerConnection(e.config)
 	if err != nil {
@@ -284,9 +282,9 @@ func (e *Engine) NewReceiverConnection(ctx context.Context, offer webrtc.Session
 	})
 	// Allow us to receive 1 audio track, and 1 video track
 	if _, err = peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio); err != nil {
-		panic(err)
+		slog.Error("rtp.engine: .addTransceiverFromKind audio", "err", err)
 	} else if _, err = peerConnection.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo); err != nil {
-		panic(err)
+		slog.Error("rtp.engine: .addTransceiverFromKind video", "err", err)
 	}
 
 	go func(ctx context.Context, pc *webrtc.PeerConnection, rtmp string) {

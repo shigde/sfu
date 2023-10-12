@@ -123,7 +123,7 @@ func rtmpListener(ctx context.Context, peerConnection *webrtc.PeerConnection, rt
 
 	// Wait for context to be done
 	<-ctx.Done()
-	peerConnection.Close()
+	_ = peerConnection.Close()
 }
 
 func startFFmpeg(ctx context.Context, streamURL string) {

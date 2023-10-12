@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
@@ -69,39 +68,46 @@ func main() {
 		panic(err)
 	}
 
+	println("Offer: ##########################################..")
+	println("Offer: ", offer.SDP)
 	receiveEndpoint, err := engine.NewReceiverConnection(ctx, *offer, &media.EmptyStateHandler{}, rtmpEndpoint)
 	if err != nil {
 		panic(err)
 	}
+	observer := newMediaObserver(receiveEndpoint, signalmesenger)
+	signalmesenger.Register(observer)
 
 	answer, err := receiveEndpoint.GetLocalDescription(ctx)
 	if err != nil {
 		panic(err)
 	}
 
+	println("Answer: ##########################################..")
+	println("Answer: ", answer.SDP)
 	err = whepClient.SendAnswer(spaceId, streamId, bearer, answer)
 	if err != nil {
 		panic(err)
 	}
-	observer := newMediaObserver(receiveEndpoint)
-	signalmesenger.Register(observer)
 
 	select {}
 }
 
 type mediaObserver struct {
-	id       uuid.UUID
-	endpoint *rtp.Connetcion
+	id        uuid.UUID
+	endpoint  *rtp.Connetcion
+	messenger *media.Messenger
 }
 
-func newMediaObserver(endpoint *rtp.Connetcion) *mediaObserver {
-	return &mediaObserver{id: uuid.New(), endpoint: endpoint}
+func newMediaObserver(endpoint *rtp.Connetcion, messenger *media.Messenger) *mediaObserver {
+	return &mediaObserver{id: uuid.New(), endpoint: endpoint, messenger: messenger}
 }
 
-func (o *mediaObserver) OnOffer(sdp *webrtc.SessionDescription, number uint32) {
-	fmt.Println("Receive New Offer:")
+func (o *mediaObserver) OnOffer(sdp *webrtc.SessionDescription, id uint32, number uint32) {
+	slog.Debug("############### Receive an Offer!", "offer")
+	println("Offer - x: ##########################################..")
+	println("Offer - x: ", &sdp)
 	if err := o.endpoint.PeerConnection.SetRemoteDescription(*sdp); err != nil {
-		slog.Error("set retedescription", "err", err)
+		slog.Error("set remote description", "err", err)
 		return
 	}
 
@@ -114,10 +120,23 @@ func (o *mediaObserver) OnOffer(sdp *webrtc.SessionDescription, number uint32) {
 
 	if err = o.endpoint.PeerConnection.SetLocalDescription(answer); err != nil {
 		slog.Error("set answer", "err", err)
+		return
 	}
 
+	ldc, err := o.endpoint.GetLocalDescription(context.Background())
+	if err != nil {
+		slog.Error("get local dc", "err", err)
+		return
+	}
+
+	_, err = o.messenger.SendSDP(ldc, id, number)
+	if err != nil {
+		slog.Error("send local dc", "err", err)
+
+	}
+	return
 }
-func (o *mediaObserver) OnAnswer(sdp *webrtc.SessionDescription, number uint32) {
+func (o *mediaObserver) OnAnswer(sdp *webrtc.SessionDescription, id uint32, number uint32) {
 }
 func (o *mediaObserver) GetId() uuid.UUID {
 	return o.id

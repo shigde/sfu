@@ -69,7 +69,7 @@ func (m *Messenger) handleAnswerMsg(msg *message.ChannelMsg) {
 	m.locker.RLock()
 	defer m.locker.RUnlock()
 	for _, observer := range m.observerList {
-		observer.OnAnswer(answer.SDP, answer.Number)
+		observer.OnAnswer(answer.SDP, msg.Id, answer.Number)
 	}
 }
 
@@ -81,7 +81,7 @@ func (m *Messenger) handleOfferMsg(msg *message.ChannelMsg) {
 	m.locker.RLock()
 	defer m.locker.RUnlock()
 	for _, observer := range m.observerList {
-		observer.OnAnswer(offer.SDP, offer.Number)
+		observer.OnOffer(offer.SDP, msg.Id, offer.Number)
 	}
 }
 

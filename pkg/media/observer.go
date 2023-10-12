@@ -6,7 +6,8 @@ import (
 )
 
 type msgObserver interface {
-	OnOffer(sdp *webrtc.SessionDescription, number uint32)
-	OnAnswer(sdp *webrtc.SessionDescription, number uint32)
+	// Use the responseId and  responseMsgNumber for your answer, so that the server knew which request you are responding to.
+	OnOffer(sdp *webrtc.SessionDescription, responseId uint32, responseMsgNumber uint32)
+	OnAnswer(sdp *webrtc.SessionDescription, responseId uint32, responseMsgNumber uint32)
 	GetId() uuid.UUID
 }
