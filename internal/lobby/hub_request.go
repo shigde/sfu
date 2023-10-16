@@ -1,11 +1,9 @@
 package lobby
 
-import "github.com/pion/webrtc/v3"
-
 type hubRequest struct {
 	kind          hubRequestKind
-	track         *webrtc.TrackLocalStaticRTP
-	trackListChan chan<- []*webrtc.TrackLocalStaticRTP
+	track         HubTrack
+	trackListChan chan<- []HubTrack
 }
 
 type hubRequestKind int

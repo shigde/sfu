@@ -16,8 +16,8 @@ type LobbyManager struct {
 }
 
 type rtpEngine interface {
-	NewReceiverEndpoint(ctx context.Context, offer webrtc.SessionDescription, d rtp.TrackDispatcher, stateHandler rtp.StateEventHandler) (*rtp.Endpoint, error)
-	NewSenderEndpoint(ctx context.Context, localTracks []*webrtc.TrackLocalStaticRTP, stateHandler rtp.StateEventHandler) (*rtp.Endpoint, error)
+	NewReceiverEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, d rtp.TrackDispatcher, stateHandler rtp.StateEventHandler) (*rtp.Endpoint, error)
+	NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, localTracks []*webrtc.TrackLocalStaticRTP, stateHandler rtp.StateEventHandler) (*rtp.Endpoint, error)
 }
 
 func NewLobbyManager(e rtpEngine) *LobbyManager {

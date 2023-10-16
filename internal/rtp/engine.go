@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/pion/interceptor"
 	"github.com/pion/interceptor/pkg/intervalpli"
 	"github.com/pion/webrtc/v3"
@@ -55,7 +56,7 @@ func NewEngine(rtpConfig *RtpConfig) (*Engine, error) {
 	}, nil
 }
 
-func (e *Engine) NewReceiverEndpoint(ctx context.Context, offer webrtc.SessionDescription, dispatcher TrackDispatcher, handler StateEventHandler) (*Endpoint, error) {
+func (e *Engine) NewReceiverEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, dispatcher TrackDispatcher, handler StateEventHandler) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create receiver-endpoint")
 	defer span.End()
 
@@ -64,7 +65,7 @@ func (e *Engine) NewReceiverEndpoint(ctx context.Context, offer webrtc.SessionDe
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
 	}
 
-	receiver := newReceiver(dispatcher)
+	receiver := newReceiver(sessionId, dispatcher)
 	peerConnection.OnTrack(receiver.onTrack)
 
 	peerConnection.OnICEConnectionStateChange(handler.OnConnectionStateChange)
@@ -95,7 +96,7 @@ func (e *Engine) NewReceiverEndpoint(ctx context.Context, offer webrtc.SessionDe
 	}, nil
 }
 
-func (e *Engine) NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.TrackLocalStaticRTP, handler StateEventHandler) (*Endpoint, error) {
+func (e *Engine) NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, sendingTracks []*webrtc.TrackLocalStaticRTP, handler StateEventHandler) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create sender-endpoint")
 	defer span.End()
 
@@ -104,7 +105,7 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sendingTracks []*webrtc.
 		return nil, fmt.Errorf("create sender peer connection: %w ", err)
 	}
 
-	sender := newSender(peerConnection)
+	sender := newSender(sessionId, peerConnection)
 	peerConnection.OnICEConnectionStateChange(handler.OnConnectionStateChange)
 
 	initComplete := make(chan struct{})
