@@ -40,6 +40,16 @@ However, when establishing the WHIP connection, a DataChannel is also created, a
 When new tracks are added to the lobby, the server dispatches SDP offers through this endpoint. 
 This enables the client to refresh its WHEP connection and transmit an SDP response via the same data channel.
 
+### Publish/Stop/Status Lobby Session
+
+A Lobby Session can only be made live with the assistance of a session cookie. 
+This session cookie represents a Lobby session and is obtained when you create a WHIP request.
+
+!["live-stream"](./uml/sequence/lobby-stream-start.png)
+
+!["live-stream"](./uml/sequence/lobby-stream-status.png)
+
+!["live-stream"](./uml/sequence/lobby-stream-stop.png)
 
 ## Live Stream vs. ActivePub Video
 
