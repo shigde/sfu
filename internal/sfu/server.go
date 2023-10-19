@@ -45,12 +45,12 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("creating webrtc engine: %w", err)
 	}
-	lobbyManager := lobby.NewLobbyManager(engine)
+	lobbyManager := lobby.NewLobbyManager(store, engine)
 
-	// @TODO Please do the more simple!!!! To complicated
-	repo := stream.NewLiveStreamRepository(store)
-	liveStreamService := stream.NewLiveStreamService(repo)
-	spaceManager := stream.NewSpaceManager(lobbyManager, store, repo)
+	streamRepo := stream.NewLiveStreamRepository(store)
+	spaceRepo := stream.NewSpaceRepository(store)
+	liveStreamService := stream.NewLiveStreamService(streamRepo, spaceRepo)
+	liveLobbyService := stream.NewLiveLobbyService(store, lobbyManager)
 
 	// Auth provider
 	accountService, err := auth.NewAccountService(store)
@@ -62,7 +62,8 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 		config.SecurityConfig,
 		config.RtpConfig,
 		accountService,
-		spaceManager,
+		liveStreamService,
+		liveLobbyService,
 	)
 
 	// federation api

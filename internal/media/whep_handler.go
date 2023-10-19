@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-func whepOffer(spaceManager spaceGetCreator) http.HandlerFunc {
+func whepOffer(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "whep-offer")
 		defer span.End()
@@ -41,14 +41,14 @@ func whepOffer(spaceManager spaceGetCreator) http.HandlerFunc {
 			return
 		}
 
-		liveStream, space, err := getLiveStream(r, spaceManager)
+		liveStream, _, err := getLiveStream(r, streamService)
 		if err != nil {
 			telemetry.RecordError(span, err)
 			handleResourceError(w, err)
 			return
 		}
 
-		answer, err := space.StartListenLobby(ctx, liveStream, userId)
+		answer, err := liveService.StartListenLobby(ctx, liveStream, userId)
 		if err != nil && errors.Is(err, stream.ErrLobbyNotActive) {
 			telemetry.RecordError(span, err)
 			w.WriteHeader(http.StatusNotFound)
@@ -77,7 +77,7 @@ func whepOffer(spaceManager spaceGetCreator) http.HandlerFunc {
 	}
 }
 
-func whepAnswer(spaceManager spaceGetCreator) http.HandlerFunc {
+func whepAnswer(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "whep-answer")
 		defer span.End()
@@ -102,7 +102,7 @@ func whepAnswer(spaceManager spaceGetCreator) http.HandlerFunc {
 			return
 		}
 
-		liveStream, space, err := getLiveStream(r, spaceManager)
+		liveStream, _, err := getLiveStream(r, streamService)
 		if err != nil {
 			telemetry.RecordError(span, err)
 			handleResourceError(w, err)
@@ -116,7 +116,7 @@ func whepAnswer(spaceManager spaceGetCreator) http.HandlerFunc {
 			return
 		}
 
-		_, err = space.ListenLobby(ctx, answer, liveStream, userId)
+		_, err = liveService.ListenLobby(ctx, answer, liveStream, userId)
 		if err != nil && errors.Is(err, stream.ErrLobbyNotActive) {
 			telemetry.RecordError(span, err)
 			w.WriteHeader(http.StatusNotFound)

@@ -48,7 +48,7 @@ func (r *LiveStreamRepository) Add(ctx context.Context, liveStream *LiveStream) 
 	return liveStream.UUID.String(), nil
 }
 
-func (r *LiveStreamRepository) All(ctx context.Context) ([]LiveStream, error) {
+func (r *LiveStreamRepository) AllBySpaceIdentifier(ctx context.Context, identifier string) ([]LiveStream, error) {
 	r.locker.RLock()
 	tx, cancel := r.getStoreWithContext(ctx)
 	defer func() {
@@ -57,7 +57,7 @@ func (r *LiveStreamRepository) All(ctx context.Context) ([]LiveStream, error) {
 	}()
 
 	var streams []LiveStream
-	result := tx.Model(&LiveStream{}).Limit(501).Find(&streams)
+	result := tx.Joins("Space", tx.Where(&Space{Identifier: identifier})).Model(&LiveStream{}).Limit(100).Find(&streams)
 
 	if result.Error != nil {
 		return nil, fmt.Errorf("fetching all streams %w", result.Error)
@@ -207,5 +207,4 @@ func (r *LiveStreamRepository) DeleteByUuid(ctx context.Context, streamUUID stri
 		return fmt.Errorf("deleting stream by uuid %s: %w", streamUUID, result.Error)
 	}
 	return nil
-
 }

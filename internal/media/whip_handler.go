@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-func whip(spaceManager spaceGetCreator) http.HandlerFunc {
+func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "whip-create")
 		//ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer(tracerName).Start(ctx, "post-whip")
@@ -27,7 +27,7 @@ func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 			httpError(w, "error", http.StatusInternalServerError, err)
 		}
 
-		liveStream, space, err := getLiveStream(r, spaceManager)
+		liveStream, _, err := getLiveStream(r, streamService)
 		if err != nil {
 			telemetry.RecordError(span, err)
 			handleResourceError(w, err)
@@ -57,7 +57,7 @@ func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 		}
 		auth.SetNewRequestToken(w, user.UUID)
 
-		answer, resourceId, err := space.EnterLobby(ctx, offer, liveStream, userId)
+		answer, resourceId, err := liveService.EnterLobby(ctx, offer, liveStream, userId)
 		if err != nil {
 			telemetry.RecordError(span, err)
 			httpError(w, "error build whip", http.StatusInternalServerError, err)
@@ -80,7 +80,7 @@ func whip(spaceManager spaceGetCreator) http.HandlerFunc {
 	}
 }
 
-func whipDelete(spaceManager spaceGetCreator) http.HandlerFunc {
+func whipDelete(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "whip-delete")
 		defer span.End()
@@ -107,14 +107,14 @@ func whipDelete(spaceManager spaceGetCreator) http.HandlerFunc {
 			return
 		}
 
-		liveStream, space, err := getLiveStream(r, spaceManager)
+		liveStream, _, err := getLiveStream(r, streamService)
 		if err != nil {
 			telemetry.RecordError(span, err)
 			handleResourceError(w, err)
 			return
 		}
 
-		left, err := space.LeaveLobby(ctx, liveStream, userId)
+		left, err := liveService.LeaveLobby(ctx, liveStream, userId)
 		if err != nil {
 			telemetry.RecordError(span, err)
 			if errors.Is(err, stream.ErrLobbyNotActive) {

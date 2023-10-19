@@ -15,6 +15,7 @@ type FederationConfig struct {
 	InstanceUsername string `mapstructure:"instanceUsername"`
 	ServerName       string `mapstructure:"serverName"`
 	IsPrivate        bool   `mapstructure:"private"`
+	RegisterToken    string `mapstructure:"registerToken"`
 	InstanceUrl      *url.URL
 	ServerInitTime   sql.NullTime
 }
@@ -30,6 +31,10 @@ func ValidateFederationConfig(config *FederationConfig) error {
 
 	if len(config.ServerName) < 1 {
 		config.ServerName = "shig"
+	}
+
+	if len(config.RegisterToken) < 1 {
+		return fmt.Errorf("Federation is enabled but register token is not set properly.")
 	}
 
 	if len(config.Domain) < 3 {

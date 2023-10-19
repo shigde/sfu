@@ -23,6 +23,7 @@ type lobby struct {
 	hub           *hub
 	rtpEngine     rtpEngine
 	resourceId    uuid.UUID
+	entity        LobbyEntity
 	quit          chan struct{}
 	reqChan       chan *lobbyRequest
 	childQuitChan chan uuid.UUID
@@ -63,7 +64,7 @@ func (l *lobby) run() {
 			case *leaveData:
 				l.handleLeave(req)
 			default:
-				slog.Error("lobby.lobby: not supported request type in Lobby", "type", requestType)
+				slog.Error("lobby.lobby: not supported request type in lobby", "type", requestType)
 			}
 		case id := <-l.childQuitChan:
 			slog.Debug("join leave lobby")
@@ -71,7 +72,7 @@ func (l *lobby) run() {
 				slog.Error("lobby.lobby: deleting session because internally reason", "err", err)
 			}
 		case <-l.quit:
-			slog.Info("lobby.lobby: close Lobby", "lobbyId", l.Id)
+			slog.Info("lobby.lobby: close lobby", "lobbyId", l.Id)
 			return
 		}
 	}
@@ -228,7 +229,7 @@ func (l *lobby) stop() {
 	slog.Info("lobby.lobby: stop", "lobbyId", l.Id)
 	select {
 	case <-l.quit:
-		slog.Warn("lobby.lobby: the Lobby was already closed", "lobbyId", l.Id)
+		slog.Warn("lobby.lobby: the lobby was already closed", "lobbyId", l.Id)
 	default:
 		close(l.quit)
 		slog.Info("lobby.lobby: stopped was triggered", "lobbyId", l.Id)

@@ -69,3 +69,4 @@ release = "v0"
 instanceUsername = "shig"
 serverName = "shig"
 private = false
+registerToken ="this-token-must-be-changed-in-public"

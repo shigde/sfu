@@ -26,7 +26,7 @@ func testLobbyManagerSetup(t *testing.T) (*LobbyManager, *lobby, uuid.UUID) {
 }
 
 func TestLobbyManager(t *testing.T) {
-	t.Run("Access a Lobby with timeout", func(t *testing.T) {
+	t.Run("Access a lobby with timeout", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 		userId := uuid.New()
 		ctx, cancel := context.WithCancel(context.Background())
@@ -35,7 +35,7 @@ func TestLobbyManager(t *testing.T) {
 		assert.ErrorIs(t, err, errLobbyRequestTimeout)
 	})
 
-	t.Run("Access a new Lobby", func(t *testing.T) {
+	t.Run("Access a new lobby", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 		userId := uuid.New()
 		data, err := manager.AccessLobby(context.Background(), lobby.Id, userId, mockedOffer)
@@ -46,7 +46,7 @@ func TestLobbyManager(t *testing.T) {
 		assert.False(t, uuid.Nil == data.Resource)
 	})
 
-	t.Run("Access a already started Lobby", func(t *testing.T) {
+	t.Run("Access a already started lobby", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 
 		_, err := manager.AccessLobby(context.Background(), lobby.Id, uuid.New(), mockedOffer)
@@ -60,7 +60,7 @@ func TestLobbyManager(t *testing.T) {
 		assert.False(t, uuid.Nil == data.Resource)
 	})
 
-	t.Run("Start listen to a Lobby with timeout", func(t *testing.T) {
+	t.Run("Start listen to a lobby with timeout", func(t *testing.T) {
 		manager, lobby, user := testLobbyManagerSetup(t)
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -69,7 +69,7 @@ func TestLobbyManager(t *testing.T) {
 		assert.ErrorIs(t, err, errLobbyRequestTimeout)
 	})
 
-	t.Run("Start listen to a Lobby, but receiver has no messenger", func(t *testing.T) {
+	t.Run("Start listen to a lobby, but receiver has no messenger", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 		user := uuid.New()
 		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), nil)
@@ -83,14 +83,14 @@ func TestLobbyManager(t *testing.T) {
 		waitingTimeOut = oldTimeOut
 	})
 
-	t.Run("Start listen to a Lobby, but no session exists", func(t *testing.T) {
+	t.Run("Start listen to a lobby, but no session exists", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 
 		_, err := manager.StartListenLobby(context.Background(), lobby.Id, uuid.New())
 		assert.ErrorIs(t, err, errNoSession)
 	})
 
-	t.Run("Start listen to a Lobby", func(t *testing.T) {
+	t.Run("Start listen to a lobby", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 		user := uuid.New()
 		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), nil)
@@ -105,14 +105,14 @@ func TestLobbyManager(t *testing.T) {
 		assert.False(t, uuid.Nil == data.RtpSessionId)
 	})
 
-	t.Run("Start listen to a Lobby but session already listen", func(t *testing.T) {
+	t.Run("Start listen to a lobby but session already listen", func(t *testing.T) {
 		manager, lobby, user := testLobbyManagerSetup(t)
 
 		_, err := manager.StartListenLobby(context.Background(), lobby.Id, user)
 		assert.ErrorIs(t, err, errSenderInSessionAlreadyExists)
 	})
 
-	t.Run("listen to a Lobby with timeout", func(t *testing.T) {
+	t.Run("listen to a lobby with timeout", func(t *testing.T) {
 		manager, lobby, user := testLobbyManagerSetup(t)
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -121,7 +121,7 @@ func TestLobbyManager(t *testing.T) {
 		assert.ErrorIs(t, err, errLobbyRequestTimeout)
 	})
 
-	t.Run("listen to a Lobby", func(t *testing.T) {
+	t.Run("listen to a lobby", func(t *testing.T) {
 		manager, lobby, user := testLobbyManagerSetup(t)
 		data, err := manager.ListenLobby(context.Background(), lobby.Id, user, mockedAnswer)
 		assert.NoError(t, err)
@@ -129,19 +129,19 @@ func TestLobbyManager(t *testing.T) {
 		assert.False(t, uuid.Nil == data.RtpSessionId)
 	})
 
-	t.Run("listen to a Lobby but no session", func(t *testing.T) {
+	t.Run("listen to a lobby but no session", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 		_, err := manager.ListenLobby(context.Background(), lobby.Id, uuid.New(), mockedAnswer)
 		assert.ErrorIs(t, err, errNoSession)
 	})
 
-	t.Run("leave a Lobby but no session", func(t *testing.T) {
+	t.Run("leave a lobby but no session", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 		_, err := manager.LeaveLobby(context.Background(), lobby.Id, uuid.New())
 		assert.ErrorIs(t, err, errNoSession)
 	})
 
-	t.Run("Leave a Lobby", func(t *testing.T) {
+	t.Run("Leave a lobby", func(t *testing.T) {
 		manager, lobby, user := testLobbyManagerSetup(t)
 		success, err := manager.LeaveLobby(context.Background(), lobby.Id, user)
 		assert.NoError(t, err)

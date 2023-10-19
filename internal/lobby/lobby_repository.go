@@ -4,19 +4,22 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/storage"
 )
 
 type lobbyRepository struct {
 	locker    *sync.RWMutex
 	lobbies   map[uuid.UUID]*lobby
+	store     *storage.Store
 	rtpEngine rtpEngine
 }
 
-func newLobbyRepository(rtpEngine rtpEngine) *lobbyRepository {
+func newLobbyRepository(store *storage.Store, rtpEngine rtpEngine) *lobbyRepository {
 	lobbies := make(map[uuid.UUID]*lobby)
 	return &lobbyRepository{
 		&sync.RWMutex{},
 		lobbies,
+		store,
 		rtpEngine,
 	}
 }
