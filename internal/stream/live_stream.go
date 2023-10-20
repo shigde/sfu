@@ -20,7 +20,7 @@ type LiveStream struct {
 	Space     *Space             `json:"-" gorm:"foreignKey:SpaceId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	AccountId uint               `json:"-" gorm:"not null;"`
 	Account   *auth.Account      `json:"-" gorm:"foreignKey:AccountId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	User      string             `json:"-"`
+	User      string             `json:"user"`
 	ID        uint               `json:"-" gorm:"primaryKey"`
 	CreatedAt time.Time          `json:"-"`
 	UpdatedAt time.Time          `json:"-"`
