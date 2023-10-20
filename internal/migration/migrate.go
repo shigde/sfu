@@ -22,10 +22,10 @@ func Migrate(config *instance.FederationConfig, storage instance.Storage) error 
 		&models.Follow{},
 		&models.Actor{},
 		&models.Server{},
-		auth.Account{},
-		lobby.LobbyEntity{},
-		stream.Space{},
-		stream.LiveStream{},
+		&auth.Account{},
+		&lobby.LobbyEntity{},
+		&stream.Space{},
+		&stream.LiveStream{},
 	); err != nil {
 		return fmt.Errorf("migrating the space schema: %w", err)
 	}

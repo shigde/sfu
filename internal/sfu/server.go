@@ -53,7 +53,7 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 	liveLobbyService := stream.NewLiveLobbyService(store, lobbyManager)
 
 	// Auth provider
-	accountService, err := auth.NewAccountService(store)
+	accountService, err := auth.NewAccountService(store, config.RegisterToken, config.SecurityConfig)
 	if err != nil {
 		return nil, fmt.Errorf("creating acoount service %w", err)
 	}
