@@ -82,7 +82,7 @@ func (r *LiveStreamRepository) FindByUuid(ctx context.Context, streamUUID string
 
 	liveStream := &LiveStream{UUID: UUID}
 
-	result := tx.First(liveStream)
+	result := tx.Preload("Space").Preload("Lobby").Preload("Account").First(liveStream)
 	if result.Error != nil {
 		err := fmt.Errorf("finding stream by uuid %s: %w", streamUUID, result.Error)
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
