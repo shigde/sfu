@@ -30,7 +30,7 @@ func NewRouter(
 	// router.Use(cors)
 	// Auth
 	router.Use(func(next http.Handler) http.Handler { return handlers.LoggingHandler(os.Stdout, next) })
-	router.HandleFunc("authtehnticate", getAuthenticationHandler(accountService)).Methods("POST")
+	router.HandleFunc("authenticate", getAuthenticationHandler(accountService)).Methods("POST")
 	// Space
 	router.HandleFunc("/space/{space}/streams", auth.HttpMiddleware(securityConfig, getStreamList(streamService))).Methods("GET")
 	router.HandleFunc("/space/{space}/stream", auth.HttpMiddleware(securityConfig, createStream(streamService))).Methods("POST")

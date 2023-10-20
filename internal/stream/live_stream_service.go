@@ -25,15 +25,21 @@ func NewLiveStreamService(repo *LiveStreamRepository, spaceRepo *SpaceRepository
 }
 
 func (ls *LiveStreamService) CreateStreamAccessByVideo(ctx context.Context, video *models.Video) error {
-	userId := fmt.Sprintf("%s@%s", video.Owner.PreferredUsername, video.Owner.GetActorIri().Host)
-	channelId := fmt.Sprintf("%s@%s", video.Channel.PreferredUsername, video.Channel.GetActorIri().Host)
+	userId := buildFederatedId(video.Owner.PreferredUsername, video.Owner.GetActorIri().Host)
+	channelId := buildFederatedId(video.Channel.PreferredUsername, video.Channel.GetActorIri().Host)
+
+	streamID, _ := uuid.Parse(video.Uuid)
+
+	// video.Guests
+	ls.streamRepo.BuildGuestAccounts(ctx, video.Guests)
 
 	account := &auth.Account{}
 	account.Actor = video.Owner
+	account.ActorId = video.Owner.ID
 	account.User = userId
 	account.UUID = uuid.NewString()
 
-	lobbyEntity := lobby.NewLobbyEntity()
+	lobbyEntity := lobby.NewLobbyEntity(streamID)
 
 	space := &Space{}
 	space.Account = account
@@ -44,13 +50,22 @@ func (ls *LiveStreamService) CreateStreamAccessByVideo(ctx context.Context, vide
 	stream.Lobby = lobbyEntity
 	stream.Account = account
 	stream.Space = space
-	stream.UUID, _ = uuid.Parse(video.Uuid)
+	stream.UUID = streamID
 	stream.Video = video
 	stream.User = userId
 
 	if err := ls.streamRepo.UpsertLiveStream(ctx, stream); err != nil {
 		return fmt.Errorf("upsert live stream: %w", err)
 	}
+	return nil
+}
+
+func (ls *LiveStreamService) UpdateStreamAccessByVideo(ctx context.Context, video *models.Video) error {
+	if !ls.streamRepo.Contains(ctx, video.Uuid) {
+		return ls.CreateStreamAccessByVideo(ctx, video)
+	}
+	// redundant but needed in case of update guests
+	ls.streamRepo.BuildGuestAccounts(ctx, video.Guests)
 	return nil
 }
 

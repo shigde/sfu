@@ -13,8 +13,13 @@ type LobbyEntity struct {
 	gorm.Model
 }
 
-func NewLobbyEntity() *LobbyEntity {
-	return &LobbyEntity{}
+func NewLobbyEntity(streamID uuid.UUID) *LobbyEntity {
+	return &LobbyEntity{
+		LiveStreamId: streamID,
+		UUID:         uuid.New(),
+		IsRunning:    false,
+		IsLive:       false,
+	}
 }
 
 func (LobbyEntity) TableName() string {

@@ -7,8 +7,10 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/activitypub/models"
 	"github.com/shigde/sfu/internal/auth"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var ErrStreamNotFound = errors.New("reading unknown live stream from store")
@@ -207,4 +209,26 @@ func (r *LiveStreamRepository) DeleteByUuid(ctx context.Context, streamUUID stri
 		return fmt.Errorf("deleting stream by uuid %s: %w", streamUUID, result.Error)
 	}
 	return nil
+}
+
+func (r *LiveStreamRepository) BuildGuestAccounts(ctx context.Context, actors []*models.Actor) {
+	tx, cancel := r.getStoreWithContext(ctx)
+	defer func() {
+		cancel()
+	}()
+
+	for _, actor := range actors {
+		user := buildFederatedId(actor.PreferredUsername, actor.GetActorIri().Host)
+		tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&auth.Account{
+			ActorId: actor.ID,
+			Actor:   actor,
+			User:    user,
+			UUID:    uuid.NewString(),
+		})
+	}
+	return
+}
+
+func buildFederatedId(id string, domain string) string {
+	return fmt.Sprintf("%s@%s", id, domain)
 }
