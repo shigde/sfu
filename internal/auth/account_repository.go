@@ -32,9 +32,9 @@ func (r accountRepository) findByUserName(ctx context.Context, user string) (*Ac
 		cancel()
 	}()
 
-	account := &Account{User: user}
+	var account Account
 
-	result := tx.First(account)
+	result := tx.Where("user = ?", user).First(&account)
 	if result.Error != nil {
 		err := fmt.Errorf("finding stream by uuid %s: %w", user, result.Error)
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -43,5 +43,5 @@ func (r accountRepository) findByUserName(ctx context.Context, user string) (*Ac
 		return nil, err
 	}
 
-	return account, nil
+	return &account, nil
 }
