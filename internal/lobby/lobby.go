@@ -11,10 +11,11 @@ import (
 )
 
 var (
-	errNoSession           = errors.New("no session exists")
-	errLobbyStopped        = errors.New("error because lobby stopped")
-	errLobbyRequestTimeout = errors.New("lobby request timeout error")
-	lobbyReqTimeout        = 3 * time.Second
+	errNoSession            = errors.New("no session exists")
+	ErrSessionAlreadyExists = errors.New("session already exists")
+	errLobbyStopped         = errors.New("error because lobby stopped")
+	errLobbyRequestTimeout  = errors.New("lobby request timeout error")
+	lobbyReqTimeout         = 3 * time.Second
 )
 
 type lobby struct {
@@ -115,10 +116,18 @@ func (l *lobby) handleJoin(joinReq *lobbyRequest) {
 
 	data, _ := joinReq.data.(*joinData)
 	session, ok := l.sessions.FindByUserId(joinReq.user)
-	if !ok {
-		session = newSession(joinReq.user, l.hub, l.rtpEngine, l.childQuitChan)
-		l.sessions.Add(session)
+	if ok {
+		select {
+		case joinReq.err <- ErrSessionAlreadyExists:
+		case <-joinReq.ctx.Done():
+			joinReq.err <- errLobbyRequestTimeout
+		case <-l.quit:
+			joinReq.err <- errLobbyStopped
+		}
+		return
 	}
+	session = newSession(joinReq.user, l.hub, l.rtpEngine, l.childQuitChan)
+	l.sessions.Add(session)
 	offerReq := newSessionRequest(joinReq.ctx, data.offer, offerReq)
 
 	go func() {

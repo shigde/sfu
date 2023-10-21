@@ -56,5 +56,6 @@ end note
 Client <-- Media_Server: 400 Bad Request
 Client <-- Media_Server: 401 Unauthorised
 Client <-- Media_Server: 404 Not Found
+Client <-- Media_Server: 409 Conflict
 Client <-- Media_Server: 500 Internal Server Error
 @enduml

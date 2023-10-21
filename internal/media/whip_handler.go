@@ -9,6 +9,7 @@ import (
 
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/lobby"
 	"github.com/shigde/sfu/internal/stream"
 	"github.com/shigde/sfu/internal/telemetry"
 	"go.opentelemetry.io/otel"
@@ -58,6 +59,13 @@ func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 		auth.SetNewRequestToken(w, user.UUID)
 
 		answer, resourceId, err := liveService.EnterLobby(ctx, offer, liveStream, userId)
+		if err != nil && errors.Is(err, lobby.ErrSessionAlreadyExists) {
+			w.WriteHeader(http.StatusConflict)
+			telemetry.RecordError(span, err)
+			httpError(w, "session already exists", http.StatusConflict, err)
+			return
+		}
+
 		if err != nil {
 			telemetry.RecordError(span, err)
 			httpError(w, "error build whip", http.StatusInternalServerError, err)
