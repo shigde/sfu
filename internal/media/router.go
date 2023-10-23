@@ -2,10 +2,7 @@ package media
 
 import (
 	"context"
-	"net/http"
-	"os"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/rtp"
@@ -29,7 +26,7 @@ func NewRouter(
 	//)
 	// router.Use(cors)
 	// Auth
-	router.Use(func(next http.Handler) http.Handler { return handlers.LoggingHandler(os.Stdout, next) })
+	// router.Use(func(next http.Handler) http.Handler { return handlers.LoggingHandler(os.Stdout, next) })
 	router.HandleFunc("/authenticate", getAuthenticationHandler(accountService)).Methods("POST")
 	// Space
 	router.HandleFunc("/space/{space}/streams", auth.HttpMiddleware(securityConfig, getStreamList(streamService))).Methods("GET")

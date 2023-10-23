@@ -34,10 +34,10 @@ func NewTracerProvider(ctx context.Context, config *TelemetryConfig) (*trace.Tra
 	}
 
 	if !config.Enable {
-		exporter, err = newStdoutExporter()
-		if err != nil {
-			return nil, fmt.Errorf("creating OTLP trace exporter: %w", err)
-		}
+		//exporter, err = newStdoutExporter()
+		//if err != nil {
+		//	return nil, fmt.Errorf("creating OTLP trace exporter: %w", err)
+		//}
 	}
 
 	res, err := resource.New(ctx,
@@ -55,6 +55,7 @@ func NewTracerProvider(ctx context.Context, config *TelemetryConfig) (*trace.Tra
 		trace.WithSampler(trace.AlwaysSample()),
 		trace.WithBatcher(exporter),
 	)
+
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 	return tp, nil

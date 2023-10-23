@@ -1,9 +1,11 @@
 package lobby
 
+import "github.com/shigde/sfu/internal/rtp"
+
 type hubRequest struct {
 	kind          hubRequestKind
-	track         HubTrack
-	trackListChan chan<- []HubTrack
+	track         *rtp.TrackInfo
+	trackListChan chan<- []*rtp.TrackInfo
 }
 
 type hubRequestKind int

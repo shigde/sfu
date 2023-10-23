@@ -58,15 +58,7 @@ go build -o ./bin/media_streamer ./cmd/media_streamer
 ```
 
 
-
+// der funktioniert!!!
 ```shell
-ffmpeg -protocol_whitelist file,udp,rtp -i rtp-forwarder.sdp -c:v libx264 -preset veryfast -b:v 3000k -maxrate 3000k -bufsize 6000k -pix_fmt yuv420p -g 50 -c:a aac -b:a 160k -ac 2 -ar 44100 -f flv rtmp://localhost:1935/live/http://localhost:3000/w/wsKv2tHqn2VBAEuQ8PscXF 
-```
-
-```shell
-ffmpeg -protocol_whitelist file,udp,rtp -i rtp-forwarder.sdp -re -c:v libx264 -c:a aac -preset veryfast -b:v 3000k -maxrate 3000k -bufsize 6000k -f flv rtmp://127.0.0.1:1935/live/15d2f10a-ba68-46c7-8755-52e9320cbd47
-```
-
-```shell
-ffmpeg -protocol_whitelist file,udp,rtp -i rtp-forwarder.sdp  -c:v copy -c:a aac -c:v libx264 -f flv rtmp://127.0.0.1:1935/live/15d2f10a-ba68-46c7-8755-52e9320cbd47
+ffmpeg -protocol_whitelist file,udp,rtp -i rtp-forwarder.sdp -c:v libx264  -preset veryfast -b:v 3000k -maxrate 3000k -bufsize 6000k -pix_fmt yuv420p -g 50 -c:a aac -b:a 160k -ac 2 -ar 44100 -f flv -flvflags no_duration_filesize rtmp://localhost:1935/live/64411dfc-2ddd-4b66-ba85-9bd40fe6d395 
 ```

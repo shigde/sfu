@@ -149,3 +149,20 @@ func (m *LobbyManager) LeaveLobby(ctx context.Context, liveStreamId uuid.UUID, u
 	}
 	return false, nil
 }
+
+func (m *LobbyManager) StartLiveStream(ctx context.Context, liveStreamId uuid.UUID, userId uuid.UUID) error {
+	if lobby, hasLobby := m.lobbies.getLobby(liveStreamId); hasLobby {
+		request := newLobbyRequest(ctx, userId)
+		startData := newLiveStreamData("start", "key")
+		request.data = startData
+		go lobby.runRequest(request)
+
+		select {
+		case err := <-request.err:
+			return err
+		case _ = <-startData.response:
+			return nil
+		}
+	}
+	return nil
+}

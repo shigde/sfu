@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/rtp"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
 )
@@ -21,6 +22,7 @@ var (
 type lobby struct {
 	Id            uuid.UUID
 	sessions      *sessionRepository
+	forwarder     *rtp.UdpForwarder
 	hub           *hub
 	rtpEngine     rtpEngine
 	resourceId    uuid.UUID
@@ -35,12 +37,17 @@ func newLobby(id uuid.UUID, rtpEngine rtpEngine) *lobby {
 	quitChan := make(chan struct{})
 	reqChan := make(chan *lobbyRequest)
 	childQuitChan := make(chan uuid.UUID)
-	hub := newHub(sessions)
+	forwarder, err := rtp.NewUdpForwarder(id)
+	if err != nil {
+		slog.Error("create udp forwarder", "err", err)
+	}
+	hub := newHub(sessions, forwarder)
 	lobby := &lobby{
 		Id:            id,
 		resourceId:    uuid.New(),
 		rtpEngine:     rtpEngine,
 		sessions:      sessions,
+		forwarder:     forwarder,
 		hub:           hub,
 		quit:          quitChan,
 		reqChan:       reqChan,
@@ -64,6 +71,8 @@ func (l *lobby) run() {
 				l.handleListen(req)
 			case *leaveData:
 				l.handleLeave(req)
+			case *liveStreamData:
+				l.handleLiveStreamReq(req)
 			default:
 				slog.Error("lobby.lobby: not supported request type in lobby", "type", requestType)
 			}
@@ -232,6 +241,16 @@ func (l *lobby) handleLeave(req *lobbyRequest) {
 		req.err <- fmt.Errorf("no session existing for user %s: %w", req.user, errNoSession)
 	}
 	data.response <- deleted
+}
+
+func (l *lobby) handleLiveStreamReq(req *lobbyRequest) {
+	slog.Info("lobby.lobby: handleLiveStreamReq", "lobbyId", l.Id, "user", req.user)
+	data, _ := req.data.(*liveStreamData)
+	//deleted, err := l.deleteSessionByUserId(req.user)
+	//if err != nil {
+	//	req.err <- fmt.Errorf("no session existing for user %s: %w", req.user, errNoSession)
+	//}
+	data.response <- true
 }
 
 func (l *lobby) stop() {

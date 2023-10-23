@@ -12,12 +12,6 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
-type udpConn struct {
-	conn        *net.UDPConn
-	port        int
-	payloadType uint8
-}
-
 func rtmpListener(ctx context.Context, peerConnection *webrtc.PeerConnection, rtmpEndpoint string) {
 	// Create context
 	ctx, cancel := context.WithCancel(ctx)
@@ -32,7 +26,7 @@ func rtmpListener(ctx context.Context, peerConnection *webrtc.PeerConnection, rt
 	// Prepare udp conns
 	// Also update incoming packets with expected PayloadType, the browser may use
 	// a different value. We have to modify so our stream matches what rtp-forwarder.sdp expects
-	udpConns := map[string]*udpConn{
+	udpConns := map[string]*UdpConnection{
 		"audio": {port: 4000, payloadType: 111},
 		"video": {port: 4002, payloadType: 96},
 	}

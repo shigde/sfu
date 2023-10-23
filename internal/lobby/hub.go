@@ -18,17 +18,19 @@ var (
 
 type hub struct {
 	sessionRepo *sessionRepository
+	forwarder   *rtp.UdpForwarder
 	reqChan     chan *hubRequest
-	tracks      map[string]HubTrack
+	tracks      map[string]*rtp.TrackInfo
 	quit        chan struct{}
 }
 
-func newHub(sessionRepo *sessionRepository) *hub {
+func newHub(sessionRepo *sessionRepository, forwarder *rtp.UdpForwarder) *hub {
 	quit := make(chan struct{})
-	tracks := make(map[string]HubTrack)
+	tracks := make(map[string]*rtp.TrackInfo)
 	requests := make(chan *hubRequest)
 	hub := &hub{
 		sessionRepo,
+		forwarder,
 		requests,
 		tracks,
 		quit,
@@ -78,8 +80,8 @@ func (h *hub) DispatchRemoveTrack(track *rtp.TrackInfo) {
 }
 
 func (h *hub) getTrackList(sessionId uuid.UUID) ([]*webrtc.TrackLocalStaticRTP, error) {
-	var hubList []HubTrack
-	trackListChan := make(chan []HubTrack)
+	var hubList []*rtp.TrackInfo
+	trackListChan := make(chan []*rtp.TrackInfo)
 	select {
 	case h.reqChan <- &hubRequest{kind: getTrackList, trackListChan: trackListChan}:
 	case <-h.quit:
@@ -121,6 +123,11 @@ func (h *hub) stop() error {
 }
 
 func (h *hub) onAddTrack(event *hubRequest) {
+	if event.track.GetStreamKind() == rtp.TrackInfoKindStream {
+		h.forwarder.AddTrack(event.track)
+		return
+	}
+
 	h.tracks[event.track.GetTrack().ID()] = event.track
 	h.sessionRepo.Iter(func(s *session) {
 		if s.Id != event.track.GetSessionId() {
@@ -141,7 +148,7 @@ func (h *hub) onRemoveTrack(event *hubRequest) {
 }
 
 func (h *hub) onGetTrackList(event *hubRequest) {
-	list := make([]HubTrack, 0, len(h.tracks))
+	list := make([]*rtp.TrackInfo, 0, len(h.tracks))
 	for _, track := range h.tracks {
 		list = append(list, track)
 	}

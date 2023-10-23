@@ -7,6 +7,7 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
+// Todo refactor this to cmd pattern
 type lobbyRequest struct {
 	user uuid.UUID
 	ctx  context.Context
@@ -29,6 +30,12 @@ type listenData struct {
 }
 
 type leaveData struct {
+	response chan bool
+}
+
+type liveStreamData struct {
+	cmd      string
+	key      string
 	response chan bool
 }
 
@@ -60,6 +67,15 @@ func newListenData(answer *webrtc.SessionDescription) *listenData {
 	resChan := make(chan *listenResponse)
 	return &listenData{
 		answer:   answer,
+		response: resChan,
+	}
+}
+
+func newLiveStreamData(cmd string, key string) *liveStreamData {
+	resChan := make(chan bool)
+	return &liveStreamData{
+		cmd:      cmd,
+		key:      key,
 		response: resChan,
 	}
 }

@@ -31,9 +31,11 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 	ctx, span := otel.Tracer(tracerName).Start(context.Background(), "rtp.receiver: on track")
 	defer span.End()
 
-	streamKind := "standard"
+	streamKind := TrackInfoKindPeer
 	if len(r.streams) > 0 {
-		streamKind = "main"
+		streamKind = TrackInfoKindStream
+		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, nil, remoteTrack, streamKind))
+		return
 	}
 
 	stream := r.getStream(remoteTrack.StreamID(), r.id, streamKind)
@@ -47,7 +49,7 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 			return
 		}
 
-		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, stream.audioTrack, streamKind))
+		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, stream.audioTrack, remoteTrack, streamKind))
 	}
 
 	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "video") {
@@ -58,11 +60,11 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 			// stop handler goroutine because error
 			return
 		}
-		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, stream.videoTrack, streamKind))
+		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, stream.videoTrack, remoteTrack, streamKind))
 	}
 }
 
-func (r *receiver) getStream(remoteId string, sessionId uuid.UUID, kind string) *localStream {
+func (r *receiver) getStream(remoteId string, sessionId uuid.UUID, kind TrackInfoKind) *localStream {
 	r.Lock()
 	defer r.Unlock()
 	stream, ok := r.streams[remoteId]
