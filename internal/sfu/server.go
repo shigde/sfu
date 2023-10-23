@@ -45,15 +45,15 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("creating webrtc engine: %w", err)
 	}
-	lobbyManager := lobby.NewLobbyManager(engine)
+	lobbyManager := lobby.NewLobbyManager(store, engine)
 
-	// @TODO Please do the more simple!!!! To complicated
-	repo := stream.NewLiveStreamRepository(store)
-	liveStreamService := stream.NewLiveStreamService(repo)
-	spaceManager := stream.NewSpaceManager(lobbyManager, store, repo)
+	streamRepo := stream.NewLiveStreamRepository(store)
+	spaceRepo := stream.NewSpaceRepository(store)
+	liveStreamService := stream.NewLiveStreamService(streamRepo, spaceRepo)
+	liveLobbyService := stream.NewLiveLobbyService(store, lobbyManager)
 
 	// Auth provider
-	accountService, err := auth.NewAccountService(store)
+	accountService, err := auth.NewAccountService(store, config.RegisterToken, config.SecurityConfig)
 	if err != nil {
 		return nil, fmt.Errorf("creating acoount service %w", err)
 	}
@@ -62,7 +62,8 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 		config.SecurityConfig,
 		config.RtpConfig,
 		accountService,
-		spaceManager,
+		liveStreamService,
+		liveLobbyService,
 	)
 
 	// federation api
@@ -89,11 +90,11 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 		return nil, fmt.Errorf("starting telemetry tracer provider: %w", err)
 	}
 
-	mux := http.TimeoutHandler(router, maxRequestTime, "Request Timeout!")
+	// mux := http.TimeoutHandler(router, maxRequestTime, "Request Timeout!")
 	// start server
 	return &Server{
 		ctx:    ctx,
-		server: &http.Server{Addr: fmt.Sprintf("%s:%d", config.Host, config.Port), Handler: mux},
+		server: &http.Server{Addr: fmt.Sprintf("%s:%d", config.Host, config.Port), Handler: router},
 		config: config,
 		tp:     tp,
 	}, nil

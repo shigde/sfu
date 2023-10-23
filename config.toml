@@ -1,5 +1,5 @@
 [server]
-host = "localhost"
+host = "0.0.0.0"
 port = 8080
 
 [log]
@@ -69,3 +69,4 @@ release = "v0"
 instanceUsername = "shig"
 serverName = "shig"
 private = false
+registerToken ="this-token-must-be-changed-in-public"

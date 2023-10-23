@@ -21,13 +21,13 @@ func testWhipReqSetup(t *testing.T) (*mux.Router, string) {
 	// Setup space
 	lobbyManager := newTestLobbyManager()
 	store := newTestStore()
-	manager, _ := stream.NewSpaceManager(lobbyManager, store)
+	manager := stream.NewSpaceManager(lobbyManager, store, nil)
 	space, _ := manager.GetOrCreateSpace(context.Background(), spaceId)
 
 	// Setup Stream
 	s := &stream.LiveStream{}
 	streamId, _ := space.LiveStreamRepo.Add(context.Background(), s)
-	router := NewRouter(securityConfig, rtpConfig, manager)
+	router := NewRouter(securityConfig, rtpConfig, nil, manager)
 	return router, streamId
 }
 

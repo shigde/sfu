@@ -16,14 +16,16 @@ const rtpBufferSize = 1500
 type localStream struct {
 	id                       uuid.UUID
 	remoteId                 string
+	sessionId                uuid.UUID
+	streamKind               TrackInfoKind
 	audioTrack, videoTrack   *webrtc.TrackLocalStaticRTP
 	audioWriter, videoWriter *writer
 	dispatcher               TrackDispatcher
 	globalQuit               <-chan struct{}
 }
 
-func newLocalStream(remoteId string, dispatcher TrackDispatcher, globalQuit <-chan struct{}) *localStream {
-	return &localStream{id: uuid.New(), remoteId: remoteId, dispatcher: dispatcher, globalQuit: globalQuit}
+func newLocalStream(remoteId string, sessionId uuid.UUID, kind TrackInfoKind, dispatcher TrackDispatcher, globalQuit <-chan struct{}) *localStream {
+	return &localStream{id: uuid.New(), remoteId: remoteId, sessionId: sessionId, streamKind: kind, dispatcher: dispatcher, globalQuit: globalQuit}
 }
 
 func (s *localStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) error {
@@ -39,7 +41,7 @@ func (s *localStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemo
 
 	// start local audio track
 	go func() {
-		defer s.dispatcher.DispatchRemoveTrack(s.audioTrack)
+		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.sessionId, s.audioTrack, track, s.streamKind))
 
 		if err = s.audioWriter.writeRtp(track, s.audioTrack); err != nil {
 			slog.Error("rtp.local_stream: writing local audio track ", "streamId", s.id, "err", err)
@@ -63,7 +65,7 @@ func (s *localStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemo
 
 	// start local video track
 	go func() {
-		defer s.dispatcher.DispatchRemoveTrack(s.videoTrack)
+		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.sessionId, s.videoTrack, track, s.streamKind))
 
 		if err = s.videoWriter.writeRtp(track, s.videoTrack); err != nil {
 			slog.Error("rtp.local_stream: writing local video track ", "streamId", s.id, "err", err)

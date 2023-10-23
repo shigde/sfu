@@ -10,15 +10,15 @@ import (
 	"github.com/shigde/sfu/internal/stream"
 )
 
-func getStreamList(manager spaceGetCreator) http.HandlerFunc {
+func getStreamList(streamService *stream.LiveStreamService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		space, err := getSpace(r, manager)
+		spaceIdentifier, err := getSpaceIdentifier(r)
 		if err != nil {
 			handleResourceError(w, err)
 			return
 		}
-		streams, err := space.LiveStreamRepo.All(r.Context())
+		streams, err := streamService.AllBySpaceIdentifier(r.Context(), spaceIdentifier)
 		if err != nil {
 			httpError(w, "error reading stream list", http.StatusInternalServerError, err)
 			return
@@ -29,10 +29,10 @@ func getStreamList(manager spaceGetCreator) http.HandlerFunc {
 		}
 	}
 }
-func getStream(manager spaceGetCreator) http.HandlerFunc {
+func getStream(streamService *stream.LiveStreamService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		streamResource, _, err := getLiveStream(r, manager)
+		streamResource, _, err := getLiveStream(r, streamService)
 		if err != nil {
 			handleResourceError(w, err)
 			return
@@ -44,12 +44,12 @@ func getStream(manager spaceGetCreator) http.HandlerFunc {
 	}
 }
 
-func deleteStream(manager spaceGetCreator) http.HandlerFunc {
+func deleteStream(streamService *stream.LiveStreamService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		space, err := getSpace(r, manager)
-		if err != nil {
-			handleResourceError(w, err)
+		user, ok := auth.PrincipalFromContext(r.Context())
+		if !ok {
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -59,7 +59,7 @@ func deleteStream(manager spaceGetCreator) http.HandlerFunc {
 			return
 		}
 
-		if err := space.LiveStreamRepo.Delete(r.Context(), id); err != nil {
+		if err := streamService.Delete(r.Context(), id, user.UUID); err != nil {
 			httpError(w, "error delete stream", http.StatusInternalServerError, err)
 			return
 		}
@@ -67,7 +67,7 @@ func deleteStream(manager spaceGetCreator) http.HandlerFunc {
 	}
 }
 
-func createStream(manager spaceGetCreator) http.HandlerFunc {
+func createStream(streamService *stream.LiveStreamService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		user, ok := auth.PrincipalFromContext(r.Context())
@@ -75,7 +75,7 @@ func createStream(manager spaceGetCreator) http.HandlerFunc {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		space, err := getOrCreateSpace(r, manager)
+		spaceIdentifier, err := getSpaceIdentifier(r)
 		if err != nil {
 			handleResourceError(w, err)
 			return
@@ -86,9 +86,8 @@ func createStream(manager spaceGetCreator) http.HandlerFunc {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		liveStream.User = user.UUID
-		liveStream.Space = space
-		id, err := space.LiveStreamRepo.Add(r.Context(), &liveStream)
+
+		id, err := streamService.CreateStream(r.Context(), &liveStream, spaceIdentifier, user.UUID)
 		if err != nil {
 			httpError(w, "error create stream", http.StatusInternalServerError, err)
 			return
@@ -98,10 +97,16 @@ func createStream(manager spaceGetCreator) http.HandlerFunc {
 	}
 }
 
-func updateStream(manager spaceGetCreator) http.HandlerFunc {
+func updateStream(streamService *stream.LiveStreamService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		space, err := getSpace(r, manager)
+		user, ok := auth.PrincipalFromContext(r.Context())
+		if !ok {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		spaceIdentifier, err := getSpaceIdentifier(r)
 		if err != nil {
 			handleResourceError(w, err)
 			return
@@ -113,7 +118,7 @@ func updateStream(manager spaceGetCreator) http.HandlerFunc {
 			return
 		}
 
-		if err := space.LiveStreamRepo.Update(r.Context(), &liveStream); err != nil {
+		if err := streamService.UpdateStream(r.Context(), &liveStream, spaceIdentifier, user.UUID); err != nil {
 			httpError(w, "error update stream", http.StatusInternalServerError, err)
 			return
 		}

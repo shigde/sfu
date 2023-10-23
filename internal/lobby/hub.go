@@ -4,7 +4,9 @@ import (
 	"errors"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
+	"github.com/shigde/sfu/internal/rtp"
 	"golang.org/x/exp/slog"
 )
 
@@ -16,17 +18,19 @@ var (
 
 type hub struct {
 	sessionRepo *sessionRepository
+	forwarder   *rtp.UdpForwarder
 	reqChan     chan *hubRequest
-	tracks      map[string]*webrtc.TrackLocalStaticRTP
+	tracks      map[string]*rtp.TrackInfo
 	quit        chan struct{}
 }
 
-func newHub(sessionRepo *sessionRepository) *hub {
+func newHub(sessionRepo *sessionRepository, forwarder *rtp.UdpForwarder) *hub {
 	quit := make(chan struct{})
-	tracks := make(map[string]*webrtc.TrackLocalStaticRTP)
+	tracks := make(map[string]*rtp.TrackInfo)
 	requests := make(chan *hubRequest)
 	hub := &hub{
 		sessionRepo,
+		forwarder,
 		requests,
 		tracks,
 		quit,
@@ -55,7 +59,7 @@ func (h *hub) run() {
 	}
 }
 
-func (h *hub) DispatchAddTrack(track *webrtc.TrackLocalStaticRTP) {
+func (h *hub) DispatchAddTrack(track *rtp.TrackInfo) {
 	select {
 	case h.reqChan <- &hubRequest{kind: addTrack, track: track}:
 	case <-h.quit:
@@ -65,7 +69,7 @@ func (h *hub) DispatchAddTrack(track *webrtc.TrackLocalStaticRTP) {
 	}
 }
 
-func (h *hub) DispatchRemoveTrack(track *webrtc.TrackLocalStaticRTP) {
+func (h *hub) DispatchRemoveTrack(track *rtp.TrackInfo) {
 	select {
 	case h.reqChan <- &hubRequest{kind: removeTrack, track: track}:
 	case <-h.quit:
@@ -75,9 +79,9 @@ func (h *hub) DispatchRemoveTrack(track *webrtc.TrackLocalStaticRTP) {
 	}
 }
 
-func (h *hub) getTrackList() ([]*webrtc.TrackLocalStaticRTP, error) {
-	var list []*webrtc.TrackLocalStaticRTP
-	trackListChan := make(chan []*webrtc.TrackLocalStaticRTP)
+func (h *hub) getTrackList(sessionId uuid.UUID) ([]*webrtc.TrackLocalStaticRTP, error) {
+	var hubList []*rtp.TrackInfo
+	trackListChan := make(chan []*rtp.TrackInfo)
 	select {
 	case h.reqChan <- &hubRequest{kind: getTrackList, trackListChan: trackListChan}:
 	case <-h.quit:
@@ -89,13 +93,18 @@ func (h *hub) getTrackList() ([]*webrtc.TrackLocalStaticRTP, error) {
 	}
 
 	select {
-	case list = <-trackListChan:
+	case hubList = <-trackListChan:
 	case <-h.quit:
 		slog.Warn("lobby.hub: get track list on closed hub")
 	case <-time.After(hubDispatchTimeout):
 		slog.Error("lobby.hub: get track list - interrupted because dispatch timeout")
 	}
-
+	list := make([]*webrtc.TrackLocalStaticRTP, 0)
+	for _, track := range hubList {
+		if track.GetSessionId() != sessionId {
+			list = append(list, track.GetTrack())
+		}
+	}
 	return list, nil
 }
 
@@ -114,23 +123,32 @@ func (h *hub) stop() error {
 }
 
 func (h *hub) onAddTrack(event *hubRequest) {
-	h.tracks[event.track.ID()] = event.track
+	if event.track.GetStreamKind() == rtp.TrackInfoKindStream {
+		h.forwarder.AddTrack(event.track)
+		return
+	}
+
+	h.tracks[event.track.GetTrack().ID()] = event.track
 	h.sessionRepo.Iter(func(s *session) {
-		s.addTrack(event.track)
+		if s.Id != event.track.GetSessionId() {
+			s.addTrack(event.track.GetTrack())
+		}
 	})
 }
 
 func (h *hub) onRemoveTrack(event *hubRequest) {
-	if _, ok := h.tracks[event.track.ID()]; ok {
-		delete(h.tracks, event.track.ID())
+	if _, ok := h.tracks[event.track.GetTrack().ID()]; ok {
+		delete(h.tracks, event.track.GetTrack().ID())
 	}
 	h.sessionRepo.Iter(func(s *session) {
-		s.removeTrack(event.track)
+		if s.Id != event.track.GetSessionId() {
+			s.removeTrack(event.track.GetTrack())
+		}
 	})
 }
 
 func (h *hub) onGetTrackList(event *hubRequest) {
-	list := make([]*webrtc.TrackLocalStaticRTP, 0, len(h.tracks))
+	list := make([]*rtp.TrackInfo, 0, len(h.tracks))
 	for _, track := range h.tracks {
 		list = append(list, track)
 	}

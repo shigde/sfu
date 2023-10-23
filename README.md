@@ -51,3 +51,13 @@ See the [ffmpeg documentation](https://ffmpeg.org/ffmpeg.html#Options) for more 
 go build -o ./bin/media_runner ./cmd/media_runner
 ./bin/media_runner -c config.toml -v output.ivf -a output.ogg
 ```
+##### Run the Media Streamer
+```shell
+go build -o ./bin/media_streamer ./cmd/media_streamer
+./bin/media_streamer -c config.toml
+```
+
+
+```shell
+ffmpeg -protocol_whitelist file,udp,rtp -i rtp-forwarder.sdp -c:v libx264  -preset veryfast -b:v 3000k -maxrate 3000k -bufsize 6000k -pix_fmt yuv420p -g 50 -c:a aac -b:a 160k -ac 2 -ar 44100 -f flv -flvflags no_duration_filesize rtmp://localhost:1935/live/64411dfc-2ddd-4b66-ba85-9bd40fe6d395 
+```

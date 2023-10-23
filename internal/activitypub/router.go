@@ -33,7 +33,7 @@ func extendRouter(
 	router.HandleFunc("/federation/", handler.GetObjectHandler(config, signer))
 
 	// Register request for instances
-	router.HandleFunc("/federation/register", handler.GetRegisterHandler(config, actorService, followRep, sender)).Methods("GET")
+	router.HandleFunc("/federation/register", handler.GetRegisterHandler(config, actorService, followRep, sender)).Methods("POST")
 
 	return nil
 }

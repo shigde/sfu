@@ -130,6 +130,9 @@ func (s *VideoService) UpsertVideo(ctx context.Context, updateObject vocab.Activ
 		return fmt.Errorf("saving video: %w", err)
 	}
 
+	if err := s.streamService.UpdateStreamAccessByVideo(ctx, video); err != nil {
+		return fmt.Errorf("update stream acces for new video: %w", err)
+	}
 	return nil
 }
 

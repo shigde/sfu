@@ -7,8 +7,10 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/activitypub/models"
 	"github.com/shigde/sfu/internal/auth"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var ErrStreamNotFound = errors.New("reading unknown live stream from store")
@@ -48,7 +50,7 @@ func (r *LiveStreamRepository) Add(ctx context.Context, liveStream *LiveStream) 
 	return liveStream.UUID.String(), nil
 }
 
-func (r *LiveStreamRepository) All(ctx context.Context) ([]LiveStream, error) {
+func (r *LiveStreamRepository) AllBySpaceIdentifier(ctx context.Context, identifier string) ([]LiveStream, error) {
 	r.locker.RLock()
 	tx, cancel := r.getStoreWithContext(ctx)
 	defer func() {
@@ -57,7 +59,7 @@ func (r *LiveStreamRepository) All(ctx context.Context) ([]LiveStream, error) {
 	}()
 
 	var streams []LiveStream
-	result := tx.Model(&LiveStream{}).Limit(501).Find(&streams)
+	result := tx.Joins("Space", tx.Where(&Space{Identifier: identifier})).Model(&LiveStream{}).Limit(100).Find(&streams)
 
 	if result.Error != nil {
 		return nil, fmt.Errorf("fetching all streams %w", result.Error)
@@ -80,7 +82,7 @@ func (r *LiveStreamRepository) FindByUuid(ctx context.Context, streamUUID string
 
 	liveStream := &LiveStream{UUID: UUID}
 
-	result := tx.First(liveStream)
+	result := tx.Preload("Space").Preload("Lobby").Preload("Account").First(liveStream)
 	if result.Error != nil {
 		err := fmt.Errorf("finding stream by uuid %s: %w", streamUUID, result.Error)
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -207,5 +209,26 @@ func (r *LiveStreamRepository) DeleteByUuid(ctx context.Context, streamUUID stri
 		return fmt.Errorf("deleting stream by uuid %s: %w", streamUUID, result.Error)
 	}
 	return nil
+}
 
+func (r *LiveStreamRepository) BuildGuestAccounts(ctx context.Context, actors []*models.Actor) {
+	tx, cancel := r.getStoreWithContext(ctx)
+	defer func() {
+		cancel()
+	}()
+
+	for _, actor := range actors {
+		user := buildFederatedId(actor.PreferredUsername, actor.GetActorIri().Host)
+		tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&auth.Account{
+			ActorId: actor.ID,
+			Actor:   actor,
+			User:    user,
+			UUID:    uuid.NewString(),
+		})
+	}
+	return
+}
+
+func buildFederatedId(id string, domain string) string {
+	return fmt.Sprintf("%s@%s", id, domain)
 }

@@ -128,7 +128,7 @@ func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescriptio
 		return true
 	})
 
-	endpoint, err := s.rtpEngine.NewReceiverEndpoint(ctx, *req.reqSDP, s.hub, s.receiver)
+	endpoint, err := s.rtpEngine.NewReceiverEndpoint(ctx, s.Id, *req.reqSDP, s.hub, s.receiver)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
@@ -179,12 +179,12 @@ func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescriptio
 
 	s.sender = newSenderHandler(s.Id, s.user, s.receiver.messenger)
 
-	trackList, err := s.hub.getTrackList()
+	trackList, err := s.hub.getTrackList(s.Id)
 	if err != nil {
 		return nil, fmt.Errorf("reading track list by creating rtp connection: %w", err)
 	}
 
-	endpoint, err := s.rtpEngine.NewSenderEndpoint(ctx, trackList, s.sender)
+	endpoint, err := s.rtpEngine.NewSenderEndpoint(ctx, s.Id, trackList, s.sender)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}

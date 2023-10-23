@@ -39,12 +39,13 @@ func (c *Claims) GetUuidString() string {
 }
 
 // CreateJWTToken generates a JWT signed token for for the given user
-func CreateJWTToken(principal Principal, jwtToken *JwtToken) (string, error) {
+func CreateJWTToken(uuid string, jwtConfig *JwtToken) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"uuid":      principal.GetUuidString(),
-		"ExpiresAt": time.Now().Unix() + jwtToken.DefaultExpireTime,
+		"uuid":      uuid,
+		"ExpiresAt": time.Now().Unix() + jwtConfig.DefaultExpireTime,
+		"nbf":       time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
 	})
-	tokenString, err := token.SignedString([]byte(jwtToken.Key))
+	tokenString, err := token.SignedString([]byte(jwtConfig.Key))
 
 	return tokenString, err
 }

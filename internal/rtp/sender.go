@@ -3,6 +3,7 @@ package rtp
 import (
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"golang.org/x/exp/slog"
 )
@@ -10,21 +11,23 @@ import (
 var errSenderAlreadyClosed = errors.New("sender already closed")
 
 type sender struct {
+	id              uuid.UUID
 	conn            *webrtc.PeerConnection
 	addTrackChan    <-chan *webrtc.TrackLocalStaticRTP
 	removeTrackChan <-chan *webrtc.TrackLocalStaticRTP
 	quit            chan struct{}
 }
 
-func newSender(conn *webrtc.PeerConnection) *sender {
+func newSender(sessionId uuid.UUID, conn *webrtc.PeerConnection) *sender {
 	addTrack := make(<-chan *webrtc.TrackLocalStaticRTP, 1)
 	removeTrack := make(<-chan *webrtc.TrackLocalStaticRTP, 1)
 	quit := make(chan struct{})
 	sender := &sender{
-		conn,
-		addTrack,
-		removeTrack,
-		quit,
+		id:              sessionId,
+		conn:            conn,
+		addTrackChan:    addTrack,
+		removeTrackChan: removeTrack,
+		quit:            quit,
 	}
 
 	go sender.run()

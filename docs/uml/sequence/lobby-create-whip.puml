@@ -1,12 +1,11 @@
 @startuml
 'https://plantuml.com/sequence-diagram
 
-'https://plantuml.com/sequence-diagram
 
 title WHIP Endpoint (https://datatracker.ietf.org/doc/draft-ietf-wish-whip/)
 
 autonumber
-== Create a Lobby with Stream Recource ==
+== Create a Lobby with Stream Resource ==
 Client -> Media_Server: POST /space/<<spaceId>>/stream/<<streamId>>/whip
 note right
 __Request__:
@@ -42,10 +41,21 @@ Client <-- RTP_Server: ICE RESPONSE
 Client <-> RTP_Server: DTLS SETUP
 Client <-> RTP_Server: RTP/RTCP FLOW
 
+...
+Client <- RTP_Server: SCTP
+note right
+ChannelMsg: Offer
+end note
+Client --> RTP_Server: SCTP
+note right
+ChannelMsg: Answer
+end note
+
 == Other Response Cases ==
 
 Client <-- Media_Server: 400 Bad Request
 Client <-- Media_Server: 401 Unauthorised
 Client <-- Media_Server: 404 Not Found
+Client <-- Media_Server: 409 Conflict
 Client <-- Media_Server: 500 Internal Server Error
 @enduml

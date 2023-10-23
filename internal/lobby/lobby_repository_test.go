@@ -17,20 +17,20 @@ func testRtpStreamLobbyRepositorySetup(t *testing.T) *lobbyRepository {
 }
 func TestStreamLobbyRepository(t *testing.T) {
 
-	t.Run("Get not existing Lobby", func(t *testing.T) {
+	t.Run("Get not existing lobby", func(t *testing.T) {
 		repo := testRtpStreamLobbyRepositorySetup(t)
 		space, ok := repo.getLobby(uuid.New())
 		assert.False(t, ok)
 		assert.Nil(t, space)
 	})
 
-	t.Run("Create Lobby", func(t *testing.T) {
+	t.Run("Create lobby", func(t *testing.T) {
 		repo := testRtpStreamLobbyRepositorySetup(t)
 		lobby := repo.getOrCreateLobby(uuid.New())
 		assert.NotNil(t, lobby)
 	})
 
-	t.Run("Create and Get Lobby", func(t *testing.T) {
+	t.Run("Create and Get lobby", func(t *testing.T) {
 		repo := testRtpStreamLobbyRepositorySetup(t)
 		id := uuid.New()
 		lobbyCreated := repo.getOrCreateLobby(id)
@@ -40,7 +40,7 @@ func TestStreamLobbyRepository(t *testing.T) {
 		assert.Same(t, lobbyCreated, lobbyGet)
 	})
 
-	t.Run("Delete Lobby", func(t *testing.T) {
+	t.Run("Delete lobby", func(t *testing.T) {
 		repo := testRtpStreamLobbyRepositorySetup(t)
 		id := uuid.New()
 		created := repo.getOrCreateLobby(id)

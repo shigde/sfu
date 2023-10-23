@@ -17,30 +17,30 @@ var (
 	errStreamNotFound          = errors.New("reading stream from manager")
 )
 
-func getLiveStream(r *http.Request, manager spaceGetCreator) (*stream.LiveStream, *stream.Space, error) {
-	space, err := getSpace(r, manager)
+func getLiveStream(r *http.Request, streamService *stream.LiveStreamService) (*stream.LiveStream, string, error) {
+	spaceIdentifier, err := getSpaceIdentifier(r)
 	if err != nil {
-		return nil, nil, err
+		return nil, spaceIdentifier, err
 	}
 
-	id, ok := mux.Vars(r)["id"]
+	streamUUID, ok := mux.Vars(r)["id"]
 	if !ok {
-		return nil, nil, errStreamRequestIdNotFound
+		return nil, spaceIdentifier, errStreamRequestIdNotFound
 	}
 
-	streamResource, err := space.LiveStreamRepo.FindByUuid(r.Context(), id)
+	streamResource, err := streamService.FindByUuidAndSpaceIdentifier(r.Context(), streamUUID, spaceIdentifier)
 	if err != nil && errors.Is(err, stream.ErrStreamNotFound) {
-		return nil, nil, errors.Join(err, errStreamNotFound)
+		return nil, spaceIdentifier, errors.Join(err, errStreamNotFound)
 	}
 
 	if err != nil {
-		return nil, nil, err
+		return nil, spaceIdentifier, err
 	}
 
-	return streamResource, space, nil
+	return streamResource, spaceIdentifier, nil
 }
 
-func getSpaceId(r *http.Request) (string, error) {
+func getSpaceIdentifier(r *http.Request) (string, error) {
 	spaceId, ok := mux.Vars(r)["space"]
 	if !ok {
 		return "", errSpaceRequestIdNotFound
@@ -49,7 +49,7 @@ func getSpaceId(r *http.Request) (string, error) {
 }
 
 func getSpace(r *http.Request, manager spaceGetCreator) (*stream.Space, error) {
-	spaceId, err := getSpaceId(r)
+	spaceId, err := getSpaceIdentifier(r)
 	if err != nil {
 		return nil, err
 	}
@@ -64,11 +64,11 @@ func getSpace(r *http.Request, manager spaceGetCreator) (*stream.Space, error) {
 }
 
 func getOrCreateSpace(r *http.Request, manager spaceGetCreator) (*stream.Space, error) {
-	spaceId, err := getSpaceId(r)
+	spaceId, err := getSpaceIdentifier(r)
 	if err != nil {
 		return nil, err
 	}
-	space, err := manager.GetOrCreateSpace(r.Context(), spaceId)
+	space, err := manager.CreateSpace(r.Context(), spaceId)
 	if err != nil {
 		return nil, err
 	}

@@ -6,23 +6,27 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/rtp"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
 )
 
 var (
-	errNoSession           = errors.New("no session exists")
-	errLobbyStopped        = errors.New("error because lobby stopped")
-	errLobbyRequestTimeout = errors.New("lobby request timeout error")
-	lobbyReqTimeout        = 3 * time.Second
+	errNoSession            = errors.New("no session exists")
+	ErrSessionAlreadyExists = errors.New("session already exists")
+	errLobbyStopped         = errors.New("error because lobby stopped")
+	errLobbyRequestTimeout  = errors.New("lobby request timeout error")
+	lobbyReqTimeout         = 3 * time.Second
 )
 
 type lobby struct {
 	Id            uuid.UUID
 	sessions      *sessionRepository
+	forwarder     *rtp.UdpForwarder
 	hub           *hub
 	rtpEngine     rtpEngine
 	resourceId    uuid.UUID
+	entity        LobbyEntity
 	quit          chan struct{}
 	reqChan       chan *lobbyRequest
 	childQuitChan chan uuid.UUID
@@ -33,12 +37,17 @@ func newLobby(id uuid.UUID, rtpEngine rtpEngine) *lobby {
 	quitChan := make(chan struct{})
 	reqChan := make(chan *lobbyRequest)
 	childQuitChan := make(chan uuid.UUID)
-	hub := newHub(sessions)
+	forwarder, err := rtp.NewUdpForwarder(id)
+	if err != nil {
+		slog.Error("create udp forwarder", "err", err)
+	}
+	hub := newHub(sessions, forwarder)
 	lobby := &lobby{
 		Id:            id,
 		resourceId:    uuid.New(),
 		rtpEngine:     rtpEngine,
 		sessions:      sessions,
+		forwarder:     forwarder,
 		hub:           hub,
 		quit:          quitChan,
 		reqChan:       reqChan,
@@ -62,8 +71,10 @@ func (l *lobby) run() {
 				l.handleListen(req)
 			case *leaveData:
 				l.handleLeave(req)
+			case *liveStreamData:
+				l.handleLiveStreamReq(req)
 			default:
-				slog.Error("lobby.lobby: not supported request type in Lobby", "type", requestType)
+				slog.Error("lobby.lobby: not supported request type in lobby", "type", requestType)
 			}
 		case id := <-l.childQuitChan:
 			slog.Debug("join leave lobby")
@@ -71,7 +82,7 @@ func (l *lobby) run() {
 				slog.Error("lobby.lobby: deleting session because internally reason", "err", err)
 			}
 		case <-l.quit:
-			slog.Info("lobby.lobby: close Lobby", "lobbyId", l.Id)
+			slog.Info("lobby.lobby: close lobby", "lobbyId", l.Id)
 			return
 		}
 	}
@@ -114,10 +125,18 @@ func (l *lobby) handleJoin(joinReq *lobbyRequest) {
 
 	data, _ := joinReq.data.(*joinData)
 	session, ok := l.sessions.FindByUserId(joinReq.user)
-	if !ok {
-		session = newSession(joinReq.user, l.hub, l.rtpEngine, l.childQuitChan)
-		l.sessions.Add(session)
+	if ok {
+		select {
+		case joinReq.err <- ErrSessionAlreadyExists:
+		case <-joinReq.ctx.Done():
+			joinReq.err <- errLobbyRequestTimeout
+		case <-l.quit:
+			joinReq.err <- errLobbyStopped
+		}
+		return
 	}
+	session = newSession(joinReq.user, l.hub, l.rtpEngine, l.childQuitChan)
+	l.sessions.Add(session)
 	offerReq := newSessionRequest(joinReq.ctx, data.offer, offerReq)
 
 	go func() {
@@ -224,11 +243,21 @@ func (l *lobby) handleLeave(req *lobbyRequest) {
 	data.response <- deleted
 }
 
+func (l *lobby) handleLiveStreamReq(req *lobbyRequest) {
+	slog.Info("lobby.lobby: handleLiveStreamReq", "lobbyId", l.Id, "user", req.user)
+	data, _ := req.data.(*liveStreamData)
+	//deleted, err := l.deleteSessionByUserId(req.user)
+	//if err != nil {
+	//	req.err <- fmt.Errorf("no session existing for user %s: %w", req.user, errNoSession)
+	//}
+	data.response <- true
+}
+
 func (l *lobby) stop() {
 	slog.Info("lobby.lobby: stop", "lobbyId", l.Id)
 	select {
 	case <-l.quit:
-		slog.Warn("lobby.lobby: the Lobby was already closed", "lobbyId", l.Id)
+		slog.Warn("lobby.lobby: the lobby was already closed", "lobbyId", l.Id)
 	default:
 		close(l.quit)
 		slog.Info("lobby.lobby: stopped was triggered", "lobbyId", l.Id)

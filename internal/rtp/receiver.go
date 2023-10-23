@@ -20,10 +20,10 @@ type receiver struct {
 	quit       chan struct{}
 }
 
-func newReceiver(d TrackDispatcher) *receiver {
+func newReceiver(sessionId uuid.UUID, d TrackDispatcher) *receiver {
 	streams := make(map[string]*localStream)
 	quit := make(chan struct{})
-	return &receiver{sync.RWMutex{}, uuid.New(), streams, d, quit}
+	return &receiver{sync.RWMutex{}, sessionId, streams, d, quit}
 }
 
 func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.RTPReceiver) {
@@ -31,7 +31,14 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 	ctx, span := otel.Tracer(tracerName).Start(context.Background(), "rtp.receiver: on track")
 	defer span.End()
 
-	stream := r.getStream(remoteTrack.StreamID())
+	streamKind := TrackInfoKindPeer
+	if len(r.streams) > 0 {
+		streamKind = TrackInfoKindStream
+		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, nil, remoteTrack, streamKind))
+		return
+	}
+
+	stream := r.getStream(remoteTrack.StreamID(), r.id, streamKind)
 
 	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "audio") {
 		slog.Debug("rtp.receiver: on audio track")
@@ -41,7 +48,8 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 			// stop handler goroutine because error
 			return
 		}
-		r.dispatcher.DispatchAddTrack(stream.audioTrack)
+
+		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, stream.audioTrack, remoteTrack, streamKind))
 	}
 
 	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "video") {
@@ -52,17 +60,17 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 			// stop handler goroutine because error
 			return
 		}
-		r.dispatcher.DispatchAddTrack(stream.videoTrack)
+		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, stream.videoTrack, remoteTrack, streamKind))
 	}
 }
 
-func (r *receiver) getStream(id string) *localStream {
+func (r *receiver) getStream(remoteId string, sessionId uuid.UUID, kind TrackInfoKind) *localStream {
 	r.Lock()
 	defer r.Unlock()
-	stream, ok := r.streams[id]
+	stream, ok := r.streams[remoteId]
 	if !ok {
-		stream = newLocalStream(id, r.dispatcher, r.quit)
-		r.streams[id] = stream
+		stream = newLocalStream(remoteId, sessionId, kind, r.dispatcher, r.quit)
+		r.streams[remoteId] = stream
 	}
 	return stream
 }

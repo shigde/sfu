@@ -1,0 +1,42 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+title Status of Live Stream
+
+autonumber
+== Status of a Lobby Live Stream ==
+Client -> Media_Server: GET /space/<<spaceId>>/stream/<<streamId>>/live/<<live-id>>
+note right
+__Header__:
+- Content-Type: "application/json"
+- Cookie: <<Session-Cookie>>
+- X-Req-Token: <<Request-Token>>
+- Authorization: Bearer <JWT> {
+    home: <<serverDomainName>>
+    userId: <<User Identifier>>
+   }
+end note
+
+Client <-- Media_Server: 200 OK
+note right
+__Response__:
+{
+   status: online | offline
+}
+
+__Header__:
+- Content-Type: "application/json"
+- Content-Length: <<number>>
+- Cookie: <<Session-Cookie>>
+- X-Req-Token: <<Request-Token>>
+- ETag: <<hash>>
+end note
+
+== Other Response Cases ==
+
+Client <-- Media_Server: 400 Bad Request
+Client <-- Media_Server: 401 Unauthorised
+Client <-- Media_Server: 404 Not Found
+Client <-- Media_Server: 500 Internal Server Error
+
+@enduml

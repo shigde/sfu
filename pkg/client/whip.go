@@ -11,7 +11,11 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
+const reqTokenHeaderName = "X-Req-Token"
+
 type Whip struct {
+	Session   *http.Cookie
+	CsrfToken string
 }
 
 func NewWhip() *Whip {
@@ -35,6 +39,9 @@ func (w *Whip) GetAnswer(spaceId string, streamId string, bearer string, offer *
 		return nil, fmt.Errorf("requesting answer: %w", err)
 	}
 	defer resp.Body.Close()
+
+	w.Session = resp.Cookies()[0]
+	w.CsrfToken = resp.Header.Get(reqTokenHeaderName)
 
 	if resp.Status != "201 Created" {
 		return nil, fmt.Errorf("server answer with wrong status code %s", resp.Status)
