@@ -42,8 +42,8 @@ func NewRouter(
 	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.TokenMiddleware(whepAnswer(streamService, liveLobbyService))).Methods("PATCH")
 	// Live
 	router.HandleFunc("/space/{space}/stream/{id}/live", auth.TokenMiddleware(publishLiveStream(streamService, liveLobbyService))).Methods("POST")
-	router.HandleFunc("/space/{space}/stream/{id}/live/{liveId}", auth.TokenMiddleware(getStatusOfLiveStream(streamService, liveLobbyService))).Methods("GET")
-	router.HandleFunc("/space/{space}/stream/{id}/live/{liveId}", auth.TokenMiddleware(stopLiveStream(streamService, liveLobbyService))).Methods("DELETE")
+	router.HandleFunc("/space/{space}/stream/{id}/live", auth.TokenMiddleware(getStatusOfLiveStream(streamService, liveLobbyService))).Methods("GET")
+	router.HandleFunc("/space/{space}/stream/{id}/live", auth.TokenMiddleware(stopLiveStream(streamService, liveLobbyService))).Methods("DELETE")
 	return router
 }
 
