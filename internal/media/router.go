@@ -5,6 +5,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/logging"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/stream"
 )
@@ -26,7 +27,7 @@ func NewRouter(
 	//)
 	// router.Use(cors)
 	// Auth
-	// router.Use(func(next http.Handler) http.Handler { return handlers.LoggingHandler(os.Stdout, next) })
+	router.Use(logging.LoggingMiddleware)
 	router.HandleFunc("/authenticate", getAuthenticationHandler(accountService)).Methods("POST")
 	// Space
 	// I commented out the Delete/Update/Create Space Rest endpoints.

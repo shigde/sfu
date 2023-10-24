@@ -32,8 +32,9 @@ func NewUdpForwarder(id uuid.UUID) (*UdpForwarder, error) {
 }
 
 func (f *UdpForwarder) Run() {
+	f.log("run")
 	defer func() {
-		slog.Info("forwarder stop running", "forwarderID", f.id)
+		f.log("stop")
 		if err := f.close(); err != nil {
 			slog.Error("forwarder closing udp ports", "err", err, "forwarderID", f.id)
 		}
@@ -55,9 +56,11 @@ func (f *UdpForwarder) Run() {
 		return
 	}
 
+	f.log("running")
 	select {
 	case <-f.quit:
 	}
+	f.log("quit")
 }
 
 func (f *UdpForwarder) Stop() {
@@ -70,25 +73,26 @@ func (f *UdpForwarder) Stop() {
 	}
 }
 
-func (f *UdpForwarder) AddTrack(track *TrackInfo) {
-	if track.RemoteTrack.Kind() == webrtc.RTPCodecTypeAudio {
-		go func() {
-			slog.Info("forwarder: writing audio", "forwarderId", f.id.String())
+func (f *UdpForwarder) AddTrack(trackInfo *TrackInfo) {
+
+	if trackInfo.RemoteTrack.Kind() == webrtc.RTPCodecTypeAudio {
+		go func(track *TrackInfo) {
+			f.log("writing audio")
 			if err := f.writeTrack(f.audio, track.RemoteTrack); err != nil {
 				slog.Error("writing stream audio", "err", err, "forwarderId", f.id.String())
 			}
-			slog.Info("stop writing stream audio", "forwarderId", f.id.String())
-		}()
+			f.log("stop writing stream audio")
+		}(trackInfo)
 	}
 
-	if track.RemoteTrack.Kind() == webrtc.RTPCodecTypeVideo {
-		go func() {
-			slog.Info("forwarder: writing video", "forwarderId", f.id.String())
+	if trackInfo.RemoteTrack.Kind() == webrtc.RTPCodecTypeVideo {
+		go func(track *TrackInfo) {
+			f.log("writing video")
 			if err := f.writeTrack(f.video, track.RemoteTrack); err != nil {
 				slog.Error("writing stream video", "err", err, "forwarderId", f.id.String())
 			}
-			slog.Info("forwarder: stop writing stream video", "forwarderId", f.id.String())
-		}()
+			f.log("stop writing stream video")
+		}(trackInfo)
 	}
 }
 
@@ -99,21 +103,24 @@ func (f *UdpForwarder) connect(udp *UdpConnection, laddr *net.UDPAddr) error {
 	if raddr, err = net.ResolveUDPAddr("udp", fmt.Sprintf("127.0.0.1:%d", udp.port)); err != nil {
 		return fmt.Errorf("resolving udp port: %w", err)
 	}
-
 	// Dial udp
 	if udp.conn, err = net.DialUDP("udp", laddr, raddr); err != nil {
 		return fmt.Errorf("dealing udp port: %w", err)
 	}
+
+	f.log(fmt.Sprintf("connected to port %d", udp.port))
 	return err
 }
 
 func (f *UdpForwarder) close() error {
 	if f.audio.conn != nil {
+		f.log("close audio connection")
 		if err := f.audio.conn.Close(); err != nil {
 			return fmt.Errorf("closing audio udp port: %w", err)
 		}
 	}
 	if f.video.conn != nil {
+		f.log("close video connection")
 		if err := f.video.conn.Close(); err != nil {
 			return fmt.Errorf("closing video udp port: %w", err)
 		}
@@ -125,7 +132,7 @@ func (f *UdpForwarder) writeTrack(udp *UdpConnection, track *webrtc.TrackRemote)
 	for {
 		select {
 		case <-f.quit:
-			slog.Info("forwarder closed", "forwarderId", f.id)
+			f.log("stop writing because quit")
 			return nil
 		default:
 			var err error
@@ -174,4 +181,8 @@ func (f *UdpForwarder) GetConnData() UdpShare {
 		Audio: UdpShareInfo{Port: f.audio.port, PayloadType: f.audio.payloadType},
 		Video: UdpShareInfo{Port: f.video.port, PayloadType: f.video.payloadType},
 	}
+}
+
+func (f *UdpForwarder) log(msg string) {
+	slog.Debug(msg, "forwarderId", f.id, "obj", "udpForwarder")
 }

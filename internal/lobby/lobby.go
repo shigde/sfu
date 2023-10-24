@@ -253,6 +253,7 @@ func (l *lobby) handleLiveStreamReq(req *lobbyRequest) {
 	slog.Info("lobby.lobby: handleLiveStreamReq", "lobbyId", l.Id, "user", req.user)
 	data, _ := req.data.(*liveStreamData)
 	if data.cmd == "start" {
+		slog.Debug("lobby.lobby: start ffmpeg streamer", "lobbyId", l.Id, "user", req.user)
 		streamUrl := fmt.Sprintf("%s/%s", data.rtmpUrl, data.key)
 		if err := l.streamer.StartFFmpeg(context.Background(), streamUrl); err != nil {
 			req.err <- fmt.Errorf("starting ffmeg: %w", err)
@@ -260,6 +261,7 @@ func (l *lobby) handleLiveStreamReq(req *lobbyRequest) {
 		}
 	}
 	if data.cmd == "stop" {
+		slog.Debug("lobby.lobby: stop ffmpeg streamer", "lobbyId", l.Id, "user", req.user)
 		oldStreamer := l.streamer
 		l.streamer = rtmp.NewStreamer()
 		oldStreamer.Stop()
