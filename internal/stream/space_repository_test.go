@@ -13,46 +13,47 @@ import (
 
 func testSpaceRepositorySetup(t *testing.T) *SpaceRepository {
 	t.Helper()
-	var lobby lobbyListenAccessor
 	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	_ = db.AutoMigrate(&Space{})
 	store := &testStore{db}
-	repository := newSpaceRepository(lobby, store, nil)
+	repository := NewSpaceRepository(store)
 	return repository
 }
 func TestSpaceRepository(t *testing.T) {
 
 	t.Run("Get not existing Space", func(t *testing.T) {
 		repo := testSpaceRepositorySetup(t)
-		space, err := repo.GetSpace(context.Background(), "123")
+		space, err := repo.GetByIdentifier(context.Background(), "123")
 		assert.Error(t, err, ErrSpaceNotFound)
 		assert.Nil(t, space)
 	})
 
 	t.Run("Create Space", func(t *testing.T) {
 		repo := testSpaceRepositorySetup(t)
-		space, _ := repo.GetOrCreateSpace(context.Background(), "456")
+		space, err := repo.CreateWithIdentifier(context.Background(), "456")
+		assert.NoError(t, err)
 		assert.NotNil(t, space)
 	})
 
 	t.Run("Create and Get Space", func(t *testing.T) {
 		repo := testSpaceRepositorySetup(t)
-		spaceCreated, _ := repo.GetOrCreateSpace(context.Background(), "789")
+		spaceCreated, _ := repo.CreateWithIdentifier(context.Background(), "789")
 		assert.NotNil(t, spaceCreated)
-		spaceGet, err := repo.GetSpace(context.Background(), "789")
+		spaceGet, err := repo.GetByIdentifier(context.Background(), "789")
 		assert.NoError(t, err)
 		assert.NotSame(t, spaceCreated, spaceGet)
-		assert.Equal(t, spaceCreated, spaceGet)
+		assert.Equal(t, spaceCreated.Identifier, spaceGet.Identifier)
 	})
 
 	t.Run("Delete Space", func(t *testing.T) {
 		repo := testSpaceRepositorySetup(t)
-		spaceCreated, _ := repo.GetOrCreateSpace(context.Background(), "1012")
+		spaceCreated, _ := repo.CreateWithIdentifier(context.Background(), "1012")
 		assert.NotNil(t, spaceCreated)
 
 		err := repo.Delete(context.Background(), "1012")
 		assert.NoError(t, err)
 
-		spaceGet, err := repo.GetSpace(context.Background(), "1012")
+		spaceGet, err := repo.GetByIdentifier(context.Background(), "1012")
 		assert.Error(t, err)
 		assert.Nil(t, spaceGet)
 	})
@@ -70,14 +71,14 @@ func TestSpaceRepository(t *testing.T) {
 
 		for i := 0; i < wantedCount; i++ {
 			go func(spaceId int) {
-				space, _ := repo.GetOrCreateSpace(context.Background(), fmt.Sprintf("id-%d", spaceId))
+				space, _ := repo.CreateWithIdentifier(context.Background(), fmt.Sprintf("id-%d", spaceId))
 				assert.NotNil(t, space)
 				wg.Done()
 			}(i)
 
 			if i == createOn {
 				go func() {
-					space, _ := repo.GetOrCreateSpace(context.Background(), id)
+					space, _ := repo.CreateWithIdentifier(context.Background(), id)
 					assert.NotNil(t, space)
 					close(created)
 					wg.Done()
@@ -96,7 +97,7 @@ func TestSpaceRepository(t *testing.T) {
 
 		wg.Wait()
 
-		_, err := repo.GetSpace(context.Background(), id)
+		_, err := repo.GetByIdentifier(context.Background(), id)
 		assert.Error(t, err, ErrSpaceNotFound)
 		assert.Equal(t, int64(wantedCount), repo.Len(context.Background()))
 	})
