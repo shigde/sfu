@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/rtp"
-	"github.com/shigde/sfu/internal/storage"
 )
 
 const tracerName = "github.com/shigde/sfu/internal/lobby"
@@ -21,7 +20,7 @@ type rtpEngine interface {
 	NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, localTracks []*webrtc.TrackLocalStaticRTP, stateHandler rtp.StateEventHandler) (*rtp.Endpoint, error)
 }
 
-func NewLobbyManager(storage *storage.Store, e rtpEngine) *LobbyManager {
+func NewLobbyManager(storage store, e rtpEngine) *LobbyManager {
 	lobbies := newLobbyRepository(storage, e)
 	return &LobbyManager{lobbies}
 }

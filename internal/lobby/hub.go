@@ -18,13 +18,13 @@ var (
 
 type hub struct {
 	sessionRepo *sessionRepository
-	forwarder   *rtp.UdpForwarder
+	forwarder   streamForwarder
 	reqChan     chan *hubRequest
 	tracks      map[string]*rtp.TrackInfo
 	quit        chan struct{}
 }
 
-func newHub(sessionRepo *sessionRepository, forwarder *rtp.UdpForwarder) *hub {
+func newHub(sessionRepo *sessionRepository, forwarder streamForwarder) *hub {
 	quit := make(chan struct{})
 	tracks := make(map[string]*rtp.TrackInfo)
 	requests := make(chan *hubRequest)

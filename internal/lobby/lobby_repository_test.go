@@ -5,13 +5,15 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/storage"
 	"github.com/stretchr/testify/assert"
 )
 
 func testRtpStreamLobbyRepositorySetup(t *testing.T) *lobbyRepository {
 	t.Helper()
+	store := storage.NewTestStore()
 	var engine rtpEngine
-	repository := newLobbyRepository(engine)
+	repository := newLobbyRepository(store, engine)
 
 	return repository
 }
