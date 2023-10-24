@@ -6,27 +6,21 @@ import (
 	"fmt"
 
 	"github.com/shigde/sfu/internal/activitypub/models"
-	"github.com/shigde/sfu/internal/storage"
 	"github.com/shigde/sfu/pkg/authentication"
 )
 
 type AccountService struct {
 	config        *SecurityConfig
 	instanceToken string
-	repo          *accountRepository
+	repo          *AccountRepository
 }
 
-func NewAccountService(store *storage.Store, instanceToken string, config *SecurityConfig) (*AccountService, error) {
-	repo, err := newAccountRepository(store)
-	if err != nil {
-		return nil, fmt.Errorf("creating account repository: %w", err)
-	}
-
+func NewAccountService(repo *AccountRepository, instanceToken string, config *SecurityConfig) *AccountService {
 	return &AccountService{
 		config:        config,
 		instanceToken: instanceToken,
 		repo:          repo,
-	}, nil
+	}
 }
 
 func (s *AccountService) CreateAccountByActor(actor *models.Actor) error {

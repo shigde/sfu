@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/shigde/sfu/internal/activitypub/instance"
+	"github.com/shigde/sfu/internal/storage"
 	"gorm.io/gorm"
 )
 
@@ -15,10 +16,10 @@ var ErrActorFollowNotFound = errors.New("actor follow not found")
 type FollowRepository struct {
 	locker  *sync.RWMutex
 	config  *instance.FederationConfig
-	storage instance.Storage
+	storage storage.Storage
 }
 
-func NewFollowRepository(config *instance.FederationConfig, storage instance.Storage) *FollowRepository {
+func NewFollowRepository(config *instance.FederationConfig, storage storage.Storage) *FollowRepository {
 	return &FollowRepository{
 		&sync.RWMutex{},
 		config,

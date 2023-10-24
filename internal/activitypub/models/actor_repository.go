@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/shigde/sfu/internal/activitypub/instance"
+	"github.com/shigde/sfu/internal/storage"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -22,12 +23,12 @@ const (
 var ErrActorNotFound = errors.New("actor not found")
 
 type ActorRepository struct {
-	locker  *sync.RWMutex
-	config  *instance.FederationConfig
-	storage instance.Storage
+	locker *sync.RWMutex
+	config *instance.FederationConfig
+	store  storage.Storage
 }
 
-func NewActorRepository(config *instance.FederationConfig, storage instance.Storage) *ActorRepository {
+func NewActorRepository(config *instance.FederationConfig, storage storage.Storage) *ActorRepository {
 	return &ActorRepository{
 		&sync.RWMutex{},
 		config,
@@ -40,7 +41,7 @@ func (r *ActorRepository) Add(_ context.Context, actor *Actor) (*Actor, error) {
 }
 
 func (r *ActorRepository) Upsert(ctx context.Context, actor *Actor) (*Actor, error) {
-	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
+	tx, cancel := r.store.GetDatabaseWithContext(ctx)
 	defer cancel()
 
 	result := tx.Clauses(clause.OnConflict{
@@ -55,7 +56,7 @@ func (r *ActorRepository) Upsert(ctx context.Context, actor *Actor) (*Actor, err
 }
 
 func (r *ActorRepository) GetActorForUserName(ctx context.Context, name string) (*Actor, error) {
-	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
+	tx, cancel := r.store.GetDatabaseWithContext(ctx)
 	defer cancel()
 
 	actor := &Actor{PreferredUsername: name}
@@ -72,7 +73,7 @@ func (r *ActorRepository) GetActorForUserName(ctx context.Context, name string) 
 }
 
 func (r *ActorRepository) GetActorForIRI(ctx context.Context, iri *url.URL, iriType IriType) (*Actor, error) {
-	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
+	tx, cancel := r.store.GetDatabaseWithContext(ctx)
 	defer cancel()
 
 	var actor *Actor
@@ -98,7 +99,7 @@ func (r *ActorRepository) GetActorForIRI(ctx context.Context, iri *url.URL, iriT
 }
 
 func (r *ActorRepository) GetAllActorsByIds(ctx context.Context, actorIds []uint) ([]*Actor, error) {
-	tx, cancel := r.storage.GetDatabaseWithContext(ctx)
+	tx, cancel := r.store.GetDatabaseWithContext(ctx)
 	defer cancel()
 
 	var actors []*Actor
@@ -112,7 +113,6 @@ func (r *ActorRepository) GetAllActorsByIds(ctx context.Context, actorIds []uint
 	}
 
 	return actors, nil
-
 }
 
 func (r *ActorRepository) GetPublicKey(ctx context.Context, actorIRI *url.URL) (string, error) {

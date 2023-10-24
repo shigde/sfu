@@ -6,25 +6,26 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/shigde/sfu/internal/storage"
 	"gorm.io/gorm"
 )
 
 var ErrAccountNotFound = errors.New("account not found")
 
-type accountRepository struct {
+type AccountRepository struct {
 	locker *sync.RWMutex
-	store  *storage.Store
+	store  storage.Storage
 }
 
-func newAccountRepository(store *storage.Store) (*accountRepository, error) {
-	return &accountRepository{
+func NewAccountRepository(store storage.Storage) *AccountRepository {
+	return &AccountRepository{
 		&sync.RWMutex{},
 		store,
-	}, nil
+	}
 }
 
-func (r accountRepository) findByUserName(ctx context.Context, user string) (*Account, error) {
+func (r *AccountRepository) findByUserName(ctx context.Context, user string) (*Account, error) {
 	r.locker.RLock()
 	tx, cancel := r.store.GetDatabaseWithContext(ctx)
 	defer func() {
@@ -44,4 +45,23 @@ func (r accountRepository) findByUserName(ctx context.Context, user string) (*Ac
 	}
 
 	return &account, nil
+}
+
+func (r *AccountRepository) Add(ctx context.Context, account *Account) (string, error) {
+	r.locker.Lock()
+	tx, cancel := r.store.GetDatabaseWithContext(ctx)
+	defer func() {
+		r.locker.Unlock()
+		cancel()
+	}()
+
+	if len(account.UUID) == 0 {
+		account.UUID = uuid.NewString()
+	}
+
+	result := tx.Create(account)
+	if result.Error != nil || result.RowsAffected != 1 {
+		return "", fmt.Errorf("adding live stream: %w", result.Error)
+	}
+	return account.UUID, nil
 }

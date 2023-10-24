@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"context"
+
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -16,4 +18,10 @@ func NewTestStore() *TestStore {
 
 func (s *TestStore) GetDatabase() *gorm.DB {
 	return s.db
+}
+
+func (s *TestStore) GetDatabaseWithContext(ctx context.Context) (*gorm.DB, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeOut)
+	tx := s.db.WithContext(ctx)
+	return tx, cancel
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -21,6 +22,25 @@ func NewSpaceRepository(store storage) *SpaceRepository {
 		&sync.RWMutex{},
 		store,
 	}
+}
+
+func (r *SpaceRepository) Add(ctx context.Context, space *Space) (string, error) {
+	r.locker.Lock()
+	tx, cancel := r.getStoreWithContext(ctx)
+	defer func() {
+		r.locker.Unlock()
+		cancel()
+	}()
+
+	if len(space.Identifier) == 0 {
+		space.Identifier = uuid.NewString()
+	}
+
+	result := tx.Create(space)
+	if result.Error != nil || result.RowsAffected != 1 {
+		return "", fmt.Errorf("adding live stream: %w", result.Error)
+	}
+	return space.Identifier, nil
 }
 
 func (r *SpaceRepository) GetByIdentifier(ctx context.Context, identifier string) (*Space, error) {

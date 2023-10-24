@@ -2,55 +2,36 @@ package media
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
 
-	"github.com/gorilla/mux"
-	"github.com/shigde/sfu/internal/stream"
 	"github.com/stretchr/testify/assert"
 )
 
-func testWhepReqSetup(t *testing.T) (*mux.Router, string) {
-	t.Helper()
-
-	// Setup space
-	lobbyManager := newTestLobbyManager()
-	store := newTestStore()
-	manager := stream.NewSpaceManager(lobbyManager, store, nil)
-	space, _ := manager.GetOrCreateSpace(context.Background(), spaceId)
-
-	// Setup Stream
-	s := &stream.LiveStream{}
-	streamId, _ := space.LiveStreamRepo.Add(context.Background(), s)
-	router := NewRouter(securityConfig, rtpConfig, nil, manager)
-	return router, streamId
-}
-
 func TestWhepOfferReq(t *testing.T) {
 	t.Run("Request to start WHEP, but have no active web session", func(t *testing.T) {
-		router, streamId := testWhepReqSetup(t)
+		th, space, stream, _, bearer := testRouterSetup(t)
 
-		req := newSDPContentRequest("POST", fmt.Sprintf("/space/%s/stream/%s/whep", spaceId, streamId), nil, 0)
+		req := newSDPContentRequest("POST", fmt.Sprintf("/space/%s/stream/%s/whep", space.Identifier, stream.UUID.String()), nil, bearer, 0)
 		rr := httptest.NewRecorder()
-		router.ServeHTTP(rr, req)
+		th.router.ServeHTTP(rr, req)
 
 		// Then: status is 403 because no active web session
 		assert.Equal(t, http.StatusForbidden, rr.Code)
 	})
 
 	t.Run("Request to start and listen WHEP", func(t *testing.T) {
-		router, streamId := testWhepReqSetup(t)
-		sessionCookie, reqToken := runWhipRequest(t, router, streamId)
+		th, space, stream, _, bearer := testRouterSetup(t)
+		sessionCookie, reqToken := runWhipRequest(t, th.router, space.Identifier, stream.UUID.String(), bearer)
 
-		startReq := newSDPContentRequest("POST", fmt.Sprintf("/space/%s/stream/%s/whep", spaceId, streamId), nil, 0)
+		startReq := newSDPContentRequest("POST", fmt.Sprintf("/space/%s/stream/%s/whep", space.Identifier, stream.UUID.String()), nil, bearer, 0)
 		startReq.AddCookie(sessionCookie)
 		startReq.Header.Set(reqTokenHeaderName, reqToken)
 		startRr := httptest.NewRecorder()
-		router.ServeHTTP(startRr, startReq)
+		th.router.ServeHTTP(startRr, startReq)
 
 		assert.Equal(t, http.StatusCreated, startRr.Code)
 		assert.Equal(t, "application/sdp", startRr.Header().Get("Content-Type"))
@@ -61,11 +42,11 @@ func TestWhepOfferReq(t *testing.T) {
 		body := bytes.NewBuffer(answer)
 		reqToken = startRr.Header().Get(reqTokenHeaderName)
 
-		listenReq := newSDPContentRequest("PATCH", fmt.Sprintf("/space/%s/stream/%s/whep", spaceId, streamId), body, len(answer))
+		listenReq := newSDPContentRequest("PATCH", fmt.Sprintf("/space/%s/stream/%s/whep", space.Identifier, stream.UUID.String()), body, bearer, len(answer))
 		listenReq.AddCookie(sessionCookie)
 		listenReq.Header.Set(reqTokenHeaderName, reqToken)
 		listenRr := httptest.NewRecorder()
-		router.ServeHTTP(listenRr, listenReq)
+		th.router.ServeHTTP(listenRr, listenReq)
 
 		assert.Equal(t, http.StatusCreated, listenRr.Code)
 		assert.Equal(t, "application/sdp", listenRr.Header().Get("Content-Type"))

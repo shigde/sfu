@@ -6,16 +6,17 @@ import (
 	"sync"
 
 	"github.com/shigde/sfu/internal/activitypub/instance"
+	"github.com/shigde/sfu/internal/storage"
 	"gorm.io/gorm/clause"
 )
 
 type VideoRepository struct {
 	locker  *sync.RWMutex
 	config  *instance.FederationConfig
-	storage instance.Storage
+	storage storage.Storage
 }
 
-func NewVideoRepository(config *instance.FederationConfig, storage instance.Storage) *VideoRepository {
+func NewVideoRepository(config *instance.FederationConfig, storage storage.Storage) *VideoRepository {
 	return &VideoRepository{
 		&sync.RWMutex{},
 		config,

@@ -6,16 +6,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
-	"github.com/shigde/sfu/internal/lobby"
 )
 
 type LiveLobbyService struct {
-	// @TODO Space should not have this properties. Redactor this. This make a lot of trouble
-	lobbyManager *lobby.LobbyManager
+	lobbyManager liveLobbyManager
 	store        storage
 }
 
-func NewLiveLobbyService(store storage, lobbyManager *lobby.LobbyManager) *LiveLobbyService {
+func NewLiveLobbyService(store storage, lobbyManager liveLobbyManager) *LiveLobbyService {
 	return &LiveLobbyService{
 		store:        store,
 		lobbyManager: lobbyManager,

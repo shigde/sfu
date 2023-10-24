@@ -2,7 +2,6 @@ package media
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,33 +10,16 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
-	"github.com/shigde/sfu/internal/stream"
 	"github.com/stretchr/testify/assert"
 )
 
-func testWhipReqSetup(t *testing.T) (*mux.Router, string) {
-	t.Helper()
-
-	// Setup space
-	lobbyManager := newTestLobbyManager()
-	store := newTestStore()
-	manager := stream.NewSpaceManager(lobbyManager, store, nil)
-	space, _ := manager.GetOrCreateSpace(context.Background(), spaceId)
-
-	// Setup Stream
-	s := &stream.LiveStream{}
-	streamId, _ := space.LiveStreamRepo.Add(context.Background(), s)
-	router := NewRouter(securityConfig, rtpConfig, nil, manager)
-	return router, streamId
-}
-
-func runWhipRequest(t *testing.T, router *mux.Router, streamId string) (*http.Cookie, string) {
+func runWhipRequest(t *testing.T, router *mux.Router, spaceId string, streamId string, bearer string) (*http.Cookie, string) {
 	t.Helper()
 
 	offer := []byte(testOffer)
 	body := bytes.NewBuffer(offer)
 
-	req := newSDPContentRequest("POST", fmt.Sprintf("/space/%s/stream/%s/whip", spaceId, streamId), body, len(offer))
+	req := newSDPContentRequest("POST", fmt.Sprintf("/space/%s/stream/%s/whip", spaceId, streamId), body, bearer, len(offer))
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 	session := rr.Result().Cookies()[0]
@@ -46,14 +28,14 @@ func runWhipRequest(t *testing.T, router *mux.Router, streamId string) (*http.Co
 }
 
 func TestWhipReq(t *testing.T) {
-	router, streamId := testWhipReqSetup(t)
+	th, space, stream, _, bearer := testRouterSetup(t)
 	resourceRxp := fmt.Sprintf("^resource/%s", resourceID)
 	offer := []byte(testOffer)
 	body := bytes.NewBuffer(offer)
 
-	req := newSDPContentRequest("POST", fmt.Sprintf("/space/%s/stream/%s/whip", spaceId, streamId), body, len(offer))
+	req := newSDPContentRequest("POST", fmt.Sprintf("/space/%s/stream/%s/whip", space.Identifier, stream.UUID.String()), body, bearer, len(offer))
 	rr := httptest.NewRecorder()
-	router.ServeHTTP(rr, req)
+	th.router.ServeHTTP(rr, req)
 
 	// Then: status is 201
 	assert.Equal(t, http.StatusCreated, rr.Code)
@@ -66,20 +48,20 @@ func TestWhipReq(t *testing.T) {
 }
 
 func TestWhipDeleteReq(t *testing.T) {
-	router, streamId := testWhipReqSetup(t)
-	sessionCookie, reqToken := runWhipRequest(t, router, streamId)
+	th, space, stream, _, bearer := testRouterSetup(t)
+	sessionCookie, reqToken := runWhipRequest(t, th.router, space.Identifier, stream.UUID.String(), bearer)
 
-	req := newSDPContentRequest("DELETE", fmt.Sprintf("/space/%s/stream/%s/whip", spaceId, streamId), nil, 0)
+	req := newSDPContentRequest("DELETE", fmt.Sprintf("/space/%s/stream/%s/whip", space.Identifier, stream.UUID.String()), nil, bearer, 0)
 	req.AddCookie(sessionCookie)
 	req.Header.Set(reqTokenHeaderName, reqToken)
 
 	rr := httptest.NewRecorder()
-	router.ServeHTTP(rr, req)
+	th.router.ServeHTTP(rr, req)
 	// Then: status is 200
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
-func newSDPContentRequest(method string, url string, body io.Reader, len int) *http.Request {
+func newSDPContentRequest(method string, url string, body io.Reader, bearer string, len int) *http.Request {
 	req, _ := http.NewRequest(method, url, body)
 	req.Header.Set("Content-Type", "application/sdp")
 	req.Header.Set("Content-Length", strconv.Itoa(len))
