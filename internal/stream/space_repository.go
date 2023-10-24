@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -23,7 +24,7 @@ func NewSpaceRepository(store storage) *SpaceRepository {
 	}
 }
 
-func (r *SpaceRepository) GetSpace(ctx context.Context, id string) (*Space, error) {
+func (r *SpaceRepository) Add(ctx context.Context, space *Space) (string, error) {
 	r.locker.Lock()
 	tx, cancel := r.getStoreWithContext(ctx)
 	defer func() {
@@ -31,24 +32,39 @@ func (r *SpaceRepository) GetSpace(ctx context.Context, id string) (*Space, erro
 		cancel()
 	}()
 
-	space, err := newSpace(id)
-	if err != nil {
-		return nil, fmt.Errorf("finding space by space id %s: %w", id, err)
+	if len(space.Identifier) == 0 {
+		space.Identifier = uuid.NewString()
 	}
 
-	result := tx.First(space)
+	result := tx.Create(space)
+	if result.Error != nil || result.RowsAffected != 1 {
+		return "", fmt.Errorf("adding live stream: %w", result.Error)
+	}
+	return space.Identifier, nil
+}
+
+func (r *SpaceRepository) GetByIdentifier(ctx context.Context, identifier string) (*Space, error) {
+	r.locker.Lock()
+	tx, cancel := r.getStoreWithContext(ctx)
+	defer func() {
+		r.locker.Unlock()
+		cancel()
+	}()
+
+	var space Space
+	result := tx.Where("identifier = ?", identifier).First(&space)
 	if result.Error != nil {
-		err = fmt.Errorf("finding space by space id %s: %w", id, result.Error)
+		err := fmt.Errorf("finding space by space identifier %s: %w", identifier, result.Error)
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, errors.Join(err, ErrSpaceNotFound)
 		}
 		return nil, err
 	}
 
-	return space, nil
+	return &space, nil
 }
 
-func (r *SpaceRepository) GetSpaceByIdentifier(ctx context.Context, id string) (*Space, error) {
+func (r *SpaceRepository) CreateWithIdentifier(ctx context.Context, identifier string) (*Space, error) {
 	r.locker.Lock()
 	tx, cancel := r.getStoreWithContext(ctx)
 	defer func() {
@@ -56,24 +72,16 @@ func (r *SpaceRepository) GetSpaceByIdentifier(ctx context.Context, id string) (
 		cancel()
 	}()
 
-	space, err := newSpace(id)
-	if err != nil {
-		return nil, fmt.Errorf("finding space by space id %s: %w", id, err)
-	}
-
-	result := tx.First(space)
+	space := &Space{Identifier: identifier}
+	result := tx.Create(space)
 	if result.Error != nil {
-		err = fmt.Errorf("finding space by space id %s: %w", id, result.Error)
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, errors.Join(err, ErrSpaceNotFound)
-		}
-		return nil, err
+		return nil, fmt.Errorf("creating space for name %s: %w", space.Identifier, result.Error)
 	}
 
 	return space, nil
 }
 
-func (r *SpaceRepository) Delete(ctx context.Context, id string) error {
+func (r *SpaceRepository) Delete(ctx context.Context, identifier string) error {
 	r.locker.Lock()
 	tx, cancel := r.getStoreWithContext(ctx)
 	defer func() {
@@ -81,14 +89,9 @@ func (r *SpaceRepository) Delete(ctx context.Context, id string) error {
 		cancel()
 	}()
 
-	space, err := newSpace(id)
-	if err != nil {
-		return fmt.Errorf("deleting space by space id %s: %w", id, err)
-	}
-
-	result := tx.Delete(space)
+	result := tx.Where("identifier = ?", identifier).Delete(&Space{})
 	if result.Error != nil {
-		return fmt.Errorf("deleting space by space id %s: %w", id, result.Error)
+		return fmt.Errorf("deleting space by space id %s: %w", identifier, result.Error)
 	}
 	return nil
 }

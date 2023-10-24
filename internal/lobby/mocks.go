@@ -25,11 +25,11 @@ func newRtpEngineMock() *rtpEngineMock {
 	return &rtpEngineMock{}
 }
 
-func (e *rtpEngineMock) NewReceiverEndpoint(_ context.Context, _ webrtc.SessionDescription, _ rtp.TrackDispatcher, _ rtp.StateEventHandler) (*rtp.Endpoint, error) {
+func (e *rtpEngineMock) NewReceiverEndpoint(_ context.Context, _ uuid.UUID, _ webrtc.SessionDescription, _ rtp.TrackDispatcher, _ rtp.StateEventHandler) (*rtp.Endpoint, error) {
 	return e.conn, e.err
 }
 
-func (e *rtpEngineMock) NewSenderEndpoint(_ context.Context, _ []*webrtc.TrackLocalStaticRTP, _ rtp.StateEventHandler) (*rtp.Endpoint, error) {
+func (e *rtpEngineMock) NewSenderEndpoint(_ context.Context, _ uuid.UUID, _ []*webrtc.TrackLocalStaticRTP, _ rtp.StateEventHandler) (*rtp.Endpoint, error) {
 	return e.conn, e.err
 }
 
@@ -54,4 +54,18 @@ func mockIdelConnection() *rtp.Endpoint {
 		GatherComplete: make(chan struct{}),
 	}
 	return rtp.NewMockConnection(ops)
+}
+
+type streamForwarderMock struct {
+	Tracks map[string]*rtp.TrackInfo
+}
+
+func newStreamForwarderMock() *streamForwarderMock {
+	tracks := make(map[string]*rtp.TrackInfo)
+	return &streamForwarderMock{
+		Tracks: tracks,
+	}
+}
+func (sf *streamForwarderMock) AddTrack(track *rtp.TrackInfo) {
+	sf.Tracks[track.Track.ID()] = track
 }

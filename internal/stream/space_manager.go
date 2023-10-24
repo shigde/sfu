@@ -8,11 +8,11 @@ type SpaceManager struct {
 	spaces *SpaceRepository
 }
 
-func NewSpaceManager(store storage, liveRepo *LiveStreamRepository) *SpaceManager {
+func NewSpaceManager(store storage) *SpaceManager {
 	spaces := NewSpaceRepository(store)
 	return &SpaceManager{spaces}
 }
 
-func (m *SpaceManager) GetSpace(ctx context.Context, id string) (*Space, error) {
-	return m.spaces.GetSpace(ctx, id)
+func (m *SpaceManager) GetSpace(ctx context.Context, identifier string) (*Space, error) {
+	return m.spaces.GetByIdentifier(ctx, identifier)
 }

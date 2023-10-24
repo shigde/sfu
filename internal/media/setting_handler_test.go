@@ -6,36 +6,24 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
-	"github.com/shigde/sfu/internal/stream"
 	"github.com/stretchr/testify/assert"
 )
 
-func testSettingReqSetup(t *testing.T) *mux.Router {
-	t.Helper()
-	// Setup space
-	lobbyManager := newTestLobbyManager()
-	store := newTestStore()
-	manager, _ := stream.NewSpaceManager(lobbyManager, store)
-
-	router := NewRouter(securityConfig, rtpConfig, manager)
-	return router
-}
-
 func TestGetSettingReq(t *testing.T) {
-	router := testSettingReqSetup(t)
+	th, _, _, _, bearer := testRouterSetup(t)
 
 	// When: GET /streams is called
-	req := newJsonContentRequest("GET", "/space/setting", nil)
+	req := newJsonContentRequest("GET", "/space/setting", nil, bearer)
 	rr := httptest.NewRecorder()
-	router.ServeHTTP(rr, req)
+	th.router.ServeHTTP(rr, req)
 
 	// Then: status is 200
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
-func getCsrfRequestToken(t *testing.T, router *mux.Router) string {
+func getCsrfRequestToken(t *testing.T, router *mux.Router, bearer string) string {
 	t.Helper()
-	req := newJsonContentRequest("GET", "/space/setting", nil)
+	req := newJsonContentRequest("GET", "/space/setting", nil, bearer)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 	return rr.Result().Cookies()[0].Value

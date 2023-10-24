@@ -8,12 +8,13 @@ import (
 	"github.com/shigde/sfu/internal/activitypub/models"
 	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/lobby"
+	"github.com/shigde/sfu/internal/storage"
 	"github.com/shigde/sfu/internal/stream"
 	"golang.org/x/exp/slog"
 	"gorm.io/gorm"
 )
 
-func Migrate(config *instance.FederationConfig, storage instance.Storage) error {
+func Migrate(config *instance.FederationConfig, storage storage.Storage) error {
 	storage.GetDatabase()
 	db := storage.GetDatabase()
 

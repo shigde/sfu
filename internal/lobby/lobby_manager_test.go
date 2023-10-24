@@ -6,15 +6,17 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shigde/sfu/internal/logging"
+	"github.com/shigde/sfu/internal/storage"
 	"github.com/stretchr/testify/assert"
 )
 
 func testLobbyManagerSetup(t *testing.T) (*LobbyManager, *lobby, uuid.UUID) {
 	t.Helper()
 	logging.SetupDebugLogger()
+	store := storage.NewTestStore()
 	engine := mockRtpEngineForOffer(mockedAnswer)
 
-	manager := NewLobbyManager(engine)
+	manager := NewLobbyManager(store, engine)
 	lobby := manager.lobbies.getOrCreateLobby(uuid.New())
 	user := uuid.New()
 	session := newSession(user, lobby.hub, engine, nil)

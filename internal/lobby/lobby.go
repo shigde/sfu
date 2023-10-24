@@ -1,11 +1,13 @@
 package lobby
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/rtmp"
 	"github.com/shigde/sfu/internal/rtp"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
@@ -23,6 +25,7 @@ type lobby struct {
 	Id            uuid.UUID
 	sessions      *sessionRepository
 	forwarder     *rtp.UdpForwarder
+	streamer      *rtmp.Streamer
 	hub           *hub
 	rtpEngine     rtpEngine
 	resourceId    uuid.UUID
@@ -41,6 +44,8 @@ func newLobby(id uuid.UUID, rtpEngine rtpEngine) *lobby {
 	if err != nil {
 		slog.Error("create udp forwarder", "err", err)
 	}
+
+	streamer := rtmp.NewStreamer()
 	hub := newHub(sessions, forwarder)
 	lobby := &lobby{
 		Id:            id,
@@ -48,6 +53,7 @@ func newLobby(id uuid.UUID, rtpEngine rtpEngine) *lobby {
 		rtpEngine:     rtpEngine,
 		sessions:      sessions,
 		forwarder:     forwarder,
+		streamer:      streamer,
 		hub:           hub,
 		quit:          quitChan,
 		reqChan:       reqChan,
@@ -246,7 +252,23 @@ func (l *lobby) handleLeave(req *lobbyRequest) {
 func (l *lobby) handleLiveStreamReq(req *lobbyRequest) {
 	slog.Info("lobby.lobby: handleLiveStreamReq", "lobbyId", l.Id, "user", req.user)
 	data, _ := req.data.(*liveStreamData)
-	//deleted, err := l.deleteSessionByUserId(req.user)
+	if data.cmd == "start" {
+		streamUrl := fmt.Sprintf("%s/%s", data.rtmpUrl, data.key)
+		if err := l.streamer.StartFFmpeg(context.Background(), streamUrl); err != nil {
+			req.err <- fmt.Errorf("starting ffmeg: %w", err)
+			return
+		}
+	}
+	if data.cmd == "stop" {
+		oldStreamer := l.streamer
+		l.streamer = rtmp.NewStreamer()
+		oldStreamer.Stop()
+	}
+
+	if data.cmd == "status" {
+		// nothing to d
+	}
+
 	//if err != nil {
 	//	req.err <- fmt.Errorf("no session existing for user %s: %w", req.user, errNoSession)
 	//}

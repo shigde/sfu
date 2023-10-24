@@ -80,9 +80,9 @@ func (r *LiveStreamRepository) FindByUuid(ctx context.Context, streamUUID string
 		return nil, fmt.Errorf("parsing UUID: %w", err)
 	}
 
-	liveStream := &LiveStream{UUID: UUID}
+	var liveStream LiveStream
 
-	result := tx.Preload("Space").Preload("Lobby").Preload("Account").First(liveStream)
+	result := tx.Preload("Space").Preload("Lobby").Preload("Account").Where("uuid=?", UUID).First(&liveStream)
 	if result.Error != nil {
 		err := fmt.Errorf("finding stream by uuid %s: %w", streamUUID, result.Error)
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -91,7 +91,7 @@ func (r *LiveStreamRepository) FindByUuid(ctx context.Context, streamUUID string
 		return nil, err
 	}
 
-	return liveStream, nil
+	return &liveStream, nil
 }
 
 func (r *LiveStreamRepository) Delete(ctx context.Context, streamUUID string) error {
@@ -105,7 +105,7 @@ func (r *LiveStreamRepository) Delete(ctx context.Context, streamUUID string) er
 	if err != nil {
 		return fmt.Errorf("parsing UUID: %w", err)
 	}
-	result := tx.Delete(&LiveStream{UUID: UUID})
+	result := tx.Where("uuid=?", UUID).Delete(&LiveStream{})
 	if result.Error != nil {
 		return fmt.Errorf("deleting stream by id %s: %w", streamUUID, result.Error)
 	}
@@ -126,7 +126,7 @@ func (r *LiveStreamRepository) Contains(ctx context.Context, streamUUID string) 
 	}
 
 	var count int64
-	tx.Find(&LiveStream{UUID: UUID}).Count(&count)
+	tx.Where("uuid=?", UUID).Find(&LiveStream{}).Count(&count)
 	return count == 1
 }
 
@@ -172,13 +172,13 @@ func (r *LiveStreamRepository) UpsertLiveStream(ctx context.Context, stream *Liv
 	}()
 
 	account := auth.Account{User: stream.User}
-	resultAc := tx.First(&account)
+	resultAc := tx.Where("user=?", stream.User).First(&account)
 	if resultAc.Error != nil && !errors.Is(resultAc.Error, gorm.ErrRecordNotFound) {
 		return fmt.Errorf("serching account: %w", resultAc.Error)
 	}
 
 	space := Space{Identifier: stream.Space.Identifier}
-	resultSp := tx.First(&space)
+	resultSp := tx.Where("identifier=?", stream.Space.Identifier).First(&space)
 	if resultSp.Error != nil && !errors.Is(resultSp.Error, gorm.ErrRecordNotFound) {
 		return fmt.Errorf("serching space: %w", resultAc.Error)
 	}

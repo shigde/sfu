@@ -14,12 +14,13 @@ import (
 	"github.com/shigde/sfu/internal/activitypub/webfinger"
 	"github.com/shigde/sfu/internal/activitypub/workerpool"
 	"github.com/shigde/sfu/internal/migration"
+	"github.com/shigde/sfu/internal/storage"
 	"github.com/superseriousbusiness/activity/pub"
 )
 
 type ApApi struct {
 	config       *instance.FederationConfig
-	Storage      instance.Storage
+	Storage      storage.Storage
 	actorRepo    *models.ActorRepository
 	followRepo   *models.FollowRepository
 	videoRepo    *models.VideoRepository
@@ -32,7 +33,7 @@ type ApApi struct {
 
 func NewApApi(
 	config *instance.FederationConfig,
-	storage instance.Storage,
+	storage storage.Storage,
 	streamService services.StreamService,
 ) (*ApApi, error) {
 	if err := migration.Migrate(config, storage); err != nil {

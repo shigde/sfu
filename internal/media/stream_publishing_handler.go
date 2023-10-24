@@ -17,6 +17,7 @@ func publishLiveStream(streamService *stream.LiveStreamService, liveService *str
 
 		user, err := getUserFromSession(w, r)
 		if err != nil {
+			httpError(w, "forbidden", http.StatusForbidden, err)
 			return
 		}
 
@@ -27,7 +28,13 @@ func publishLiveStream(streamService *stream.LiveStreamService, liveService *str
 
 		userId, _ := user.GetUuid()
 
-		if err := liveService.StartLiveStream(r.Context(), liveStream, userId); err != nil {
+		info, err := getStreamLiveInfoPayload(w, r)
+		if err != nil {
+			httpError(w, "forbidden", http.StatusBadRequest, err)
+			return
+		}
+
+		if err := liveService.StartLiveStream(r.Context(), liveStream, info, userId); err != nil {
 			httpError(w, "error start live stream", http.StatusInternalServerError, err)
 			return
 		}
@@ -74,4 +81,16 @@ func getStatusOfLiveStream(streamService *stream.LiveStreamService, liveService 
 		//	httpError(w, "error reading stream list", http.StatusInternalServerError, err)
 		//}
 	}
+}
+
+func getStreamLiveInfoPayload(w http.ResponseWriter, r *http.Request) (*stream.LiveStreamInfo, error) {
+	dec, err := getJsonPayload(w, r)
+	if err != nil {
+		return nil, err
+	}
+	var info stream.LiveStreamInfo
+	if err := dec.Decode(&info); err != nil {
+		return nil, invalidPayload
+	}
+	return &info, nil
 }

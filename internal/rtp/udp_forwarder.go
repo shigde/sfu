@@ -73,21 +73,21 @@ func (f *UdpForwarder) Stop() {
 func (f *UdpForwarder) AddTrack(track *TrackInfo) {
 	if track.RemoteTrack.Kind() == webrtc.RTPCodecTypeAudio {
 		go func() {
-			slog.Info("forwarder: writing audio", "forwarderId", f.id)
+			slog.Info("forwarder: writing audio", "forwarderId", f.id.String())
 			if err := f.writeTrack(f.audio, track.RemoteTrack); err != nil {
-				slog.Error("writing stream audio", "err", err, "forwarderId", f.id)
+				slog.Error("writing stream audio", "err", err, "forwarderId", f.id.String())
 			}
-			slog.Info("stop writing stream audio", "forwarderId", f.id)
+			slog.Info("stop writing stream audio", "forwarderId", f.id.String())
 		}()
 	}
 
 	if track.RemoteTrack.Kind() == webrtc.RTPCodecTypeVideo {
 		go func() {
-			slog.Info("forwarder: writing video", "forwarderId", f.id)
+			slog.Info("forwarder: writing video", "forwarderId", f.id.String())
 			if err := f.writeTrack(f.video, track.RemoteTrack); err != nil {
-				slog.Error("writing stream video", "err", err, "forwarderId", f.id)
+				slog.Error("writing stream video", "err", err, "forwarderId", f.id.String())
 			}
-			slog.Info("forwarder: stop writing stream video", "forwarderId", f.id)
+			slog.Info("forwarder: stop writing stream video", "forwarderId", f.id.String())
 		}()
 	}
 }
@@ -167,4 +167,11 @@ func (f *UdpForwarder) writeTrack(udp *UdpConnection, track *webrtc.TrackRemote)
 		}
 	}
 	return nil
+}
+
+func (f *UdpForwarder) GetConnData() UdpShare {
+	return UdpShare{
+		Audio: UdpShareInfo{Port: f.audio.port, PayloadType: f.audio.payloadType},
+		Video: UdpShareInfo{Port: f.video.port, PayloadType: f.video.payloadType},
+	}
 }

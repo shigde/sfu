@@ -36,6 +36,7 @@ type leaveData struct {
 type liveStreamData struct {
 	cmd      string
 	key      string
+	rtmpUrl  string
 	response chan bool
 }
 
@@ -71,11 +72,12 @@ func newListenData(answer *webrtc.SessionDescription) *listenData {
 	}
 }
 
-func newLiveStreamData(cmd string, key string) *liveStreamData {
+func newLiveStreamData(cmd string, key string, rtmpUrl string) *liveStreamData {
 	resChan := make(chan bool)
 	return &liveStreamData{
 		cmd:      cmd,
 		key:      key,
+		rtmpUrl:  rtmpUrl,
 		response: resChan,
 	}
 }

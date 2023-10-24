@@ -109,7 +109,7 @@ func (ls *LiveStreamService) Delete(ctx context.Context, uuid string, user strin
 }
 
 func (ls *LiveStreamService) CreateStream(ctx context.Context, liveStream *LiveStream, identifier string, user string) (string, error) {
-	space, err := ls.spaceRepo.GetSpaceByIdentifier(ctx, identifier)
+	space, err := ls.spaceRepo.GetByIdentifier(ctx, identifier)
 	if err != nil {
 		return "", fmt.Errorf("find space by identifier: %w", err)
 	}
@@ -120,7 +120,7 @@ func (ls *LiveStreamService) CreateStream(ctx context.Context, liveStream *LiveS
 }
 
 func (ls *LiveStreamService) UpdateStream(ctx context.Context, liveStream *LiveStream, identifier string, user string) error {
-	space, err := ls.spaceRepo.GetSpaceByIdentifier(ctx, identifier)
+	space, err := ls.spaceRepo.GetByIdentifier(ctx, identifier)
 	if err != nil {
 		return fmt.Errorf("find space by identifier: %w", err)
 	}

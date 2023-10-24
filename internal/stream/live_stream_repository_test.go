@@ -10,7 +10,9 @@ import (
 
 func testLiveStreamRepositorySetup(t *testing.T) (*LiveStreamRepository, string) {
 	t.Helper()
-	repository := NewLiveStreamRepository(newTestStore())
+	store := newTestStore()
+	repository := NewLiveStreamRepository(store)
+	_ = store.db.AutoMigrate(&LiveStream{})
 	s := &LiveStream{}
 	streamId, _ := repository.Add(context.Background(), s)
 
@@ -21,7 +23,8 @@ func TestLiveStreamRepository(t *testing.T) {
 	assertRtpStream := func(t testing.TB, got *LiveStream, want *LiveStream) {
 		t.Helper()
 		assert.NotNil(t, got)
-		assert.Equal(t, want, got)
+		assert.Equal(t, want.ID, got.ID)
+		assert.Equal(t, want.UUID, got.UUID)
 	}
 
 	assertRepoLength := func(t testing.TB, repo *LiveStreamRepository, want int64) {

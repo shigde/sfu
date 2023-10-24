@@ -18,7 +18,3 @@ type Space struct {
 	Account    *auth.Account `json:"-" gorm:"foreignKey:AccountId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	gorm.Model
 }
-
-func newSpace(id string) (*Space, error) {
-	return &Space{Identifier: id}, nil
-}

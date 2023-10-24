@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/rtp"
-	"github.com/shigde/sfu/internal/storage"
 )
 
 const tracerName = "github.com/shigde/sfu/internal/lobby"
@@ -21,7 +20,7 @@ type rtpEngine interface {
 	NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, localTracks []*webrtc.TrackLocalStaticRTP, stateHandler rtp.StateEventHandler) (*rtp.Endpoint, error)
 }
 
-func NewLobbyManager(storage *storage.Store, e rtpEngine) *LobbyManager {
+func NewLobbyManager(storage store, e rtpEngine) *LobbyManager {
 	lobbies := newLobbyRepository(storage, e)
 	return &LobbyManager{lobbies}
 }
@@ -150,10 +149,16 @@ func (m *LobbyManager) LeaveLobby(ctx context.Context, liveStreamId uuid.UUID, u
 	return false, nil
 }
 
-func (m *LobbyManager) StartLiveStream(ctx context.Context, liveStreamId uuid.UUID, userId uuid.UUID) error {
+func (m *LobbyManager) StartLiveStream(
+	ctx context.Context,
+	liveStreamId uuid.UUID,
+	key string,
+	rtmpUrl string,
+	userId uuid.UUID,
+) error {
 	if lobby, hasLobby := m.lobbies.getLobby(liveStreamId); hasLobby {
 		request := newLobbyRequest(ctx, userId)
-		startData := newLiveStreamData("start", "key")
+		startData := newLiveStreamData("start", key, rtmpUrl)
 		request.data = startData
 		go lobby.runRequest(request)
 

@@ -7,3 +7,13 @@ type UdpConnection struct {
 	port        int
 	payloadType uint8
 }
+
+type UdpShare struct {
+	Audio UdpShareInfo
+	Video UdpShareInfo
+}
+
+type UdpShareInfo struct {
+	Port        int
+	PayloadType uint8
+}
