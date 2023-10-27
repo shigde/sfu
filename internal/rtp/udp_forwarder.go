@@ -17,9 +17,7 @@ type UdpForwarder struct {
 	quit         chan struct{}
 }
 
-func NewUdpForwarder(id uuid.UUID) (*UdpForwarder, error) {
-	quit := make(chan struct{})
-
+func NewUdpForwarder(id uuid.UUID, quit chan struct{}) (*UdpForwarder, error) {
 	f := &UdpForwarder{
 		id:    id,
 		audio: &UdpConnection{port: 4000, payloadType: 111},
@@ -142,7 +140,8 @@ func (f *UdpForwarder) writeTrack(udp *UdpConnection, track *webrtc.TrackRemote)
 				// Read
 				n, _, readErr := track.Read(b)
 				if readErr != nil {
-					panic(readErr)
+					f.log(fmt.Sprintf("can not anymore read %s track %s  stream %s", track.Kind(), track.ID(), track.StreamID()))
+					return nil
 				}
 
 				// Unmarshal the packet and update the PayloadType

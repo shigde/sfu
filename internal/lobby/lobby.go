@@ -40,13 +40,13 @@ func newLobby(id uuid.UUID, rtpEngine rtpEngine) *lobby {
 	quitChan := make(chan struct{})
 	reqChan := make(chan *lobbyRequest)
 	childQuitChan := make(chan uuid.UUID)
-	forwarder, err := rtp.NewUdpForwarder(id)
+	forwarder, err := rtp.NewUdpForwarder(id, quitChan)
 	if err != nil {
 		slog.Error("create udp forwarder", "err", err)
 	}
 
-	streamer := rtmp.NewStreamer()
-	hub := newHub(sessions, forwarder)
+	streamer := rtmp.NewStreamer(quitChan)
+	hub := newHub(sessions, forwarder, quitChan)
 	lobby := &lobby{
 		Id:            id,
 		resourceId:    uuid.New(),
@@ -263,7 +263,7 @@ func (l *lobby) handleLiveStreamReq(req *lobbyRequest) {
 	if data.cmd == "stop" {
 		slog.Debug("lobby.lobby: stop ffmpeg streamer", "lobbyId", l.Id, "user", req.user)
 		oldStreamer := l.streamer
-		l.streamer = rtmp.NewStreamer()
+		l.streamer = rtmp.NewStreamer(l.quit)
 		oldStreamer.Stop()
 	}
 
@@ -298,4 +298,8 @@ func (l *lobby) deleteSessionByUserId(userId uuid.UUID) (bool, error) {
 		return deleted, nil
 	}
 	return false, errNoSession
+}
+
+func (l *lobby) log(msg string) {
+	slog.Debug(msg, "lobbyId", l.Id, "obj", "lobby")
 }

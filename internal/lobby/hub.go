@@ -24,8 +24,7 @@ type hub struct {
 	quit        chan struct{}
 }
 
-func newHub(sessionRepo *sessionRepository, forwarder streamForwarder) *hub {
-	quit := make(chan struct{})
+func newHub(sessionRepo *sessionRepository, forwarder streamForwarder, quit chan struct{}) *hub {
 	tracks := make(map[string]*rtp.TrackInfo)
 	requests := make(chan *hubRequest)
 	hub := &hub{

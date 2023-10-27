@@ -61,7 +61,7 @@ func (s *LiveLobbyService) LeaveLobby(ctx context.Context, stream *LiveStream, u
 }
 
 func (s *LiveLobbyService) StartLiveStream(ctx context.Context, stream *LiveStream, streamInfo *LiveStreamInfo, userId uuid.UUID) error {
-	if err := s.lobbyManager.StartLiveStream(ctx, stream.Lobby.UUID, streamInfo.StreamKey, streamInfo.Rtmp, userId); err != nil {
+	if err := s.lobbyManager.StartLiveStream(ctx, stream.Lobby.UUID, streamInfo.StreamKey, streamInfo.RtmpUrl, userId); err != nil {
 		return fmt.Errorf("start live stream: %w", err)
 	}
 	return nil
