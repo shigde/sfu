@@ -19,7 +19,7 @@ type localStream struct {
 	sessionId                uuid.UUID
 	streamKind               TrackInfoKind
 	audioTrack, videoTrack   *webrtc.TrackLocalStaticRTP
-	audioWriter, videoWriter *writer
+	audioWriter, videoWriter *localWriter
 	dispatcher               TrackDispatcher
 	globalQuit               <-chan struct{}
 }
@@ -37,7 +37,7 @@ func (s *localStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemo
 		return fmt.Errorf("adding audio remote track (%s:%s) to local stream: %w", track.ID(), track.StreamID(), err)
 	}
 	s.audioTrack = audio
-	s.audioWriter = newWriter(s.audioTrack.ID(), s.globalQuit)
+	s.audioWriter = newLocalWriter(s.audioTrack.ID(), s.globalQuit)
 
 	// start local audio track
 	go func() {
@@ -61,7 +61,7 @@ func (s *localStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemo
 	}
 
 	s.videoTrack = video
-	s.videoWriter = newWriter(s.videoTrack.ID(), s.globalQuit)
+	s.videoWriter = newLocalWriter(s.videoTrack.ID(), s.globalQuit)
 
 	// start local video track
 	go func() {

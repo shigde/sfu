@@ -17,13 +17,14 @@ type receiver struct {
 	id         uuid.UUID
 	streams    map[string]*localStream
 	dispatcher TrackDispatcher
+	trackInfos map[string]*TrackInfo
 	quit       chan struct{}
 }
 
-func newReceiver(sessionId uuid.UUID, d TrackDispatcher) *receiver {
+func newReceiver(sessionId uuid.UUID, d TrackDispatcher, trackInfos map[string]*TrackInfo) *receiver {
 	streams := make(map[string]*localStream)
 	quit := make(chan struct{})
-	return &receiver{sync.RWMutex{}, sessionId, streams, d, quit}
+	return &receiver{sync.RWMutex{}, sessionId, streams, d, trackInfos, quit}
 }
 
 func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.RTPReceiver) {
@@ -31,7 +32,7 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 	ctx, span := otel.Tracer(tracerName).Start(context.Background(), "rtp.receiver: on track")
 	defer span.End()
 
-	streamKind := TrackInfoKindPeer
+	streamKind := TrackInfoKindGuest
 	if len(r.streams) > 0 {
 		streamKind = TrackInfoKindStream
 		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, nil, remoteTrack, streamKind))

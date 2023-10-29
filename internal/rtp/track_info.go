@@ -15,7 +15,7 @@ type TrackInfo struct {
 type TrackInfoKind int
 
 const (
-	TrackInfoKindPeer TrackInfoKind = iota + 1
+	TrackInfoKindGuest TrackInfoKind = iota + 1
 	TrackInfoKindStream
 )
 
