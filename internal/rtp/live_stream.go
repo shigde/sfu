@@ -11,21 +11,19 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-const rtpBufferSize = 1500
-
-type localStream struct {
+type liveStream struct {
 	id                       uuid.UUID
 	remoteId                 string
 	sessionId                uuid.UUID
-	audioTrack, videoTrack   *webrtc.TrackLocalStaticRTP
+	audioTrack, videoTrack   *LiveTrackStaticRTP
 	audioWriter, videoWriter *localWriter
 	kind                     TrackInfoKind
 	dispatcher               TrackDispatcher
 	globalQuit               <-chan struct{}
 }
 
-func newLocalStream(remoteId string, sessionId uuid.UUID, dispatcher TrackDispatcher, kind TrackInfoKind, globalQuit <-chan struct{}) *localStream {
-	return &localStream{
+func newLiveStream(remoteId string, sessionId uuid.UUID, dispatcher TrackDispatcher, kind TrackInfoKind, globalQuit <-chan struct{}) *liveStream {
+	return &liveStream{
 		id:         uuid.New(),
 		remoteId:   remoteId,
 		sessionId:  sessionId,
@@ -35,7 +33,29 @@ func newLocalStream(remoteId string, sessionId uuid.UUID, dispatcher TrackDispat
 	}
 }
 
-func (s *localStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) error {
+func (s *liveStream) createNewAudioLocalTrack(remoteTrack *webrtc.TrackRemote) (*LiveTrackStaticRTP, error) {
+	if s.audioTrack != nil {
+		return nil, errors.New("has already audio track")
+	}
+	audio, err := NewLiveTrackStaticRTP(remoteTrack.Codec().RTPCodecCapability, uuid.NewString(), s.id.String())
+	if err != nil {
+		return nil, fmt.Errorf("creating new local audio track for local stream %s: %w", s.id, err)
+	}
+	return audio, nil
+}
+
+func (s *liveStream) createNewVideoLocalTrack(remoteTrack *webrtc.TrackRemote) (*LiveTrackStaticRTP, error) {
+	if s.videoTrack != nil {
+		return nil, errors.New("has already video track")
+	}
+	video, err := NewLiveTrackStaticRTP(remoteTrack.Codec().RTPCodecCapability, uuid.NewString(), s.id.String())
+	if err != nil {
+		return nil, fmt.Errorf("creating new local video track for local stream %s: %w", s.id, err)
+	}
+	return video, nil
+}
+
+func (s *liveStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) error {
 	slog.Debug("rtp.receiver: on track")
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "localStream:writeAudioRtp")
 	defer span.End()
@@ -58,7 +78,7 @@ func (s *localStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemo
 	return nil
 }
 
-func (s *localStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) error {
+func (s *liveStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) error {
 	_, span := otel.Tracer(tracerName).Start(ctx, "localStream:writeVideoRtp")
 	defer span.End()
 
@@ -83,29 +103,7 @@ func (s *localStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemo
 	return nil
 }
 
-func (s *localStream) createNewAudioLocalTrack(remoteTrack *webrtc.TrackRemote) (*webrtc.TrackLocalStaticRTP, error) {
-	if s.audioTrack != nil {
-		return nil, errors.New("has already audio track")
-	}
-	audio, err := webrtc.NewTrackLocalStaticRTP(remoteTrack.Codec().RTPCodecCapability, uuid.NewString(), s.id.String())
-	if err != nil {
-		return nil, fmt.Errorf("creating new local audio track for local stream %s: %w", s.id, err)
-	}
-	return audio, nil
-}
-
-func (s *localStream) createNewVideoLocalTrack(remoteTrack *webrtc.TrackRemote) (*webrtc.TrackLocalStaticRTP, error) {
-	if s.videoTrack != nil {
-		return nil, errors.New("has already video track")
-	}
-	video, err := webrtc.NewTrackLocalStaticRTP(remoteTrack.Codec().RTPCodecCapability, uuid.NewString(), s.id.String())
-	if err != nil {
-		return nil, fmt.Errorf("creating new local video track for local stream %s: %w", s.id, err)
-	}
-	return video, nil
-}
-
-func (s *localStream) close() {
+func (s *liveStream) close() {
 	slog.Debug("rtp.local_stream: the stream shutdown", "streamId", s.id)
 	if s.audioWriter != nil && s.audioWriter.isRunning() {
 		s.audioWriter.close()
@@ -115,22 +113,22 @@ func (s *localStream) close() {
 	}
 }
 
-func (s *localStream) getVideoTrack() *webrtc.TrackLocalStaticRTP {
+func (s *liveStream) getVideoTrack() *webrtc.TrackLocalStaticRTP {
+	return nil
+}
+
+func (s *liveStream) getAudioTrack() *webrtc.TrackLocalStaticRTP {
+	return nil
+}
+
+func (s *liveStream) getLiveVideoTrack() *LiveTrackStaticRTP {
 	return s.videoTrack
 }
 
-func (s *localStream) getAudioTrack() *webrtc.TrackLocalStaticRTP {
+func (s *liveStream) getLiveAudioTrack() *LiveTrackStaticRTP {
 	return s.audioTrack
 }
 
-func (s *localStream) getLiveVideoTrack() *LiveTrackStaticRTP {
-	return nil
-}
-
-func (s *localStream) getLiveAudioTrack() *LiveTrackStaticRTP {
-	return nil
-}
-
-func (s *localStream) getKind() TrackInfoKind {
+func (s *liveStream) getKind() TrackInfoKind {
 	return s.kind
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/pion/rtp"
@@ -12,6 +13,7 @@ import (
 )
 
 type UdpForwarder struct {
+	mu           sync.RWMutex
 	id           uuid.UUID
 	audio, video *UdpConnection
 	quit         chan struct{}
@@ -19,6 +21,7 @@ type UdpForwarder struct {
 
 func NewUdpForwarder(id uuid.UUID, quit chan struct{}) (*UdpForwarder, error) {
 	f := &UdpForwarder{
+		mu:    sync.RWMutex{},
 		id:    id,
 		audio: &UdpConnection{port: 4000, payloadType: 111},
 		video: &UdpConnection{port: 4002, payloadType: 96},
@@ -71,28 +74,28 @@ func (f *UdpForwarder) Stop() {
 	}
 }
 
-func (f *UdpForwarder) AddTrack(trackInfo *TrackInfo) {
-
-	if trackInfo.RemoteTrack.Kind() == webrtc.RTPCodecTypeAudio {
-		go func(track *TrackInfo) {
-			f.log("writing audio")
-			if err := f.writeTrack(f.audio, track.RemoteTrack); err != nil {
-				slog.Error("writing stream audio", "err", err, "forwarderId", f.id.String())
-			}
-			f.log("stop writing stream audio")
-		}(trackInfo)
-	}
-
-	if trackInfo.RemoteTrack.Kind() == webrtc.RTPCodecTypeVideo {
-		go func(track *TrackInfo) {
-			f.log("writing video")
-			if err := f.writeTrack(f.video, track.RemoteTrack); err != nil {
-				slog.Error("writing stream video", "err", err, "forwarderId", f.id.String())
-			}
-			f.log("stop writing stream video")
-		}(trackInfo)
-	}
-}
+//func (f *UdpForwarder) AddTrack(trackInfo *TrackInfo) {
+//
+//	if trackInfo.RemoteTrack.Kind() == webrtc.RTPCodecTypeAudio {
+//		go func(track *TrackInfo) {
+//			f.log("writing audio")
+//			if err := f.writeTrack(f.audio, track.RemoteTrack); err != nil {
+//				slog.Error("writing stream audio", "err", err, "forwarderId", f.id.String())
+//			}
+//			f.log("stop writing stream audio")
+//		}(trackInfo)
+//	}
+//
+//	if trackInfo.RemoteTrack.Kind() == webrtc.RTPCodecTypeVideo {
+//		go func(track *TrackInfo) {
+//			f.log("writing video")
+//			if err := f.writeTrack(f.video, track.RemoteTrack); err != nil {
+//				slog.Error("writing stream video", "err", err, "forwarderId", f.id.String())
+//			}
+//			f.log("stop writing stream video")
+//		}(trackInfo)
+//	}
+//}
 
 func (f *UdpForwarder) connect(udp *UdpConnection, laddr *net.UDPAddr) error {
 	// Create remote addr
@@ -184,4 +187,28 @@ func (f *UdpForwarder) GetConnData() UdpShare {
 
 func (f *UdpForwarder) log(msg string) {
 	slog.Debug(msg, "forwarderId", f.id, "obj", "udpForwarder")
+}
+
+func (f *UdpForwarder) AddTrack(track *LiveTrackStaticRTP) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	binding := trackBinding{
+		id: uuid.NewString(),
+	}
+
+	if track.Kind() == webrtc.RTPCodecTypeAudio {
+		binding.ssrc = webrtc.SSRC(3450704251)
+		binding.payloadType = webrtc.PayloadType(f.audio.payloadType)
+		binding.writeStream = newUdpWriter(uuid.NewString(), f.audio, f.quit)
+	}
+	if track.Kind() == webrtc.RTPCodecTypeVideo {
+		binding.ssrc = webrtc.SSRC(3450704222)
+		binding.payloadType = webrtc.PayloadType(f.video.payloadType)
+		binding.writeStream = newUdpWriter(uuid.NewString(), f.video, f.quit)
+	}
+
+	if err := track.BindTrack(binding); err != nil {
+		slog.Error("binding track", "err", err)
+	}
 }

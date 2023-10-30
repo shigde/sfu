@@ -23,7 +23,7 @@ func newLocalWriter(id string, globalQuit <-chan struct{}) *localWriter {
 	}
 }
 
-func (w *localWriter) writeRtp(remoteTrack *webrtc.TrackRemote, localTrack *webrtc.TrackLocalStaticRTP) error {
+func (w *localWriter) writeRtp(remoteTrack *webrtc.TrackRemote, localTrack trackWriter) error {
 	rtpBuf := make([]byte, rtpBufferSize)
 	for {
 		select {

@@ -123,7 +123,7 @@ func (h *hub) stop() error {
 
 func (h *hub) onAddTrack(event *hubRequest) {
 	if event.track.GetStreamKind() == rtp.TrackInfoKindStream {
-		h.forwarder.AddTrack(event.track)
+		h.forwarder.AddTrack(event.track.GetLiveTrack())
 		return
 	}
 
