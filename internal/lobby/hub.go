@@ -136,6 +136,11 @@ func (h *hub) onAddTrack(event *hubRequest) {
 }
 
 func (h *hub) onRemoveTrack(event *hubRequest) {
+	if event.track.GetStreamKind() == rtp.TrackInfoKindStream {
+		// @TODO Implementing h.forwarder.stopSending()
+		return
+	}
+
 	if _, ok := h.tracks[event.track.GetTrack().ID()]; ok {
 		delete(h.tracks, event.track.GetTrack().ID())
 	}
