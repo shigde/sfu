@@ -11,8 +11,7 @@ type Streamer struct {
 	quit chan struct{}
 }
 
-func NewStreamer() *Streamer {
-	quit := make(chan struct{})
+func NewStreamer(quit chan struct{}) *Streamer {
 	return &Streamer{
 		quit: quit,
 	}

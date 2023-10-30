@@ -14,6 +14,11 @@ func publishLiveStream(streamService *stream.LiveStreamService, liveService *str
 			handleResourceError(w, err)
 			return
 		}
+		streamInfo, err := getStreamLiveInfoPayload(w, r)
+		if err != nil {
+			httpError(w, "invalid payload", http.StatusBadRequest, err)
+			return
+		}
 
 		user, err := getUserFromSession(w, r)
 		if err != nil {
@@ -27,14 +32,7 @@ func publishLiveStream(streamService *stream.LiveStreamService, liveService *str
 		}
 
 		userId, _ := user.GetUuid()
-
-		info, err := getStreamLiveInfoPayload(w, r)
-		if err != nil {
-			httpError(w, "forbidden", http.StatusBadRequest, err)
-			return
-		}
-
-		if err := liveService.StartLiveStream(r.Context(), liveStream, info, userId); err != nil {
+		if err := liveService.StartLiveStream(r.Context(), liveStream, streamInfo, userId); err != nil {
 			httpError(w, "error start live stream", http.StatusInternalServerError, err)
 			return
 		}
@@ -88,9 +86,9 @@ func getStreamLiveInfoPayload(w http.ResponseWriter, r *http.Request) (*stream.L
 	if err != nil {
 		return nil, err
 	}
-	var info stream.LiveStreamInfo
-	if err := dec.Decode(&info); err != nil {
+	info := &stream.LiveStreamInfo{}
+	if err := dec.Decode(info); err != nil {
 		return nil, invalidPayload
 	}
-	return &info, nil
+	return info, nil
 }

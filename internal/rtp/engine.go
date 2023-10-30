@@ -65,7 +65,12 @@ func (e *Engine) NewReceiverEndpoint(ctx context.Context, sessionId uuid.UUID, o
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
 	}
 
-	receiver := newReceiver(sessionId, dispatcher)
+	trackInfos, err := getTrackInfo(offer, sessionId)
+	if err != nil {
+		return nil, fmt.Errorf("parsing track info: %w ", err)
+	}
+
+	receiver := newReceiver(sessionId, dispatcher, trackInfos)
 	peerConnection.OnTrack(receiver.onTrack)
 
 	peerConnection.OnICEConnectionStateChange(handler.OnConnectionStateChange)

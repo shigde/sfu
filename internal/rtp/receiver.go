@@ -2,6 +2,7 @@ package rtp
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -15,15 +16,16 @@ import (
 type receiver struct {
 	sync.RWMutex
 	id         uuid.UUID
-	streams    map[string]*localStream
+	streams    map[string]Stream
 	dispatcher TrackDispatcher
+	trackInfos map[string]*TrackInfo
 	quit       chan struct{}
 }
 
-func newReceiver(sessionId uuid.UUID, d TrackDispatcher) *receiver {
-	streams := make(map[string]*localStream)
+func newReceiver(sessionId uuid.UUID, d TrackDispatcher, trackInfos map[string]*TrackInfo) *receiver {
+	streams := make(map[string]Stream)
 	quit := make(chan struct{})
-	return &receiver{sync.RWMutex{}, sessionId, streams, d, quit}
+	return &receiver{sync.RWMutex{}, sessionId, streams, d, trackInfos, quit}
 }
 
 func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.RTPReceiver) {
@@ -31,14 +33,7 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 	ctx, span := otel.Tracer(tracerName).Start(context.Background(), "rtp.receiver: on track")
 	defer span.End()
 
-	streamKind := TrackInfoKindPeer
-	if len(r.streams) > 0 {
-		streamKind = TrackInfoKindStream
-		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, nil, remoteTrack, streamKind))
-		return
-	}
-
-	stream := r.getStream(remoteTrack.StreamID(), r.id, streamKind)
+	stream := r.getStream(r.id, remoteTrack.StreamID(), remoteTrack.ID())
 
 	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "audio") {
 		slog.Debug("rtp.receiver: on audio track")
@@ -48,8 +43,7 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 			// stop handler goroutine because error
 			return
 		}
-
-		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, stream.audioTrack, remoteTrack, streamKind))
+		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, stream.getAudioTrack(), stream.getLiveAudioTrack(), stream.getKind()))
 	}
 
 	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "video") {
@@ -60,17 +54,34 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 			// stop handler goroutine because error
 			return
 		}
-		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, stream.videoTrack, remoteTrack, streamKind))
+		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, stream.getVideoTrack(), stream.getLiveVideoTrack(), stream.getKind()))
 	}
 }
+func (r *receiver) getTrackInfo(streamID string, trackId string) *TrackInfo {
+	mid := fmt.Sprintf("%s %s", streamID, trackId)
+	info, found := r.trackInfos[mid]
+	if !found {
+		info = &TrackInfo{SessionId: r.id, Kind: TrackInfoKindGuest}
+		r.trackInfos[mid] = info
+	}
+	return info
+}
 
-func (r *receiver) getStream(remoteId string, sessionId uuid.UUID, kind TrackInfoKind) *localStream {
+func (r *receiver) getStream(sessionId uuid.UUID, streamId string, trackId string) Stream {
 	r.Lock()
 	defer r.Unlock()
-	stream, ok := r.streams[remoteId]
+	info := r.getTrackInfo(streamId, trackId)
+	stream, ok := r.streams[streamId]
 	if !ok {
-		stream = newLocalStream(remoteId, sessionId, kind, r.dispatcher, r.quit)
-		r.streams[remoteId] = stream
+		switch info.Kind {
+		case TrackInfoKindGuest:
+			stream = newLocalStream(streamId, sessionId, r.dispatcher, info.Kind, r.quit)
+		case TrackInfoKindStream:
+			stream = newLiveStream(streamId, sessionId, r.dispatcher, info.Kind, r.quit)
+		default:
+			stream = newLocalStream(streamId, sessionId, r.dispatcher, info.Kind, r.quit)
+		}
+		r.streams[streamId] = stream
 	}
 	return stream
 }

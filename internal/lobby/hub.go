@@ -24,8 +24,7 @@ type hub struct {
 	quit        chan struct{}
 }
 
-func newHub(sessionRepo *sessionRepository, forwarder streamForwarder) *hub {
-	quit := make(chan struct{})
+func newHub(sessionRepo *sessionRepository, forwarder streamForwarder, quit chan struct{}) *hub {
 	tracks := make(map[string]*rtp.TrackInfo)
 	requests := make(chan *hubRequest)
 	hub := &hub{
@@ -124,7 +123,7 @@ func (h *hub) stop() error {
 
 func (h *hub) onAddTrack(event *hubRequest) {
 	if event.track.GetStreamKind() == rtp.TrackInfoKindStream {
-		h.forwarder.AddTrack(event.track)
+		h.forwarder.AddTrack(event.track.GetLiveTrack())
 		return
 	}
 
@@ -137,6 +136,11 @@ func (h *hub) onAddTrack(event *hubRequest) {
 }
 
 func (h *hub) onRemoveTrack(event *hubRequest) {
+	if event.track.GetStreamKind() == rtp.TrackInfoKindStream {
+		// @TODO Implementing h.forwarder.stopSending()
+		return
+	}
+
 	if _, ok := h.tracks[event.track.GetTrack().ID()]; ok {
 		delete(h.tracks, event.track.GetTrack().ID())
 	}

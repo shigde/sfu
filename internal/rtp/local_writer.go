@@ -9,29 +9,29 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-type writer struct {
+type localWriter struct {
 	id         string
 	quit       chan struct{}
 	globalQuit <-chan struct{}
 }
 
-func newWriter(id string, globalQuit <-chan struct{}) *writer {
-	return &writer{
+func newLocalWriter(id string, globalQuit <-chan struct{}) *localWriter {
+	return &localWriter{
 		id:         id,
 		quit:       make(chan struct{}),
 		globalQuit: globalQuit,
 	}
 }
 
-func (w *writer) writeRtp(remoteTrack *webrtc.TrackRemote, localTrack *webrtc.TrackLocalStaticRTP) error {
+func (w *localWriter) writeRtp(remoteTrack *webrtc.TrackRemote, localTrack trackWriter) error {
 	rtpBuf := make([]byte, rtpBufferSize)
 	for {
 		select {
 		case <-w.globalQuit:
-			slog.Info("rtp.writer closed globally", "track id", w.id)
+			slog.Info("rtp.localWriter closed globally", "track id", w.id)
 			return nil
 		case <-w.quit:
-			slog.Info("rtp.writer closed locally", "track id", w.id)
+			slog.Info("rtp.localWriter closed locally", "track id", w.id)
 			return nil
 		default:
 			i, _, err := remoteTrack.Read(rtpBuf)
@@ -53,20 +53,20 @@ func (w *writer) writeRtp(remoteTrack *webrtc.TrackRemote, localTrack *webrtc.Tr
 	}
 }
 
-func (w *writer) close() {
-	slog.Info("rtp.writer: close", "track id", w.id)
+func (w *localWriter) close() {
+	slog.Info("rtp.localWriter: close", "track id", w.id)
 	select {
 	case <-w.globalQuit:
-		slog.Warn("rtp.writer the writer was already closed, con not close by global again", "track id", w.id)
+		slog.Warn("rtp.localWriter the localWriter was already closed, con not close by global again", "track id", w.id)
 	case <-w.quit:
-		slog.Warn("rtp.writer the writer was already closed, con not close by local again", "track id", w.id)
+		slog.Warn("rtp.localWriter the localWriter was already closed, con not close by local again", "track id", w.id)
 	default:
 		close(w.quit)
-		slog.Info("rtp.writer close was triggered", "track id", w.id)
+		slog.Info("rtp.localWriter close was triggered", "track id", w.id)
 	}
 }
 
-func (w *writer) isRunning() bool {
+func (w *localWriter) isRunning() bool {
 	select {
 	case <-w.globalQuit:
 		return false
