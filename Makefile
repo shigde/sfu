@@ -1,7 +1,9 @@
-SERVER_NAME = stream-server
+SERVER_NAME = shig
 GO_LDFLAGS = -ldflags "-s -w"
 GO_VERSION = 1.20
 GO_TESTPKGS:=$(shell go list ./... | grep -v cmd | grep -v examples)
+
+export CGO_ENABLED=1
 
 all: nodes
 
@@ -21,8 +23,8 @@ run: build
 race:
 	go run -race ./cmd/broadcast -c config.toml
 
-build-linux:
-	GOOS=linux GOARCH=amd64 go build -o bin/sfu $(GO_LDFLAGS) ./cmd/main.go
+build-linux: go_init
+	GOOS=linux GOARCH=amd64 go build -o bin/$(SERVER_NAME).linux.amd64 $(GO_LDFLAGS) ./cmd/broadcast
 
 test: go_init
 	go test \

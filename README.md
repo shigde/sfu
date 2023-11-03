@@ -14,6 +14,27 @@ the documentation you will find [here in the docs folder](docs/README.md)
 make run
 ```
 
+### Build
+
+```shell
+make build
+```
+
+#### If you have Mac M1 / M2 -> Build a linux arm64 with Docker
+
+Once time build a docker image for your container
+
+```shell
+export DOCKER_DEFAULT_PLATFORM=linux/amd64
+docker build -t shig-builder .
+```
+
+Build Shig
+```shell
+export DOCKER_DEFAULT_PLATFORM=linux/amd64
+docker run --rm -v "$PWD":/usr/src/myapp -w /usr/src/myapp shig-builder make build-linux
+```
+
 ## Monitoring
 
 ### Requirement
