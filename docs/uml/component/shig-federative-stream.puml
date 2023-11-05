@@ -1,0 +1,66 @@
+@startuml
+'https://plantuml.com/component-diagram
+
+package other.peertube.fr {
+    node "Shig" as ShigC {
+            interface "  WebRTC\n<sending>" as WEBRTCC #8df5ff
+            [Lobby] as LobbyC #8DCAFF
+            [Session of\nWebRTC-Sender] as SessionC #8df5ff
+
+            database ActivityPub as APC{
+                  component "video\nID:123" as VC #FA58F4
+             }
+            LobbyC - SessionC
+            VC -- LobbyC
+            [WEBRTC-Sender] as WSC
+            [SessionC] - WEBRTCC
+            WEBRTCC -> WSC
+        }
+
+}
+
+
+interface "  WebRTC\n<receiving>" as WEBRTCB2 #8df5ff
+package video.shig.de {
+
+    node "PeerTube " as PTA {
+         database ActivityPub as A1{
+              component "video\nID:123" as VA #FA58F4
+         }
+        [LiveStream] as LSA #f5873d
+        VA --LSA
+    }
+    interface RTMP as RTMPA #f5873d
+
+    LSA -- RTMPA
+
+
+
+    node "Shig" as ShigB {
+        interface "  WebRTC\n<sending>" as WEBRTCB #8df5ff
+        [Lobby] as LobbyB #8DCAFF
+        [Session of\nWebRTC-Sender from\nother.peertube.fr] as SessionB2 #8df5ff
+
+        [Session of\nRTMP-Sender] as SessionB #8df5ff
+
+        database ActivityPub as APB{
+              component "video\nID:123" as VB #FA58F4
+         }
+
+        WEBRTCB2 - SessionB2
+        SessionB2 - LobbyB
+        LobbyB - SessionB
+
+        [RTMP-Sender] as RSB
+        [SessionB] - WEBRTCB
+        WEBRTCB -> RSB
+        VB -- LobbyB
+    }
+    RSB -> RTMPA
+
+
+}
+WSC -> WEBRTCB2
+
+
+@enduml

@@ -1,0 +1,49 @@
+@startuml
+'https://plantuml.com/component-diagram
+
+
+[Streamer]
+[Viewer] as V1
+interface "HTTP (HLS)" as HLS1 #f5873d
+
+package video.shig.de {
+    interface RTMP as RTMP1 #f5873d
+    node "PeerTube " {
+        [Instance] as I1 #f5873d
+    }
+
+    I1 ---- RTMP1
+
+    node "Shig" {
+        interface "  WebRTC\n<sending>" as WEBRTC3 #8df5ff
+        [Lobby] as Lobby1 #8DCAFF
+        [Session of\nStreamer] as Session1 #8df5ff
+        [Session of\nRTMP-Sender] as Session2 #8df5ff
+        Session1 -- Lobby1
+        Lobby1 -- Session2
+        [RTMP-Sender] as L1
+        [Session2] -- WEBRTC3
+        WEBRTC3 --> L1
+
+    }
+    L1 -> RTMP1
+}
+
+HLS1 --- I1
+V1 <-- HLS1
+
+
+
+
+interface "  WebRTC\n<sending>" as WEBRTC1 #8df5ff
+interface "  WebRTC\n<receiving>" as WEBRTC2 #8df5ff
+
+
+WEBRTC2 -- [Session1]
+WEBRTC1 -- [Session1]
+
+
+[Streamer] --> WEBRTC2: send media
+[Streamer] <-- WEBRTC1: receive media
+
+@enduml
