@@ -1,0 +1,41 @@
+@startuml
+'https://plantuml.com/component-diagram
+
+interface "HTTP (HLS)" as HLS1 #f5873d
+
+package video.shig.de {
+    interface RTMP as RTMP1 #f5873d
+    node "PeerTube " as PT1{
+         database ActivityPub as A1{
+              component "video\nID:123" as V1 #FA58F4
+         }
+        [LiveStream] as I1 #f5873d
+        I1 - V1
+
+    }
+
+    node "Shig" as Shig1 {
+        interface "  WebRTC\n<sending>" as WEBRTC3 #8df5ff
+        [Lobby] as Lobby1 #8DCAFF
+        [Session of\nRTMP-Sender] as Session2 #8df5ff
+
+        database ActivityPub as A2{
+              component "video\nID:123" as V2 #FA58F4
+         }
+
+        Lobby1 -- Session2
+        [RTMP-Sender] as L1
+        [Session2] - WEBRTC3
+        WEBRTC3 -> L1
+        V2 - Lobby1
+
+    }
+    I1 -- RTMP1
+    L1 -> RTMP1
+}
+
+HLS1 --- I1
+
+
+
+@enduml
