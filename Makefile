@@ -15,16 +15,16 @@ clean:
 	rm -rf bin
 
 build: go_init
-	go build -race -o ./bin/$(SERVER_NAME) ./cmd/broadcast
+	go build -race -o ./bin/$(SERVER_NAME) ./cmd/server
 
 run: build
 	./bin/$(SERVER_NAME) -c config.toml
 
 race:
-	go run -race ./cmd/broadcast -c config.toml
+	go run -race ./cmd/server -c config.toml
 
 build-linux: go_init
-	GOOS=linux GOARCH=amd64 go build -o bin/$(SERVER_NAME).linux.amd64 $(GO_LDFLAGS) ./cmd/broadcast
+	GOOS=linux GOARCH=amd64 go build -o bin/$(SERVER_NAME).linux.amd64 $(GO_LDFLAGS) ./cmd/server
 
 test: go_init
 	go test \
