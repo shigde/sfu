@@ -3,8 +3,9 @@ package runner
 import (
 	"context"
 
+	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/rtp"
-	"github.com/shigde/sfu/internal/static"
+	"github.com/shigde/sfu/internal/sample"
 	"github.com/shigde/sfu/pkg/client"
 )
 
@@ -16,23 +17,27 @@ type StaticSender struct {
 	bearer               string
 }
 
-func (mr *StaticSender) run() {
-	media, err := static.NewMediaFile(mr.audioFile, mr.videoFile)
-	if err != nil {
-		panic(err)
-	}
+func (mr *StaticSender) run() error {
+	localTracks := make([]webrtc.TrackLocal, 0, 2)
 
-	//conf, err := config.ParseConfig(cli.Config)
-	//if err != nil {
-	//	panic(err)
-	//}
+	videoTrack, err := sample.NewLocalFileLooperTrack(mr.videoFile)
+	if err != nil {
+		return err
+	}
+	localTracks = append(localTracks, videoTrack)
+
+	audioTrack, err := sample.NewLocalFileLooperTrack(mr.audioFile)
+	if err != nil {
+		return err
+	}
+	localTracks = append(localTracks, audioTrack)
 
 	engine, err := rtp.NewEngine(mr.conf)
 	if err != nil {
 		panic(err)
 	}
 
-	endpoint, err := engine.NewStaticMediaSenderEndpoint(media)
+	endpoint, err := engine.NewLocalStaticSenderEndpoint(localTracks)
 	if err != nil {
 		panic(err)
 	}
