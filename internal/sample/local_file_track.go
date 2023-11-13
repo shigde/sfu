@@ -35,7 +35,7 @@ func NewLocalFileLooperTrack(file string, options ...ReaderOption) (*LocalTrack,
 	case webrtc.MimeTypeH264:
 		return NewLocalLooperH264Track(fp, mime, createSpec("send-loop", h264Codec, 30, 1500), nil)
 	case webrtc.MimeTypeVP8:
-		return NewLocalLooperVp8Track(fp, mime, createSpec("send-loop", h264Codec, 30, 1500), nil)
+		return NewLocalLooperVP8Track(fp, mime, createSpec("send-loop", h264Codec, 30, 1500), nil)
 	case webrtc.MimeTypeOpus:
 		return NewLocalLooperOpusTrack(fp, mime, createSpec("send-loop", h264Codec, 30, 1500), nil)
 	// case webrtc.MimeTypeVP9:

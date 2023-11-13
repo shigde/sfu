@@ -9,6 +9,7 @@ import (
 	"github.com/pion/webrtc/v3/pkg/media"
 	"github.com/pion/webrtc/v3/pkg/media/ivfreader"
 	"github.com/shigde/sfu/internal/rtp"
+	"golang.org/x/exp/slog"
 )
 
 type VideoLooperVP8 struct {
@@ -18,6 +19,26 @@ type VideoLooperVP8 struct {
 	reader        *ivfreader.IVFReader
 	ivfTimebase   float64
 	lastTimestamp uint64
+}
+
+func NewLocalLooperVP8Track(input io.ReadCloser, mime string, spec *videoSpec, trackOpts LocalTrackOptions) (*LocalTrack, error) {
+	looper, err := NewVideoLooperVP8(input, spec)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create sample track & bind handler
+	track, err := NewLocalTrack(webrtc.RTPCodecCapability{MimeType: mime}, trackOpts)
+	if err != nil {
+		return nil, err
+	}
+	track.OnBind(func() {
+		if err := track.StartWrite(looper, nil); err != nil {
+			slog.Error("Could not start writing", "err", err)
+		}
+	})
+
+	return track, nil
 }
 
 func NewVideoLooperVP8(input io.Reader, spec *videoSpec) (*VideoLooperVP8, error) {
