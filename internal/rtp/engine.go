@@ -191,6 +191,7 @@ func creatDC(pc *webrtc.PeerConnection, handler StateEventHandler) error {
 }
 
 // NewStaticMediaSenderEndpoint can be used to send static streams from file in a lobby.
+// @deprecated
 func (e *Engine) NewStaticMediaSenderEndpoint(media *static.MediaFile) (*Endpoint, error) {
 	stateHandler := newMediaStateEventHandler()
 	peerConnection, err := e.api.NewPeerConnection(e.config)
@@ -315,4 +316,46 @@ func (e *Engine) NewReceiverConnection(ctx context.Context, offer webrtc.Session
 		PeerConnection: peerConnection,
 		GatherComplete: gatherComplete,
 	}, nil
+}
+
+func (e *Engine) NewLocalStaticSenderEndpoint(sendingTracks []webrtc.TrackLocal) (*Endpoint, error) {
+	stateHandler := newMediaStateEventHandler()
+	peerConnection, err := e.api.NewPeerConnection(e.config)
+	if err != nil {
+		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
+	}
+
+	_, iceConnectedCtxCancel := context.WithCancel(context.Background())
+
+	peerConnection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
+		slog.Debug("rtp.engine: connection State has changed", "state", connectionState.String())
+		if connectionState == webrtc.ICEConnectionStateConnected {
+			iceConnectedCtxCancel()
+		}
+	})
+
+	for _, track := range sendingTracks {
+		if _, err := peerConnection.AddTrack(track); err != nil {
+			return nil, err
+		}
+	}
+
+	err = creatDC(peerConnection, stateHandler)
+
+	if err != nil {
+		return nil, fmt.Errorf("creating data channel: %w", err)
+	}
+
+	offer, err := peerConnection.CreateOffer(nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating offer: %w", err)
+	}
+
+	gatherComplete := webrtc.GatheringCompletePromise(peerConnection)
+
+	if err = peerConnection.SetLocalDescription(offer); err != nil {
+		return nil, err
+	}
+
+	return &Endpoint{peerConnection: peerConnection, gatherComplete: gatherComplete}, nil
 }
