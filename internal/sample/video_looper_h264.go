@@ -19,14 +19,14 @@ type VideoLooperH264 struct {
 	reader        *h264reader.H264Reader
 }
 
-func NewLocalLooperH264Track(input io.ReadCloser, mime string, spec *videoSpec, trackOpts LocalTrackOptions) (*LocalTrack, error) {
+func NewLocalLooperH264Track(input io.ReadCloser, mime string, spec *videoSpec, trackOpts ...LocalTrackOptions) (*LocalTrack, error) {
 	looper, err := NewVideoLooperH264(input, spec)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create sample track & bind handler
-	track, err := NewLocalTrack(webrtc.RTPCodecCapability{MimeType: mime}, trackOpts)
+	track, err := NewLocalTrack(webrtc.RTPCodecCapability{MimeType: mime}, trackOpts...)
 	if err != nil {
 		return nil, err
 	}

@@ -25,7 +25,7 @@ func NewLocalFileReaderTrack(file string, options ...ReaderOption) (*LocalTrack,
 	return track, nil
 }
 
-func NewLocalFileLooperTrack(file string, options ...ReaderOption) (*LocalTrack, error) {
+func NewLocalFileLooperTrack(file string, options ...LocalTrackOptions) (*LocalTrack, error) {
 	fp, mime, err := readFile(file)
 	if err != nil {
 		return nil, err
@@ -33,11 +33,11 @@ func NewLocalFileLooperTrack(file string, options ...ReaderOption) (*LocalTrack,
 
 	switch mime {
 	case webrtc.MimeTypeH264:
-		return NewLocalLooperH264Track(fp, mime, createSpec("send-loop", h264Codec, 30, 1500), nil)
+		return NewLocalLooperH264Track(fp, mime, createSpec("send-loop", h264Codec, 30, 1500), options...)
 	case webrtc.MimeTypeVP8:
-		return NewLocalLooperVP8Track(fp, mime, createSpec("send-loop", h264Codec, 30, 1500), nil)
+		return NewLocalLooperVP8Track(fp, mime, createSpec("send-loop", h264Codec, 30, 1500), options...)
 	case webrtc.MimeTypeOpus:
-		return NewLocalLooperOpusTrack(fp, mime, nil)
+		return NewLocalLooperOpusTrack(fp, mime, options...)
 	// case webrtc.MimeTypeVP9:
 	// allow
 	default:

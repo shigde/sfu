@@ -17,14 +17,14 @@ type AudioLooperOpus struct {
 	lastGranule uint64
 }
 
-func NewLocalLooperOpusTrack(input io.ReadCloser, mime string, trackOpts LocalTrackOptions) (*LocalTrack, error) {
+func NewLocalLooperOpusTrack(input io.ReadCloser, mime string, trackOpts ...LocalTrackOptions) (*LocalTrack, error) {
 	looper, err := NewAudioLooperOpus(input)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create sample track & bind handler
-	track, err := NewLocalTrack(webrtc.RTPCodecCapability{MimeType: mime}, trackOpts)
+	track, err := NewLocalTrack(webrtc.RTPCodecCapability{MimeType: mime}, trackOpts...)
 	if err != nil {
 		return nil, err
 	}

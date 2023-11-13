@@ -21,14 +21,14 @@ type VideoLooperVP8 struct {
 	lastTimestamp uint64
 }
 
-func NewLocalLooperVP8Track(input io.ReadCloser, mime string, spec *videoSpec, trackOpts LocalTrackOptions) (*LocalTrack, error) {
+func NewLocalLooperVP8Track(input io.ReadCloser, mime string, spec *videoSpec, trackOpts ...LocalTrackOptions) (*LocalTrack, error) {
 	looper, err := NewVideoLooperVP8(input, spec)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create sample track & bind handler
-	track, err := NewLocalTrack(webrtc.RTPCodecCapability{MimeType: mime}, trackOpts)
+	track, err := NewLocalTrack(webrtc.RTPCodecCapability{MimeType: mime}, trackOpts...)
 	if err != nil {
 		return nil, err
 	}
