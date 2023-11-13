@@ -123,3 +123,14 @@ func randomVideoSpecsForCodec(videoCodec string) []*videoSpec {
 	chosen := int(videoIndex.Inc()) % len(filtered)
 	return filtered[chosen]
 }
+
+func createSpec(prefix string, codec string, fps int, bitrates int) *videoSpec {
+	return &videoSpec{
+		prefix: prefix,
+		codec:  codec,
+		kbps:   bitrates,
+		fps:    fps,
+		height: 1800,
+		width:  1800 * 16 / 9,
+	}
+}

@@ -31,38 +31,18 @@ func NewLocalFileLooperTrack(file string, options ...ReaderOption) (*LocalTrack,
 		return nil, err
 	}
 
-	var looper Looper
-
 	switch mime {
 	case webrtc.MimeTypeH264:
+		return NewLocalLooperH264Track(fp, mime, createSpec("send-loop", h264Codec, 30, 1500), nil)
 	case webrtc.MimeTypeVP8:
+		return NewLocalLooperVp8Track(fp, mime, createSpec("send-loop", h264Codec, 30, 1500), nil)
 	case webrtc.MimeTypeOpus:
-	case webrtc.MimeTypeVP9:
+		return NewLocalLooperOpusTrack(fp, mime, createSpec("send-loop", h264Codec, 30, 1500), nil)
+	// case webrtc.MimeTypeVP9:
 	// allow
 	default:
 		return nil, ErrUnsupportedFileType
 	}
-
-	if spec.codec == h264Codec {
-		looper, err := NewVideoLooperH264(f, spec)
-		if err != nil {
-			return nil, err
-		}
-		loopers = append(loopers, looper)
-	} else if spec.codec == vp8Codec {
-		looper, err := NewVideoLooperVP8(f, spec)
-		if err != nil {
-			return nil, err
-		}
-		loopers = append(loopers, looper)
-	}
-
-	track, err := NewLocalReaderTrack(fp, mime, options...)
-	if err != nil {
-		_ = fp.Close()
-		return nil, err
-	}
-	return track, nil
 }
 
 func readFile(file string) (io.ReadCloser, string, error) {
