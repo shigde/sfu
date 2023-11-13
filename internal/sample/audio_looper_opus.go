@@ -8,12 +8,33 @@ import (
 	"github.com/pion/webrtc/v3"
 	"github.com/pion/webrtc/v3/pkg/media"
 	"github.com/pion/webrtc/v3/pkg/media/oggreader"
+	"golang.org/x/exp/slog"
 )
 
 type AudioLooperOpus struct {
 	buffer      []byte
 	reader      *oggreader.OggReader
 	lastGranule uint64
+}
+
+func NewLocalLooperOpusTrack(input io.ReadCloser, mime string, trackOpts LocalTrackOptions) (*LocalTrack, error) {
+	looper, err := NewAudioLooperOpus(input)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create sample track & bind handler
+	track, err := NewLocalTrack(webrtc.RTPCodecCapability{MimeType: mime}, trackOpts)
+	if err != nil {
+		return nil, err
+	}
+	track.OnBind(func() {
+		if err := track.StartWrite(looper, nil); err != nil {
+			slog.Error("Could not start writing", "err", err)
+		}
+	})
+
+	return track, nil
 }
 
 func NewAudioLooperOpus(input io.Reader) (*AudioLooperOpus, error) {
