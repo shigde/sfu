@@ -1,0 +1,17 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+title WHIP Static File sender
+
+autonumber
+
+WhipStaticSender -> MediaFile: open
+WhipStaticSender -> LocalStaticTrack: create
+WhipStaticSender -> WebRTCEndpoint: Add Track and create local Offer
+WhipStaticSender -> WhipClient: GetAnswer() send Offer and get Answer
+WhipClient --> WhipStaticSender: Get Answer
+WhipStaticSender -> WebRTCEndpoint: Set Answer to Connection
+
+WhipStaticSender -> WhipStaticSender: sending
+
+@enduml

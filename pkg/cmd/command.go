@@ -11,9 +11,9 @@ import (
 var (
 	cfgFile string
 
-	shigCtl = &cobra.Command{
-		Use:           "shigCtl",
-		Short:         "shigCtl – command-line tool to interact with shig",
+	shigClt = &cobra.Command{
+		Use:           "shigClt",
+		Short:         "shigClt – command-line tool to interact with shig",
 		Long:          ``,
 		Version:       "0.0.1",
 		SilenceErrors: true,
@@ -22,16 +22,16 @@ var (
 )
 
 func Execute() error {
-	return shigCtl.Execute()
+	return shigClt.Execute()
 }
 
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	shigCtl.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.shigCtl.yaml)")
-	_ = viper.BindPFlag("config", shigCtl.PersistentFlags().Lookup("config"))
+	shigClt.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.shigClt.yaml)")
+	_ = viper.BindPFlag("config", shigClt.PersistentFlags().Lookup("config"))
 
-	shigCtl.AddCommand(send)
+	shigClt.AddCommand(sendCmd)
 }
 
 func initConfig() {
@@ -44,12 +44,12 @@ func initConfig() {
 		viper.AddConfigPath(home)
 		viper.AddConfigPath(".")
 		viper.SetConfigType("yaml")
-		viper.SetConfigFile(".shigCtl")
+		viper.SetConfigFile(".shigClt")
 	}
 
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Config file used for shigCtl: ", viper.ConfigFileUsed())
+		fmt.Println("Config file used for shigClt: ", viper.ConfigFileUsed())
 	}
 }

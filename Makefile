@@ -1,4 +1,5 @@
 SERVER_NAME = shig
+CLT_NAME = shigclt
 GO_LDFLAGS = -ldflags "-s -w"
 GO_VERSION = 1.20
 GO_TESTPKGS:=$(shell go list ./... | grep -v cmd | grep -v examples)
@@ -26,6 +27,14 @@ race:
 build-linux: go_init
 	GOOS=linux GOARCH=amd64 go build -o bin/$(SERVER_NAME).linux.amd64 $(GO_LDFLAGS) ./cmd/server
 
+build-ctl:
+	go build -o bin/$(CLT_NAME) ./cmd/ctl
+
+run-ctl: build-ctl
+	chmod +x bin/$(CLT_NAME)
+	./bin/$(CLT_NAME) -c config.toml
+
+
 test: go_init
 	go test \
 		-timeout 240s \
@@ -43,3 +52,4 @@ build-streamer: go_init
 
 run-streamer: build-streamer
 	 ./bin/media_streamer -c config.toml
+
