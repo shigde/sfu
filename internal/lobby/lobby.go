@@ -267,10 +267,6 @@ func (l *lobby) handleLiveStreamReq(req *lobbyRequest) {
 		oldStreamer.Stop()
 	}
 
-	if data.cmd == "status" {
-		// nothing to d
-	}
-
 	//if err != nil {
 	//	req.err <- fmt.Errorf("no session existing for user %s: %w", req.user, errNoSession)
 	//}
