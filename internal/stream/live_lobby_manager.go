@@ -35,4 +35,10 @@ type liveLobbyManager interface {
 		rtmpUrl string,
 		userId uuid.UUID,
 	) error
+
+	StopLiveStream(
+		ctx context.Context,
+		liveStreamId uuid.UUID,
+		userId uuid.UUID,
+	) error
 }
