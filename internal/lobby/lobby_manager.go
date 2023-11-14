@@ -166,7 +166,8 @@ func (m *LobbyManager) StartLiveStream(
 		select {
 		case err := <-request.err:
 			return err
-		case _ = <-startData.response:
+		case res := <-startData.response:
+			m.lobbies.setLobbyLive(ctx, liveStreamId, res)
 			return nil
 		}
 	}
@@ -188,6 +189,7 @@ func (m *LobbyManager) StopLiveStream(
 		case err := <-request.err:
 			return err
 		case _ = <-stopData.response:
+			m.lobbies.setLobbyLive(ctx, liveStreamId, false)
 			return nil
 		}
 	}

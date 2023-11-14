@@ -55,6 +55,17 @@ func (r *lobbyRepository) getLobby(id uuid.UUID) (*lobby, bool) {
 	return currentLobby, ok
 }
 
+func (r *lobbyRepository) setLobbyLive(ctx context.Context, id uuid.UUID, isLive bool) bool {
+	r.locker.Lock()
+	defer r.locker.Unlock()
+	if currentLobby, ok := r.lobbies[id]; ok {
+		currentLobby.entity.IsLive = isLive
+		_, err := r.updateLobbyEntity(ctx, currentLobby.entity)
+		return err != nil
+	}
+	return false
+}
+
 func (r *lobbyRepository) Delete(id uuid.UUID) bool {
 	r.locker.Lock()
 	defer r.locker.Unlock()
