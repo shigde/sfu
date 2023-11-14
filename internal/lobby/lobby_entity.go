@@ -6,10 +6,10 @@ import (
 )
 
 type LobbyEntity struct {
-	LiveStreamId uuid.UUID
-	UUID         uuid.UUID
-	IsRunning    bool
-	IsLive       bool
+	LiveStreamId uuid.UUID `json:"streamId"`
+	UUID         uuid.UUID `json:"-"`
+	IsRunning    bool      `json:"isLobbyRunning"`
+	IsLive       bool      `json:"isLive"`
 	gorm.Model
 }
 

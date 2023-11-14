@@ -16,6 +16,6 @@ func (c *Connetcion) GetLocalDescription(ctx context.Context) (*webrtc.SessionDe
 	case <-c.GatherComplete:
 		return c.PeerConnection.LocalDescription(), nil
 	case <-ctx.Done():
-		return nil, ErrIceGatheringInteruption
+		return nil, ErrIceGatheringInterruption
 	}
 }

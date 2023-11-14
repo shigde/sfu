@@ -191,6 +191,7 @@ func creatDC(pc *webrtc.PeerConnection, handler StateEventHandler) error {
 }
 
 // NewStaticMediaSenderEndpoint can be used to send static streams from file in a lobby.
+// @deprecated
 func (e *Engine) NewStaticMediaSenderEndpoint(media *static.MediaFile) (*Endpoint, error) {
 	stateHandler := newMediaStateEventHandler()
 	peerConnection, err := e.api.NewPeerConnection(e.config)

@@ -66,3 +66,10 @@ func (s *LiveLobbyService) StartLiveStream(ctx context.Context, stream *LiveStre
 	}
 	return nil
 }
+
+func (s *LiveLobbyService) StopLiveStream(ctx context.Context, stream *LiveStream, userId uuid.UUID) error {
+	if err := s.lobbyManager.StopLiveStream(ctx, stream.Lobby.UUID, userId); err != nil {
+		return fmt.Errorf("stop live stream: %w", err)
+	}
+	return nil
+}

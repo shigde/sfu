@@ -16,7 +16,7 @@ func testRtpSessionSetup(t *testing.T) (*session, *rtpEngineMock) {
 	logging.SetupDebugLogger()
 	engine := mockRtpEngineForOffer(mockedAnswer)
 	forwarder := newStreamForwarderMock()
-	hub := newHub(newSessionRepository(), forwarder)
+	hub := newHub(newSessionRepository(), forwarder, nil)
 	session := newSession(uuid.New(), hub, engine, nil)
 	return session, engine
 }
@@ -92,7 +92,7 @@ func TestRtpSessionOffer(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, rtp.ErrIceGatheringInteruption)
+			assert.ErrorIs(t, err, rtp.ErrIceGatheringInterruption)
 		}
 		iceGatheringTimeout = before
 	})
@@ -213,7 +213,7 @@ func TestRtpSessionStartListen(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, rtp.ErrIceGatheringInteruption)
+			assert.ErrorIs(t, err, rtp.ErrIceGatheringInterruption)
 		}
 		iceGatheringTimeout = before
 	})

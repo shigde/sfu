@@ -72,12 +72,20 @@ func newListenData(answer *webrtc.SessionDescription) *listenData {
 	}
 }
 
-func newLiveStreamData(cmd string, key string, rtmpUrl string) *liveStreamData {
+func newLiveStreamStart(key string, rtmpUrl string) *liveStreamData {
 	resChan := make(chan bool)
 	return &liveStreamData{
-		cmd:      cmd,
+		cmd:      "start",
 		key:      key,
 		rtmpUrl:  rtmpUrl,
+		response: resChan,
+	}
+}
+
+func newLiveStreamStop() *liveStreamData {
+	resChan := make(chan bool)
+	return &liveStreamData{
+		cmd:      "stop",
 		response: resChan,
 	}
 }

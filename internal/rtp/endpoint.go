@@ -10,7 +10,7 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-var ErrIceGatheringInteruption = errors.New("getting ice gathering interrupted")
+var ErrIceGatheringInterruption = errors.New("getting ice gathering interrupted")
 
 type Endpoint struct {
 	peerConnection peerConnection
@@ -20,6 +20,15 @@ type Endpoint struct {
 	gatherComplete <-chan struct{}
 	initComplete   chan struct{}
 	closed         chan struct{}
+	onEstablished  func()
+}
+
+type EndpointOption func(*Endpoint)
+
+func EndpointWithOnEstablished(onEstablished func()) func(endpoint *Endpoint) {
+	return func(endpoint *Endpoint) {
+		endpoint.onEstablished = onEstablished
+	}
 }
 
 func (c *Endpoint) GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error) {
@@ -31,7 +40,7 @@ func (c *Endpoint) GetLocalDescription(ctx context.Context) (*webrtc.SessionDesc
 	case <-c.gatherComplete:
 		return c.peerConnection.LocalDescription(), nil
 	case <-ctx.Done():
-		return nil, ErrIceGatheringInteruption
+		return nil, ErrIceGatheringInterruption
 	}
 }
 func (c *Endpoint) SetAnswer(sdp *webrtc.SessionDescription) error {

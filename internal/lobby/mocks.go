@@ -57,15 +57,15 @@ func mockIdelConnection() *rtp.Endpoint {
 }
 
 type streamForwarderMock struct {
-	Tracks map[string]*rtp.TrackInfo
+	Tracks map[string]*rtp.LiveTrackStaticRTP
 }
 
 func newStreamForwarderMock() *streamForwarderMock {
-	tracks := make(map[string]*rtp.TrackInfo)
+	tracks := make(map[string]*rtp.LiveTrackStaticRTP)
 	return &streamForwarderMock{
 		Tracks: tracks,
 	}
 }
-func (sf *streamForwarderMock) AddTrack(track *rtp.TrackInfo) {
-	sf.Tracks[track.Track.ID()] = track
+func (sf *streamForwarderMock) AddTrack(track *rtp.LiveTrackStaticRTP) {
+	sf.Tracks[track.ID()] = track
 }
