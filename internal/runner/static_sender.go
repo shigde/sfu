@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/rtp"
@@ -17,46 +18,49 @@ type StaticSender struct {
 	bearer               string
 }
 
-func (mr *StaticSender) run() error {
+func (mr *StaticSender) run(done chan struct{}) error {
 	localTracks := make([]webrtc.TrackLocal, 0, 2)
 
 	videoTrack, err := sample.NewLocalFileLooperTrack(mr.videoFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating video track: %w", err)
 	}
 	localTracks = append(localTracks, videoTrack)
 
 	audioTrack, err := sample.NewLocalFileLooperTrack(mr.audioFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating audio track: %w", err)
 	}
 	localTracks = append(localTracks, audioTrack)
 
 	engine, err := rtp.NewEngine(mr.conf)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("setup webrtc engine: %w", err)
 	}
 
-	endpoint, err := engine.NewLocalStaticSenderEndpoint(localTracks)
+	endpoint, err := rtp.NewLocalStaticSenderEndpoint(engine, localTracks)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("building new webrtc endpoint: %w", err)
 	}
 
 	offer, err := endpoint.GetLocalDescription(context.Background())
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("creating local offer: %w", err)
 	}
 
 	whipClient := client.NewWhip()
 	answer, err := whipClient.GetAnswer(mr.spaceId, mr.streamId, mr.bearer, offer)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("getting answer from whip endpoint: %w", err)
 	}
 	println("Answer", answer.SDP)
 	err = endpoint.SetAnswer(answer)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("creating setting answer: %w", err)
 	}
 
-	select {}
+	select {
+	case <-done:
+		return nil
+	}
 }
