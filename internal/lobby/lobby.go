@@ -29,7 +29,7 @@ type lobby struct {
 	hub           *hub
 	rtpEngine     rtpEngine
 	resourceId    uuid.UUID
-	entity        LobbyEntity
+	entity        *LobbyEntity
 	quit          chan struct{}
 	reqChan       chan *lobbyRequest
 	childQuitChan chan uuid.UUID

@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/rtp"
+	"github.com/shigde/sfu/internal/storage"
 )
 
 const tracerName = "github.com/shigde/sfu/internal/lobby"
@@ -20,7 +21,7 @@ type rtpEngine interface {
 	NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, localTracks []*webrtc.TrackLocalStaticRTP, stateHandler rtp.StateEventHandler) (*rtp.Endpoint, error)
 }
 
-func NewLobbyManager(storage store, e rtpEngine) *LobbyManager {
+func NewLobbyManager(storage storage.Storage, e rtpEngine) *LobbyManager {
 	lobbies := newLobbyRepository(storage, e)
 	return &LobbyManager{lobbies}
 }
@@ -158,7 +159,7 @@ func (m *LobbyManager) StartLiveStream(
 ) error {
 	if lobby, hasLobby := m.lobbies.getLobby(liveStreamId); hasLobby {
 		request := newLobbyRequest(ctx, userId)
-		startData := newLiveStreamData("start", key, rtmpUrl)
+		startData := newLiveStreamStart(key, rtmpUrl)
 		request.data = startData
 		go lobby.runRequest(request)
 
@@ -166,6 +167,27 @@ func (m *LobbyManager) StartLiveStream(
 		case err := <-request.err:
 			return err
 		case _ = <-startData.response:
+			return nil
+		}
+	}
+	return nil
+}
+
+func (m *LobbyManager) StopLiveStream(
+	ctx context.Context,
+	liveStreamId uuid.UUID,
+	userId uuid.UUID,
+) error {
+	if lobby, hasLobby := m.lobbies.getLobby(liveStreamId); hasLobby {
+		request := newLobbyRequest(ctx, userId)
+		stopData := newLiveStreamStop()
+		request.data = stopData
+		go lobby.runRequest(request)
+
+		select {
+		case err := <-request.err:
+			return err
+		case _ = <-stopData.response:
 			return nil
 		}
 	}

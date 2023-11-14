@@ -1,19 +1,26 @@
 package lobby
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/storage"
+	"gorm.io/gorm"
 )
+
+var errLobbyNotFound = errors.New("lobby not found")
 
 type lobbyRepository struct {
 	locker    *sync.RWMutex
 	lobbies   map[uuid.UUID]*lobby
-	store     store
+	store     storage.Storage
 	rtpEngine rtpEngine
 }
 
-func newLobbyRepository(store store, rtpEngine rtpEngine) *lobbyRepository {
+func newLobbyRepository(store storage.Storage, rtpEngine rtpEngine) *lobbyRepository {
 	lobbies := make(map[uuid.UUID]*lobby)
 	return &lobbyRepository{
 		&sync.RWMutex{},
@@ -23,13 +30,19 @@ func newLobbyRepository(store store, rtpEngine rtpEngine) *lobbyRepository {
 	}
 }
 
-func (r *lobbyRepository) getOrCreateLobby(id uuid.UUID) *lobby {
+func (r *lobbyRepository) getOrCreateLobby(liveStreamId uuid.UUID) *lobby {
 	r.locker.Lock()
 	defer r.locker.Unlock()
-	currentLobby, ok := r.lobbies[id]
+	currentLobby, ok := r.lobbies[liveStreamId]
 	if !ok {
-		lobby := newLobby(id, r.rtpEngine)
-		r.lobbies[id] = lobby
+		lobby := newLobby(liveStreamId, r.rtpEngine)
+		entity, _ := r.queryLobbyEntity(context.Background(), liveStreamId.String())
+
+		entity.IsRunning = true
+		entity, _ = r.updateLobbyEntity(context.Background(), entity)
+
+		lobby.entity = entity
+		r.lobbies[liveStreamId] = lobby
 		return lobby
 	}
 	return currentLobby
@@ -45,7 +58,9 @@ func (r *lobbyRepository) getLobby(id uuid.UUID) (*lobby, bool) {
 func (r *lobbyRepository) Delete(id uuid.UUID) bool {
 	r.locker.Lock()
 	defer r.locker.Unlock()
-	if _, ok := r.lobbies[id]; ok {
+	if lobby, ok := r.lobbies[id]; ok {
+		lobby.entity.IsRunning = false
+		_, _ = r.updateLobbyEntity(context.Background(), lobby.entity)
 		delete(r.lobbies, id)
 		return true
 	}
@@ -56,4 +71,31 @@ func (r *lobbyRepository) Len() int {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 	return len(r.lobbies)
+}
+
+func (r *lobbyRepository) queryLobbyEntity(ctx context.Context, liveStreamId string) (*LobbyEntity, error) {
+	tx, cancel := r.store.GetDatabaseWithContext(ctx)
+	defer cancel()
+
+	lobby := &LobbyEntity{}
+	result := tx.Where("liveStreamId= ?", liveStreamId).Find(lobby)
+	if result.Error != nil {
+		err := fmt.Errorf("finding lobby for stream %s: %w", liveStreamId, result.Error)
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errors.Join(err, errLobbyNotFound)
+		}
+		return nil, err
+	}
+	return lobby, nil
+}
+
+func (r *lobbyRepository) updateLobbyEntity(ctx context.Context, lobby *LobbyEntity) (*LobbyEntity, error) {
+	tx, cancel := r.store.GetDatabaseWithContext(ctx)
+	defer cancel()
+
+	result := tx.Save(lobby)
+	if result.Error != nil {
+		return nil, fmt.Errorf("updating lobby %s: %w", lobby.UUID, result.Error)
+	}
+	return lobby, nil
 }
