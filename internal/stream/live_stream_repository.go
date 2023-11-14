@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/shigde/sfu/internal/activitypub/models"
 	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/lobby"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -183,12 +184,22 @@ func (r *LiveStreamRepository) UpsertLiveStream(ctx context.Context, stream *Liv
 		return fmt.Errorf("serching space: %w", resultAc.Error)
 	}
 
+	lobbyEntity := lobby.LobbyEntity{}
+	resultLE := tx.Where("liveStreamId=?", stream.Lobby.LiveStreamId).First(&lobbyEntity)
+	if resultLE.Error != nil && !errors.Is(resultLE.Error, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("serching lobby: %w", resultLE.Error)
+	}
+
 	if resultAc.RowsAffected > 0 {
 		stream.Account = &account
 	}
 
 	if resultSp.RowsAffected > 0 {
 		stream.Space = &space
+	}
+
+	if resultLE.RowsAffected > 0 {
+		stream.Lobby = &lobbyEntity
 	}
 
 	result := tx.Create(stream)
