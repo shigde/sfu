@@ -28,7 +28,7 @@ func Execute() error {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	shigClt.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.shigClt.yaml)")
+	shigClt.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.shigClt.toml)")
 	_ = viper.BindPFlag("config", shigClt.PersistentFlags().Lookup("config"))
 
 	shigClt.AddCommand(sendCmd)
@@ -43,7 +43,7 @@ func initConfig() {
 
 		viper.AddConfigPath(home)
 		viper.AddConfigPath(".")
-		viper.SetConfigType("yaml")
+		viper.SetConfigType("toml")
 		viper.SetConfigFile(".shigClt")
 	}
 

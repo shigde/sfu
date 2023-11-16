@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/shigde/sfu/pkg/cmd"
+	"github.com/shigde/sfu/internal/cmd"
 )
 
 func main() {
