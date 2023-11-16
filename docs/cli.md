@@ -9,6 +9,6 @@ make build-clt
 ## Send Video in Lobby with CLT
 
 ```shell
-bin/shigclt send -c shigclt.toml -v input.ivf -a input.ogg 
+bin/shigclt send -c .shigclt.toml -v input.ivf -a input.ogg 
 ```
 

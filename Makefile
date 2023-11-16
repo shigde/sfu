@@ -27,12 +27,12 @@ race:
 build-linux: go_init
 	GOOS=linux GOARCH=amd64 go build -o bin/$(SERVER_NAME).linux.amd64 $(GO_LDFLAGS) ./cmd/server
 
-build-ctl:
-	go build -o bin/$(CLT_NAME) ./cmd/ctl
+build-clt:
+	go build -o bin/$(CLT_NAME) ./cmd/clt
 
-run-ctl: build-ctl
+run-ctl: build-clt
 	chmod +x bin/$(CLT_NAME)
-	./bin/$(CLT_NAME) -c config.toml
+	./bin/$(CLT_NAME) -c .shigClt.toml send --video input.ivf --audio input.ogg --url http://localhost:9000/space/../stream/..
 
 
 test: go_init

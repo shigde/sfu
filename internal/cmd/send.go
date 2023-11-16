@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	video string
-	audio string
+	video         string
+	audio         string
+	liveStreamUrl string
 
 	sendCmd = &cobra.Command{
 		Use:   "send",
@@ -21,12 +22,13 @@ var (
 )
 
 func send(ccmd *cobra.Command, args []string) {
-	if len(args) > 0 {
 
-	} else {
-		fmt.Fprintln(os.Stderr, "No video and audio is specified. Please specify a valid Video and Audio file")
-		return
-	}
+	fmt.Fprintln(os.Stderr, viper.GetString("shig.user"))
+
+	//else {
+	//	fmt.Fprintln(os.Stderr, "No video and audio is specified. Please specify a valid Video and Audio file")
+	//	return
+	//}
 }
 
 func init() {
@@ -34,8 +36,10 @@ func init() {
 }
 
 func includeAddFlags(cmd *cobra.Command) {
-	cmd.PersistentFlags().StringVar(&audio, "audio", "input.ogg", "audio.")
-	cmd.PersistentFlags().StringVar(&video, "video", "input.ivf", "video")
+	cmd.PersistentFlags().StringVar(&audio, "audio", "input.ogg", "Audio to send")
+	cmd.PersistentFlags().StringVar(&video, "video", "input.ivf", "Video to send")
+	cmd.PersistentFlags().StringVar(&liveStreamUrl, "url", "", "Shig live stream url")
 	viper.BindPFlag("audio", cmd.PersistentFlags().Lookup("audio"))
 	viper.BindPFlag("video", cmd.PersistentFlags().Lookup("video"))
+	viper.BindPFlag("url", cmd.PersistentFlags().Lookup("url"))
 }
