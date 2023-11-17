@@ -14,14 +14,16 @@ import (
 
 type LobbyApi struct {
 	UserId    string
+	Token     string
 	Session   *http.Cookie
 	CsrfToken string
 	ShigUrl   string
 }
 
-func NewLobbyApi(userId string, shigUrl string) *LobbyApi {
+func NewLobbyApi(userId string, token string, shigUrl string) *LobbyApi {
 	return &LobbyApi{
 		UserId:  userId,
+		Token:   token,
 		ShigUrl: shigUrl,
 	}
 }
@@ -30,6 +32,7 @@ func (la *LobbyApi) Login() (*authentication.Token, error) {
 	loginUrl := fmt.Sprintf("%s/authenticate", la.ShigUrl)
 	user := &authentication.User{
 		UserId: la.UserId,
+		Token:  la.Token,
 	}
 	userJSON, err := json.Marshal(user)
 	if err != nil {
@@ -52,7 +55,7 @@ func (la *LobbyApi) Login() (*authentication.Token, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.Status != "201 Created" {
+	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("server answer with wrong status code %s", resp.Status)
 	}
 

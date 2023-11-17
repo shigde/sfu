@@ -32,14 +32,14 @@ func send(ccmd *cobra.Command, args []string) {
 		return
 	}
 
-	lobby := client.NewLobbyApi(config.ShigConfig.User, params.URL)
+	lobby := client.NewLobbyApi(config.ShigConfig.User, config.ShigConfig.RegisterToken, params.URL)
 	token, err := lobby.Login()
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, fmt.Errorf("logging in: %w", err))
 		return
 	}
 
-	sender := runner.NewStaticSender(config.RtpConfig, audio, video, params.Space, params.Stream, token.JWT)
+	sender := runner.NewStaticSender(config.RtpConfig, audio, video, params.Space, params.Stream, "Bearer "+token.JWT)
 	ctx, cancelCtx := context.WithCancel(ccmd.Context())
 	defer cancelCtx()
 	runChn := make(chan struct{})
