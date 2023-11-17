@@ -32,7 +32,7 @@ build-clt:
 
 run-send-clt: build-clt
 	chmod +x bin/$(CLT_NAME)
-	./bin/$(CLT_NAME) -c .shigClt.toml send --video input.ivf --audio input.ogg --main --url http://localhost:8080/space/../stream/..
+	./bin/$(CLT_NAME) -c .shigClt.toml send --video input.ivf --audio input.ogg --main --url http://localhost:8080/live_stream_channel@localhost:9000/stream/34a11051-5f71-42c4-a51e-f389ea67f43f
 
 run-start-clt: build-clt
 	chmod +x bin/$(CLT_NAME)

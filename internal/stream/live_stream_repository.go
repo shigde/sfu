@@ -185,7 +185,7 @@ func (r *LiveStreamRepository) UpsertLiveStream(ctx context.Context, stream *Liv
 	}
 
 	lobbyEntity := lobby.LobbyEntity{}
-	resultLE := tx.Where("liveStreamId=?", stream.Lobby.LiveStreamId).First(&lobbyEntity)
+	resultLE := tx.Where("live_stream_id=?", stream.Lobby.LiveStreamId).First(&lobbyEntity)
 	if resultLE.Error != nil && !errors.Is(resultLE.Error, gorm.ErrRecordNotFound) {
 		return fmt.Errorf("serching lobby: %w", resultLE.Error)
 	}

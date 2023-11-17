@@ -89,7 +89,7 @@ func (r *lobbyRepository) queryLobbyEntity(ctx context.Context, liveStreamId str
 	defer cancel()
 
 	lobby := &LobbyEntity{}
-	result := tx.Where("liveStreamId= ?", liveStreamId).Find(lobby)
+	result := tx.Where("live_stream_id= ?", liveStreamId).Find(lobby)
 	if result.Error != nil {
 		err := fmt.Errorf("finding lobby for stream %s: %w", liveStreamId, result.Error)
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
