@@ -30,10 +30,17 @@ build-linux: go_init
 build-clt:
 	go build -o bin/$(CLT_NAME) ./cmd/clt
 
-run-ctl: build-clt
+run-send-clt: build-clt
 	chmod +x bin/$(CLT_NAME)
-	./bin/$(CLT_NAME) -c .shigClt.toml send --video input.ivf --audio input.ogg --url http://localhost:9000/space/../stream/..
+	./bin/$(CLT_NAME) -c .shigClt.toml send --video input.ivf --audio input.ogg --main --url http://localhost:8080/space/../stream/..
 
+run-start-clt: build-clt
+	chmod +x bin/$(CLT_NAME)
+	./bin/$(CLT_NAME) -c .shigClt.toml start --rtp http://localhost:1365/.. --key 352rr245 --url http://localhost:8080/space/../stream/..
+
+run-stop-clt: build-clt
+	chmod +x bin/$(CLT_NAME)
+	./bin/$(CLT_NAME) -c .shigClt.toml stop --url http://localhost:8080/space/../stream/..
 
 test: go_init
 	go test \
