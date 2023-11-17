@@ -18,7 +18,18 @@ type StaticSender struct {
 	bearer               string
 }
 
-func (mr *StaticSender) run(done chan struct{}) error {
+func NewStaticSender(conf *rtp.RtpConfig, audioFile string, videoFile string, spaceId string, streamId string, bearer string) *StaticSender {
+	return &StaticSender{
+		conf,
+		audioFile,
+		videoFile,
+		spaceId,
+		streamId,
+		bearer,
+	}
+}
+
+func (mr *StaticSender) Run(ctx context.Context) error {
 	localTracks := make([]webrtc.TrackLocal, 0, 2)
 
 	videoTrack, err := sample.NewLocalFileLooperTrack(mr.videoFile)
@@ -60,7 +71,7 @@ func (mr *StaticSender) run(done chan struct{}) error {
 	}
 
 	select {
-	case <-done:
+	case <-ctx.Done():
 		return nil
 	}
 }

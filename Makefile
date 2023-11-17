@@ -27,13 +27,20 @@ race:
 build-linux: go_init
 	GOOS=linux GOARCH=amd64 go build -o bin/$(SERVER_NAME).linux.amd64 $(GO_LDFLAGS) ./cmd/server
 
-build-ctl:
-	go build -o bin/$(CLT_NAME) ./cmd/ctl
+build-clt:
+	go build -o bin/$(CLT_NAME) ./cmd/clt
 
-run-ctl: build-ctl
+run-send-clt: build-clt
 	chmod +x bin/$(CLT_NAME)
-	./bin/$(CLT_NAME) -c config.toml
+	./bin/$(CLT_NAME) -c .shigClt.toml send --video input.ivf --audio input.ogg --main --url http://localhost:8080/space/live_stream_channel@localhost:9000/stream/34a11051-5f71-42c4-a51e-f389ea67f43f
 
+run-start-clt: build-clt
+	chmod +x bin/$(CLT_NAME)
+	./bin/$(CLT_NAME) -c .shigClt.toml start --rtp http://localhost:1365/.. --key 352rr245 --url http://localhost:8080/space/../stream/..
+
+run-stop-clt: build-clt
+	chmod +x bin/$(CLT_NAME)
+	./bin/$(CLT_NAME) -c .shigClt.toml stop --url http://localhost:8080/space/../stream/..
 
 test: go_init
 	go test \
