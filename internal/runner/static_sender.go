@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/sample"
@@ -32,13 +33,14 @@ func NewStaticSender(conf *rtp.RtpConfig, audioFile string, videoFile string, sp
 func (mr *StaticSender) Run(ctx context.Context) error {
 	localTracks := make([]webrtc.TrackLocal, 0, 2)
 
-	videoTrack, err := sample.NewLocalFileLooperTrack(mr.videoFile)
+	streamID := uuid.NewString()
+	videoTrack, err := sample.NewLocalFileLooperTrack(mr.videoFile, sample.WithStreamID(streamID))
 	if err != nil {
 		return fmt.Errorf("creating video track: %w", err)
 	}
 	localTracks = append(localTracks, videoTrack)
 
-	audioTrack, err := sample.NewLocalFileLooperTrack(mr.audioFile)
+	audioTrack, err := sample.NewLocalFileLooperTrack(mr.audioFile, sample.WithStreamID(streamID))
 	if err != nil {
 		return fmt.Errorf("creating audio track: %w", err)
 	}
