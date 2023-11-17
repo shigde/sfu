@@ -10,6 +10,7 @@ import (
 
 var (
 	cfgFile string
+	config  *Config
 
 	shigClt = &cobra.Command{
 		Use:           "shigClt",
@@ -35,6 +36,7 @@ func init() {
 }
 
 func initConfig() {
+	config = &Config{}
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)
 	} else {
@@ -50,6 +52,9 @@ func initConfig() {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
+		fmt.Println("Config file used for shigClt: ", viper.ConfigFileUsed())
+	}
+	if err := viper.GetViper().Unmarshal(config); err != nil {
 		fmt.Println("Config file used for shigClt: ", viper.ConfigFileUsed())
 	}
 }

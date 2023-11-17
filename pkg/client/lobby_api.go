@@ -13,20 +13,23 @@ import (
 )
 
 type LobbyApi struct {
+	UserId    string
 	Session   *http.Cookie
 	CsrfToken string
+	ShigUrl   string
 }
 
-func NewLobbyApi(session *http.Cookie, csrfToken string) *LobbyApi {
+func NewLobbyApi(userId string, shigUrl string) *LobbyApi {
 	return &LobbyApi{
-		Session:   session,
-		CsrfToken: csrfToken,
+		UserId:  userId,
+		ShigUrl: shigUrl,
 	}
 }
 
 func (la *LobbyApi) Login() (*authentication.Token, error) {
+	loginUrl := fmt.Sprintf("%s/authenticate", la.ShigUrl)
 	user := &authentication.User{
-		UserId: "root@localhost:9000",
+		UserId: la.UserId,
 	}
 	userJSON, err := json.Marshal(user)
 	if err != nil {
@@ -35,7 +38,7 @@ func (la *LobbyApi) Login() (*authentication.Token, error) {
 	body := bytes.NewBuffer(userJSON)
 
 	c := http.Client{Timeout: time.Duration(1) * time.Second}
-	req, err := http.NewRequest("POST", "http://localhost:8080/authenticate", body)
+	req, err := http.NewRequest("POST", loginUrl, body)
 	if err != nil {
 		return nil, fmt.Errorf("create login request: %w", err)
 	}
@@ -68,7 +71,7 @@ func (la *LobbyApi) Login() (*authentication.Token, error) {
 }
 
 func (la *LobbyApi) Start(spaceId string, streamId string, bearer string) error {
-	resp, err := la.doRequest("POST", fmt.Sprintf("http://localhost:8080/space/%s/stream/%s/live", spaceId, streamId), bearer, nil)
+	resp, err := la.doRequest("POST", fmt.Sprintf("%s/space/%s/stream/%s/live", la.ShigUrl, spaceId, streamId), bearer, nil)
 	if err != nil {
 		return fmt.Errorf("running start request: %w", err)
 	}
@@ -86,7 +89,7 @@ func (la *LobbyApi) Start(spaceId string, streamId string, bearer string) error 
 }
 
 func (la *LobbyApi) Status(spaceId string, streamId string, bearer string) (string, error) {
-	resp, err := la.doRequest("GET", fmt.Sprintf("http://localhost:8080/space/%s/stream/%s/status", spaceId, streamId), bearer, nil)
+	resp, err := la.doRequest("GET", fmt.Sprintf("%s/space/%s/stream/%s/status", la.ShigUrl, spaceId, streamId), bearer, nil)
 	if err != nil {
 		return "offline", fmt.Errorf("running status request: %w", err)
 	}
@@ -104,7 +107,7 @@ func (la *LobbyApi) Status(spaceId string, streamId string, bearer string) (stri
 }
 
 func (la *LobbyApi) Stop(spaceId string, streamId string, bearer string) error {
-	resp, err := la.doRequest("DELETE", fmt.Sprintf("http://localhost:8080/space/%s/stream/%s/live", spaceId, streamId), bearer, nil)
+	resp, err := la.doRequest("DELETE", fmt.Sprintf("%s/space/%s/stream/%s/live", la.ShigUrl, spaceId, streamId), bearer, nil)
 	if err != nil {
 		return fmt.Errorf("running stop request: %w", err)
 	}

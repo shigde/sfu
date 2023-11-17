@@ -30,10 +30,6 @@ func ParseConfig(file string) (*sfu.Config, error) {
 		return nil, fmt.Errorf("loading config file: %w", err)
 	}
 
-	if err := viper.GetViper().Unmarshal(config); err != nil {
-		return nil, fmt.Errorf("loading config file: %w", err)
-	}
-
 	if config.StorageConfig.Name != "sqlite3" {
 		return nil, fmt.Errorf("store.name currently supportes only Sqlite3")
 	}

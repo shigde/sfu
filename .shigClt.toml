@@ -3,6 +3,7 @@ user = "root@localhost:9000"
 pass = ""
 registerToken = "this-token-must-be-changed-in-public"
 
+
 [instance]
 client = ""
 
