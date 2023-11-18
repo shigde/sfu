@@ -14,13 +14,26 @@ func NewLocalStaticSenderEndpoint(e *Engine, sendingTracks []webrtc.TrackLocal, 
 	if err != nil {
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
 	}
+	endpoint := &Endpoint{peerConnection: peerConnection}
+	for _, opt := range options {
+		opt(endpoint)
+	}
 
+	// This makes no sense
 	_, iceConnectedCtxCancel := context.WithCancel(context.Background())
 
 	peerConnection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
 		slog.Debug("rtp.engine: connection State has changed", "state", connectionState.String())
 		if connectionState == webrtc.ICEConnectionStateConnected {
 			iceConnectedCtxCancel()
+		}
+	})
+
+	peerConnection.OnSignalingStateChange(func(signalState webrtc.SignalingState) {
+		if signalState == webrtc.SignalingStateStable {
+			if endpoint.onEstablished != nil {
+				endpoint.onEstablished()
+			}
 		}
 	})
 
@@ -41,15 +54,10 @@ func NewLocalStaticSenderEndpoint(e *Engine, sendingTracks []webrtc.TrackLocal, 
 		return nil, fmt.Errorf("creating offer: %w", err)
 	}
 
-	gatherComplete := webrtc.GatheringCompletePromise(peerConnection)
+	endpoint.gatherComplete = webrtc.GatheringCompletePromise(peerConnection)
 
 	if err = peerConnection.SetLocalDescription(offer); err != nil {
 		return nil, err
-	}
-
-	endpoint := &Endpoint{peerConnection: peerConnection, gatherComplete: gatherComplete}
-	for _, opt := range options {
-		opt(endpoint)
 	}
 
 	return endpoint, nil

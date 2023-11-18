@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/shigde/sfu/internal/stream"
 	"github.com/shigde/sfu/pkg/authentication"
 )
 
@@ -73,8 +74,18 @@ func (la *LobbyApi) Login() (*authentication.Token, error) {
 	return &result, nil
 }
 
-func (la *LobbyApi) Start(spaceId string, streamId string, bearer string) error {
-	resp, err := la.doRequest("POST", fmt.Sprintf("%s/space/%s/stream/%s/live", la.ShigUrl, spaceId, streamId), bearer, nil)
+func (la *LobbyApi) Start(spaceId string, streamId string, bearer string, rtmpUrl string, key string) error {
+	liveStreamInfo := &stream.LiveStreamInfo{
+		RtmpUrl:   rtmpUrl,
+		StreamKey: key,
+	}
+	userJSON, err := json.Marshal(liveStreamInfo)
+	if err != nil {
+		return fmt.Errorf("creating json object for liveStreamInfo: %w", err)
+	}
+	body := bytes.NewBuffer(userJSON)
+
+	resp, err := la.doRequest("POST", fmt.Sprintf("%s/space/%s/stream/%s/live", la.ShigUrl, spaceId, streamId), bearer, body)
 	if err != nil {
 		return fmt.Errorf("running start request: %w", err)
 	}

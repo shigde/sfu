@@ -32,7 +32,7 @@ func NewStaticSender(conf *rtp.RtpConfig, audioFile string, videoFile string, sp
 	}
 }
 
-func (mr *StaticSender) Run(ctx context.Context) error {
+func (mr *StaticSender) Run(ctx context.Context, onEstablished chan<- struct{}) error {
 	localTracks := make([]webrtc.TrackLocal, 0, 2)
 
 	streamID := uuid.NewString()
@@ -53,7 +53,15 @@ func (mr *StaticSender) Run(ctx context.Context) error {
 		return fmt.Errorf("setup webrtc engine: %w", err)
 	}
 
-	endpoint, err := rtp.NewLocalStaticSenderEndpoint(engine, localTracks)
+	withOnEstablished := rtp.EndpointWithOnEstablished(func() {
+		select {
+		case <-ctx.Done():
+		default:
+			onEstablished <- struct{}{}
+		}
+	})
+
+	endpoint, err := rtp.NewLocalStaticSenderEndpoint(engine, localTracks, withOnEstablished)
 	if err != nil {
 		return fmt.Errorf("building new webrtc endpoint: %w", err)
 	}

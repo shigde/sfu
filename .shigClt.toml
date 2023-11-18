@@ -3,10 +3,12 @@ user = "user123@localhost:9000"
 pass = ""
 registerToken = "this-token-must-be-changed-in-public"
 
+[rtmp]
+streamKey = ""
+rtmpUrl = ""
 
 [instance]
 client = ""
-
 
 [rtp]
 iceServer = [{ urls = ["stun:stun.l.google.com:19302"] }]
