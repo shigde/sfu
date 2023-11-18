@@ -17,9 +17,10 @@ type StaticSender struct {
 	spaceId              string
 	streamId             string
 	bearer               string
+	isMainStream         bool
 }
 
-func NewStaticSender(conf *rtp.RtpConfig, audioFile string, videoFile string, spaceId string, streamId string, bearer string) *StaticSender {
+func NewStaticSender(conf *rtp.RtpConfig, audioFile string, videoFile string, spaceId string, streamId string, bearer string, isMainStream bool) *StaticSender {
 	return &StaticSender{
 		conf,
 		audioFile,
@@ -27,6 +28,7 @@ func NewStaticSender(conf *rtp.RtpConfig, audioFile string, videoFile string, sp
 		spaceId,
 		streamId,
 		bearer,
+		isMainStream,
 	}
 }
 
@@ -56,9 +58,15 @@ func (mr *StaticSender) Run(ctx context.Context) error {
 		return fmt.Errorf("building new webrtc endpoint: %w", err)
 	}
 
-	offer, err := endpoint.GetLocalDescription(context.Background())
+	offer, err := endpoint.GetLocalDescription(ctx)
 	if err != nil {
 		return fmt.Errorf("creating local offer: %w", err)
+	}
+
+	if mr.isMainStream {
+		if offer, err = rtp.MarkStreamAsMain(offer, streamID); err != nil {
+			return fmt.Errorf("marking straem as main stream: %w", err)
+		}
 	}
 
 	whipClient := client.NewWhip()
@@ -66,7 +74,7 @@ func (mr *StaticSender) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("getting answer from whip endpoint: %w", err)
 	}
-	println("Answer", answer.SDP)
+
 	err = endpoint.SetAnswer(answer)
 	if err != nil {
 		return fmt.Errorf("creating setting answer: %w", err)

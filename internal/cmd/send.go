@@ -39,7 +39,7 @@ func send(ccmd *cobra.Command, args []string) {
 		return
 	}
 
-	sender := runner.NewStaticSender(config.RtpConfig, audio, video, params.Space, params.Stream, "Bearer "+token.JWT)
+	sender := runner.NewStaticSender(config.RtpConfig, audio, video, params.Space, params.Stream, "Bearer "+token.JWT, isMainStream)
 	ctx, cancelCtx := context.WithCancel(ccmd.Context())
 	defer cancelCtx()
 	runChn := make(chan struct{})
@@ -47,7 +47,7 @@ func send(ccmd *cobra.Command, args []string) {
 		defer close(runChn)
 		err := sender.Run(ctx)
 		if err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, fmt.Errorf("logging in: %w", err))
+			_, _ = fmt.Fprintln(os.Stderr, fmt.Errorf("running sender: %w", err))
 		}
 	}()
 
