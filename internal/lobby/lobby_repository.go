@@ -30,13 +30,13 @@ func newLobbyRepository(store storage.Storage, rtpEngine rtpEngine) *lobbyReposi
 	}
 }
 
-func (r *lobbyRepository) getOrCreateLobby(liveStreamId uuid.UUID) (*lobby, error) {
+func (r *lobbyRepository) getOrCreateLobby(lobbyId uuid.UUID) (*lobby, error) {
 	r.locker.Lock()
 	defer r.locker.Unlock()
-	currentLobby, ok := r.lobbies[liveStreamId]
+	currentLobby, ok := r.lobbies[lobbyId]
 	if !ok {
-		lobby := newLobby(liveStreamId, r.rtpEngine)
-		entity, err := r.queryLobbyEntity(context.Background(), liveStreamId.String())
+		lobby := newLobby(lobbyId, r.rtpEngine)
+		entity, err := r.queryLobbyEntity(context.Background(), lobbyId.String())
 		if err != nil {
 			return nil, fmt.Errorf("fetching lobby entity: %w", err)
 		}
@@ -47,7 +47,7 @@ func (r *lobbyRepository) getOrCreateLobby(liveStreamId uuid.UUID) (*lobby, erro
 		}
 
 		lobby.entity = entity
-		r.lobbies[liveStreamId] = lobby
+		r.lobbies[lobbyId] = lobby
 		return lobby, nil
 	}
 	return currentLobby, nil
@@ -89,14 +89,14 @@ func (r *lobbyRepository) Len() int {
 	return len(r.lobbies)
 }
 
-func (r *lobbyRepository) queryLobbyEntity(ctx context.Context, liveStreamId string) (*LobbyEntity, error) {
+func (r *lobbyRepository) queryLobbyEntity(ctx context.Context, lobbyId string) (*LobbyEntity, error) {
 	tx, cancel := r.store.GetDatabaseWithContext(ctx)
 	defer cancel()
 
 	lobby := &LobbyEntity{}
-	result := tx.Where("live_stream_id=?", liveStreamId).Find(lobby)
+	result := tx.Where("uuid=?", lobbyId).Find(lobby)
 	if result.Error != nil {
-		err := fmt.Errorf("finding lobby for stream %s: %w", liveStreamId, result.Error)
+		err := fmt.Errorf("finding lobby for stream %s: %w", lobbyId, result.Error)
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, errors.Join(err, errLobbyNotFound)
 		}
