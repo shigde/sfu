@@ -33,13 +33,13 @@ func send(ccmd *cobra.Command, args []string) {
 	}
 
 	lobby := client.NewLobbyApi(config.ShigConfig.User, config.ShigConfig.RegisterToken, params.URL)
-	token, err := lobby.Login()
+	_, err = lobby.Login()
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, fmt.Errorf("logging in: %w", err))
 		return
 	}
 
-	sender := runner.NewStaticSender(config.RtpConfig, audio, video, params.Space, params.Stream, "Bearer "+token.JWT, isMainStream)
+	sender := runner.NewStaticSender(config.RtpConfig, audio, video, params.Space, params.Stream, lobby.Session, isMainStream)
 	ctx, cancelCtx := context.WithCancel(ccmd.Context())
 	defer cancelCtx()
 	runChn := make(chan struct{})
@@ -58,7 +58,7 @@ func send(ccmd *cobra.Command, args []string) {
 			_, _ = fmt.Fprintln(os.Stderr, "finish sending before starting stream")
 			return
 		case <-onEstablished:
-			if err := lobby.Start(params.Space, params.Stream, "Bearer "+token.JWT, config.RtmpUrl, config.StreamKey); err != nil {
+			if err := lobby.Start(params.Space, params.Stream, config.RtmpUrl, config.StreamKey); err != nil {
 				_, _ = fmt.Fprintln(os.Stderr, fmt.Errorf("starting stream: %w", err))
 			}
 		}
@@ -67,7 +67,7 @@ func send(ccmd *cobra.Command, args []string) {
 	select {
 	case <-runChn:
 		if isMainStream {
-			if err := lobby.Stop(params.Space, params.Stream, "Bearer "+token.JWT); err != nil {
+			if err := lobby.Stop(params.Space, params.Stream); err != nil {
 				_, _ = fmt.Fprintln(os.Stderr, fmt.Errorf("stoping stream: %w", err))
 			}
 		}

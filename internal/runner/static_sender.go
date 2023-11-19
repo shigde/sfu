@@ -16,18 +16,18 @@ type StaticSender struct {
 	audioFile, videoFile string
 	spaceId              string
 	streamId             string
-	bearer               string
+	session              *client.Session
 	isMainStream         bool
 }
 
-func NewStaticSender(conf *rtp.RtpConfig, audioFile string, videoFile string, spaceId string, streamId string, bearer string, isMainStream bool) *StaticSender {
+func NewStaticSender(conf *rtp.RtpConfig, audioFile string, videoFile string, spaceId string, streamId string, session *client.Session, isMainStream bool) *StaticSender {
 	return &StaticSender{
 		conf,
 		audioFile,
 		videoFile,
 		spaceId,
 		streamId,
-		bearer,
+		session,
 		isMainStream,
 	}
 }
@@ -77,8 +77,8 @@ func (mr *StaticSender) Run(ctx context.Context, onEstablished chan<- struct{}) 
 		}
 	}
 
-	whipClient := client.NewWhip()
-	answer, err := whipClient.GetAnswer(mr.spaceId, mr.streamId, mr.bearer, offer)
+	whipClient := client.NewWhip(client.WithSession(mr.session))
+	answer, err := whipClient.GetAnswer(mr.spaceId, mr.streamId, offer)
 	if err != nil {
 		return fmt.Errorf("getting answer from whip endpoint: %w", err)
 	}
