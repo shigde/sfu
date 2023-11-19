@@ -14,15 +14,17 @@ import (
 const reqTokenHeaderName = "X-Req-Token"
 
 type Whip struct {
-	Session   *http.Cookie
-	CsrfToken string
+	*Client
 }
 
-func NewWhip() *Whip {
-	return &Whip{}
+func NewWhip(opt ...ClientOption) *Whip {
+	client := NewClient(opt...)
+	return &Whip{
+		client,
+	}
 }
 
-func (w *Whip) GetAnswer(spaceId string, streamId string, bearer string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+func (w *Whip) GetAnswer(spaceId string, streamId string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
 	body := bytes.NewBuffer([]byte(offer.SDP))
 	c := http.Client{Timeout: time.Duration(1) * time.Second}
 	req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:8080/space/%s/stream/%s/whip", spaceId, streamId), body)
@@ -32,7 +34,7 @@ func (w *Whip) GetAnswer(spaceId string, streamId string, bearer string, offer *
 	req.Header.Add("Accept", `application/sdp`)
 	req.Header.Set("Content-Type", "application/sdp")
 	req.Header.Set("Content-Length", strconv.Itoa(body.Len()))
-	req.Header.Set("Authorization", bearer)
+	req.Header.Set("Authorization", w.Session.GetBearer())
 
 	resp, err := c.Do(req)
 	if err != nil {
@@ -40,8 +42,8 @@ func (w *Whip) GetAnswer(spaceId string, streamId string, bearer string, offer *
 	}
 	defer resp.Body.Close()
 
-	w.Session = resp.Cookies()[0]
-	w.CsrfToken = resp.Header.Get(reqTokenHeaderName)
+	w.Session.SetCookie(resp.Cookies()[0])
+	w.Session.SetCsrfToken(resp.Header.Get(reqTokenHeaderName))
 
 	if resp.Status != "201 Created" {
 		return nil, fmt.Errorf("server answer with wrong status code %s", resp.Status)

@@ -62,6 +62,7 @@ type LocalTrack struct {
 	simulcastID     string
 	simulcastLayer  *rtp2.SimulcastLayer
 	onRTCP          func(rtcp.Packet)
+	customStreamID  string
 
 	muted       atomic.Bool
 	cancelWrite func()
@@ -80,6 +81,12 @@ func WithSimulcast(simulcastID string, layer *rtp2.SimulcastLayer) LocalTrackOpt
 	return func(s *LocalTrack) {
 		s.simulcastLayer = layer
 		s.simulcastID = simulcastID
+	}
+}
+
+func WithStreamID(streamID string) LocalTrackOptions {
+	return func(s *LocalTrack) {
+		s.customStreamID = streamID
 	}
 }
 
@@ -106,7 +113,10 @@ func NewLocalTrack(c webrtc.RTPCodecCapability, opts ...LocalTrackOptions) (*Loc
 		}
 	}
 	trackID := uuid.NewString()
-	streamID := uuid.NewString()
+	streamID := s.customStreamID
+	if len(streamID) == 0 {
+		streamID = uuid.NewString()
+	}
 	if s.simulcastID != "" {
 		trackID = s.simulcastID
 		streamID = s.simulcastID

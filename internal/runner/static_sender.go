@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/sample"
@@ -15,30 +16,33 @@ type StaticSender struct {
 	audioFile, videoFile string
 	spaceId              string
 	streamId             string
-	bearer               string
+	session              *client.Session
+	isMainStream         bool
 }
 
-func NewStaticSender(conf *rtp.RtpConfig, audioFile string, videoFile string, spaceId string, streamId string, bearer string) *StaticSender {
+func NewStaticSender(conf *rtp.RtpConfig, audioFile string, videoFile string, spaceId string, streamId string, session *client.Session, isMainStream bool) *StaticSender {
 	return &StaticSender{
 		conf,
 		audioFile,
 		videoFile,
 		spaceId,
 		streamId,
-		bearer,
+		session,
+		isMainStream,
 	}
 }
 
-func (mr *StaticSender) Run(ctx context.Context) error {
+func (mr *StaticSender) Run(ctx context.Context, onEstablished chan<- struct{}) error {
 	localTracks := make([]webrtc.TrackLocal, 0, 2)
 
-	videoTrack, err := sample.NewLocalFileLooperTrack(mr.videoFile)
+	streamID := uuid.NewString()
+	videoTrack, err := sample.NewLocalFileLooperTrack(mr.videoFile, sample.WithStreamID(streamID))
 	if err != nil {
 		return fmt.Errorf("creating video track: %w", err)
 	}
 	localTracks = append(localTracks, videoTrack)
 
-	audioTrack, err := sample.NewLocalFileLooperTrack(mr.audioFile)
+	audioTrack, err := sample.NewLocalFileLooperTrack(mr.audioFile, sample.WithStreamID(streamID))
 	if err != nil {
 		return fmt.Errorf("creating audio track: %w", err)
 	}
@@ -49,22 +53,36 @@ func (mr *StaticSender) Run(ctx context.Context) error {
 		return fmt.Errorf("setup webrtc engine: %w", err)
 	}
 
-	endpoint, err := rtp.NewLocalStaticSenderEndpoint(engine, localTracks)
+	withOnEstablished := rtp.EndpointWithOnEstablished(func() {
+		select {
+		case <-ctx.Done():
+		default:
+			onEstablished <- struct{}{}
+		}
+	})
+
+	endpoint, err := rtp.NewLocalStaticSenderEndpoint(engine, localTracks, withOnEstablished)
 	if err != nil {
 		return fmt.Errorf("building new webrtc endpoint: %w", err)
 	}
 
-	offer, err := endpoint.GetLocalDescription(context.Background())
+	offer, err := endpoint.GetLocalDescription(ctx)
 	if err != nil {
 		return fmt.Errorf("creating local offer: %w", err)
 	}
 
-	whipClient := client.NewWhip()
-	answer, err := whipClient.GetAnswer(mr.spaceId, mr.streamId, mr.bearer, offer)
+	if mr.isMainStream {
+		if offer, err = rtp.MarkStreamAsMain(offer, streamID); err != nil {
+			return fmt.Errorf("marking straem as main stream: %w", err)
+		}
+	}
+
+	whipClient := client.NewWhip(client.WithSession(mr.session))
+	answer, err := whipClient.GetAnswer(mr.spaceId, mr.streamId, offer)
 	if err != nil {
 		return fmt.Errorf("getting answer from whip endpoint: %w", err)
 	}
-	println("Answer", answer.SDP)
+
 	err = endpoint.SetAnswer(answer)
 	if err != nil {
 		return fmt.Errorf("creating setting answer: %w", err)

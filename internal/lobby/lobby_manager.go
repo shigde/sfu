@@ -26,23 +26,27 @@ func NewLobbyManager(storage storage.Storage, e rtpEngine) *LobbyManager {
 	return &LobbyManager{lobbies}
 }
 
-func (m *LobbyManager) AccessLobby(ctx context.Context, liveStreamId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
+func (m *LobbyManager) AccessLobby(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Resource     uuid.UUID
 	RtpSessionId uuid.UUID
 }, error) {
-	lobby := m.lobbies.getOrCreateLobby(liveStreamId)
-	request := newLobbyRequest(ctx, user)
-	joinData := newJoinData(offer)
-	request.data = joinData
-
-	go lobby.runRequest(request)
-
 	var answerData struct {
 		Answer       *webrtc.SessionDescription
 		Resource     uuid.UUID
 		RtpSessionId uuid.UUID
 	}
+
+	lobby, err := m.lobbies.getOrCreateLobby(lobbyId)
+	if err != nil {
+		return answerData, fmt.Errorf("getting or creating lobby: %w", err)
+	}
+
+	request := newLobbyRequest(ctx, user)
+	joinData := newJoinData(offer)
+	request.data = joinData
+
+	go lobby.runRequest(request)
 
 	select {
 	case err := <-request.err:
@@ -55,7 +59,7 @@ func (m *LobbyManager) AccessLobby(ctx context.Context, liveStreamId uuid.UUID, 
 	}
 }
 
-func (m *LobbyManager) StartListenLobby(ctx context.Context, liveStreamId uuid.UUID, user uuid.UUID) (struct {
+func (m *LobbyManager) StartListenLobby(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID) (struct {
 	Offer        *webrtc.SessionDescription
 	Active       bool
 	RtpSessionId uuid.UUID
@@ -67,7 +71,7 @@ func (m *LobbyManager) StartListenLobby(ctx context.Context, liveStreamId uuid.U
 		RtpSessionId uuid.UUID
 	}
 
-	if lobby, hasLobby := m.lobbies.getLobby(liveStreamId); hasLobby {
+	if lobby, hasLobby := m.lobbies.getLobby(lobbyId); hasLobby {
 		request := newLobbyRequest(ctx, user)
 		listenData := newStartListenData()
 		request.data = listenData
@@ -94,7 +98,7 @@ func (m *LobbyManager) StartListenLobby(ctx context.Context, liveStreamId uuid.U
 	return answerData, nil
 }
 
-func (m *LobbyManager) ListenLobby(ctx context.Context, liveStreamId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
+func (m *LobbyManager) ListenLobby(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Active       bool
 	RtpSessionId uuid.UUID
@@ -106,7 +110,7 @@ func (m *LobbyManager) ListenLobby(ctx context.Context, liveStreamId uuid.UUID, 
 		RtpSessionId uuid.UUID
 	}
 
-	if lobby, hasLobby := m.lobbies.getLobby(liveStreamId); hasLobby {
+	if lobby, hasLobby := m.lobbies.getLobby(lobbyId); hasLobby {
 		request := newLobbyRequest(ctx, user)
 		listenData := newListenData(offer)
 		request.data = listenData
@@ -132,8 +136,8 @@ func (m *LobbyManager) ListenLobby(ctx context.Context, liveStreamId uuid.UUID, 
 	return answerData, nil
 }
 
-func (m *LobbyManager) LeaveLobby(ctx context.Context, liveStreamId uuid.UUID, userId uuid.UUID) (bool, error) {
-	if lobby, hasLobby := m.lobbies.getLobby(liveStreamId); hasLobby {
+func (m *LobbyManager) LeaveLobby(ctx context.Context, lobbyId uuid.UUID, userId uuid.UUID) (bool, error) {
+	if lobby, hasLobby := m.lobbies.getLobby(lobbyId); hasLobby {
 		request := newLobbyRequest(ctx, userId)
 		leaveData := newLeaveData()
 		request.data = leaveData
@@ -152,12 +156,12 @@ func (m *LobbyManager) LeaveLobby(ctx context.Context, liveStreamId uuid.UUID, u
 
 func (m *LobbyManager) StartLiveStream(
 	ctx context.Context,
-	liveStreamId uuid.UUID,
+	lobbyId uuid.UUID,
 	key string,
 	rtmpUrl string,
 	userId uuid.UUID,
 ) error {
-	if lobby, hasLobby := m.lobbies.getLobby(liveStreamId); hasLobby {
+	if lobby, hasLobby := m.lobbies.getLobby(lobbyId); hasLobby {
 		request := newLobbyRequest(ctx, userId)
 		startData := newLiveStreamStart(key, rtmpUrl)
 		request.data = startData
@@ -167,7 +171,7 @@ func (m *LobbyManager) StartLiveStream(
 		case err := <-request.err:
 			return err
 		case res := <-startData.response:
-			m.lobbies.setLobbyLive(ctx, liveStreamId, res)
+			m.lobbies.setLobbyLive(ctx, lobbyId, res)
 			return nil
 		}
 	}
@@ -176,10 +180,10 @@ func (m *LobbyManager) StartLiveStream(
 
 func (m *LobbyManager) StopLiveStream(
 	ctx context.Context,
-	liveStreamId uuid.UUID,
+	lobbyId uuid.UUID,
 	userId uuid.UUID,
 ) error {
-	if lobby, hasLobby := m.lobbies.getLobby(liveStreamId); hasLobby {
+	if lobby, hasLobby := m.lobbies.getLobby(lobbyId); hasLobby {
 		request := newLobbyRequest(ctx, userId)
 		stopData := newLiveStreamStop()
 		request.data = stopData
@@ -189,7 +193,7 @@ func (m *LobbyManager) StopLiveStream(
 		case err := <-request.err:
 			return err
 		case _ = <-stopData.response:
-			m.lobbies.setLobbyLive(ctx, liveStreamId, false)
+			m.lobbies.setLobbyLive(ctx, lobbyId, false)
 			return nil
 		}
 	}

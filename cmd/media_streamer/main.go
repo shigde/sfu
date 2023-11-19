@@ -50,7 +50,8 @@ func main() {
 	}
 
 	whipClient := client.NewWhip()
-	signalAnswer, err := whipClient.GetAnswer(spaceId, streamId, bearer, signalOffer)
+	whipClient.Session.SetBearer(bearer)
+	signalAnswer, err := whipClient.GetAnswer(spaceId, streamId, signalOffer)
 	if err != nil {
 		panic(err)
 	}
@@ -62,8 +63,8 @@ func main() {
 
 	// Create receive Connection
 	//-----
-	whepClient := client.NewWhep(whipClient.Session, whipClient.CsrfToken)
-	offer, err := whepClient.GetOffer(spaceId, streamId, bearer)
+	whepClient := client.NewWhep(client.WithSession(whipClient.Session))
+	offer, err := whepClient.GetOffer(spaceId, streamId)
 	if err != nil {
 		panic(err)
 	}

@@ -28,14 +28,14 @@ func TestStreamLobbyRepository(t *testing.T) {
 
 	t.Run("Create lobby", func(t *testing.T) {
 		repo := testRtpStreamLobbyRepositorySetup(t)
-		lobby := repo.getOrCreateLobby(uuid.New())
+		lobby, _ := repo.getOrCreateLobby(uuid.New())
 		assert.NotNil(t, lobby)
 	})
 
 	t.Run("Create and Get lobby", func(t *testing.T) {
 		repo := testRtpStreamLobbyRepositorySetup(t)
 		id := uuid.New()
-		lobbyCreated := repo.getOrCreateLobby(id)
+		lobbyCreated, _ := repo.getOrCreateLobby(id)
 		assert.NotNil(t, lobbyCreated)
 		lobbyGet, ok := repo.getLobby(id)
 		assert.True(t, ok)
@@ -45,7 +45,7 @@ func TestStreamLobbyRepository(t *testing.T) {
 	t.Run("Delete lobby", func(t *testing.T) {
 		repo := testRtpStreamLobbyRepositorySetup(t)
 		id := uuid.New()
-		created := repo.getOrCreateLobby(id)
+		created, _ := repo.getOrCreateLobby(id)
 		assert.NotNil(t, created)
 
 		deleted := repo.Delete(id)
@@ -69,14 +69,14 @@ func TestStreamLobbyRepository(t *testing.T) {
 
 		for i := 0; i < wantedCount; i++ {
 			go func(id int) {
-				lobby := repo.getOrCreateLobby(uuid.New())
+				lobby, _ := repo.getOrCreateLobby(uuid.New())
 				assert.NotNil(t, lobby)
 				wg.Done()
 			}(i)
 
 			if i == createOn {
 				go func() {
-					lobby := repo.getOrCreateLobby(id)
+					lobby, _ := repo.getOrCreateLobby(id)
 					assert.NotNil(t, lobby)
 					close(created)
 					wg.Done()

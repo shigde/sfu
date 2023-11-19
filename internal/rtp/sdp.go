@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/pion/sdp/v3"
 	"github.com/pion/webrtc/v3"
 )
 
@@ -41,4 +42,31 @@ func getTrackInfo(sdp webrtc.SessionDescription, session uuid.UUID) (map[string]
 		}
 	}
 	return trackInfoMap, nil
+}
+
+func MarkStreamAsMain(sdpOrigin *webrtc.SessionDescription, streamID string) (*webrtc.SessionDescription, error) {
+	sdpObj, err := sdpOrigin.Unmarshal()
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal sdp: %w", err)
+	}
+
+	for _, desc := range sdpObj.MediaDescriptions {
+		if desc.MediaName.Media != "video" && desc.MediaName.Media != "audio" {
+			continue
+		}
+		msid, fund := desc.Attribute("msid")
+		if fund && strings.Contains(msid, streamID) {
+			info := sdp.Information(fmt.Sprintf("%d", TrackInfoKindStream))
+			desc.MediaTitle = &info
+		}
+	}
+	sdpByt, err := sdpObj.Marshal()
+	if err != nil {
+		return nil, fmt.Errorf("marshal new sdp: %w", err)
+	}
+	sdpNew := &webrtc.SessionDescription{
+		Type: sdpOrigin.Type,
+		SDP:  string(sdpByt),
+	}
+	return sdpNew, nil
 }

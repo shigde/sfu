@@ -52,7 +52,8 @@ func main() {
 	}
 
 	whipClient := client.NewWhip()
-	answer, err := whipClient.GetAnswer(spaceId, streamId, bearer, offer)
+	whipClient.Session.SetBearer(bearer)
+	answer, err := whipClient.GetAnswer(spaceId, streamId, offer)
 	if err != nil {
 		panic(err)
 	}

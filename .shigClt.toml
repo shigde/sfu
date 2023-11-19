@@ -1,12 +1,14 @@
 [shig]
-user = "user123@localhost:9000"
+user = "root@localhost:9000"
 pass = ""
 registerToken = "this-token-must-be-changed-in-public"
 
+[rtmp]
+streamKey = "c4855252-00e1-43ef-baf8-230ace3249e9"
+rtmpUrl = "rtmp://localhost:1935/live"
 
 [instance]
 client = ""
-
 
 [rtp]
 iceServer = [{ urls = ["stun:stun.l.google.com:19302"] }]
