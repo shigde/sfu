@@ -31,18 +31,22 @@ func (m *LobbyManager) AccessLobby(ctx context.Context, liveStreamId uuid.UUID, 
 	Resource     uuid.UUID
 	RtpSessionId uuid.UUID
 }, error) {
-	lobby := m.lobbies.getOrCreateLobby(liveStreamId)
-	request := newLobbyRequest(ctx, user)
-	joinData := newJoinData(offer)
-	request.data = joinData
-
-	go lobby.runRequest(request)
-
 	var answerData struct {
 		Answer       *webrtc.SessionDescription
 		Resource     uuid.UUID
 		RtpSessionId uuid.UUID
 	}
+
+	lobby, err := m.lobbies.getOrCreateLobby(liveStreamId)
+	if err != nil {
+		return answerData, fmt.Errorf("getting or creating lobby: %w", err)
+	}
+
+	request := newLobbyRequest(ctx, user)
+	joinData := newJoinData(offer)
+	request.data = joinData
+
+	go lobby.runRequest(request)
 
 	select {
 	case err := <-request.err:

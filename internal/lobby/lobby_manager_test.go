@@ -17,7 +17,7 @@ func testLobbyManagerSetup(t *testing.T) (*LobbyManager, *lobby, uuid.UUID) {
 	engine := mockRtpEngineForOffer(mockedAnswer)
 
 	manager := NewLobbyManager(store, engine)
-	lobby := manager.lobbies.getOrCreateLobby(uuid.New())
+	lobby, _ := manager.lobbies.getOrCreateLobby(uuid.New())
 	user := uuid.New()
 	session := newSession(user, lobby.hub, engine, nil)
 	session.sender = newSenderHandler(session.Id, user, newMockedMessenger(t))
