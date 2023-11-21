@@ -27,6 +27,10 @@ race:
 build-linux: go_init
 	GOOS=linux GOARCH=amd64 go build -o bin/$(SERVER_NAME).linux.amd64 $(GO_LDFLAGS) ./cmd/server
 
+build-clt-linux: go_init
+	GOOS=linux GOARCH=amd64 go build -o bin/$(CLT_NAME).linux.amd64 $(GO_LDFLAGS) ./cmd/clt
+
+
 build-clt:
 	go build -o bin/$(CLT_NAME) ./cmd/clt
 
