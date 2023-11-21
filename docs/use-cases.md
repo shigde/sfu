@@ -1,5 +1,10 @@
 # Use Cases
 
+- [`Embedded Streaming`](#Embedded-Streaming)
+- [`Multi Guest Streaming`](#Multi-Guest-Streaming)
+- [`Cloning Live Streams across federate instances`](#Cloning-Live-Streams-across-federate-instances)
+- [`Monetization via trusted Video AdServer`](#Monetization-via-trusted-Video-AdServer)
+
 ## Embedded Streaming
 Shig enables livestreaming directly from PeerTube without the need to configure OBS or transfer streaming secret keys to another software.
 There is a [Shig PeerTube plugin](https://github.com/shigde/peertube-plugin-shig-live-stream) for this purpose.
