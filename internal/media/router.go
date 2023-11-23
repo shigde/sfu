@@ -43,6 +43,10 @@ func NewRouter(
 	router.HandleFunc("/space/{space}/stream/{id}/whip", auth.TokenMiddleware(whipDelete(streamService, liveLobbyService))).Methods("DELETE")
 	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.TokenMiddleware(whepOffer(streamService, liveLobbyService))).Methods("POST")
 	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.TokenMiddleware(whepAnswer(streamService, liveLobbyService))).Methods("PATCH")
+	// FFMPEG test interface HTTP WHIP
+	router.HandleFunc("/space/{space}/stream/{id}/static/whip", auth.HttpMiddleware(securityConfig, whip(streamService, liveLobbyService))).Methods("POST")
+	router.HandleFunc("/space/{space}/stream/{id}/static/whep", auth.TokenMiddleware(whepOffer(streamService, liveLobbyService))).Methods("POST")
+	router.HandleFunc("/space/{space}/stream/{id}/static/whep", auth.TokenMiddleware(whepAnswer(streamService, liveLobbyService))).Methods("PATCH")
 	// Live
 	router.HandleFunc("/space/{space}/stream/{id}/live", auth.TokenMiddleware(publishLiveStream(streamService, liveLobbyService))).Methods("POST")
 	router.HandleFunc("/space/{space}/stream/{id}/live", auth.TokenMiddleware(getStatusOfLiveStream(streamService))).Methods("GET")
