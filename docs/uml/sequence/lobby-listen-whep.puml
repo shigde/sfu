@@ -2,7 +2,7 @@
 'https://plantuml.com/sequence-diagram
 
 
-title WHEP Endpoint (https://datatracker.ietf.org/doc/draft-murillo-whep/01/)
+title WHEP Endpoint (Alternatively: https://datatracker.ietf.org/doc/draft-murillo-whep/01/)
 
 autonumber
 == Listen to a Lobby for a Stream Resource ==
