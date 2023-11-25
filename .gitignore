@@ -30,5 +30,6 @@ output.ogg
 input.ivf
 input.ogg
 Notes.md
+statistic.md
 config.prod.toml
 .shigClt.prod.toml
