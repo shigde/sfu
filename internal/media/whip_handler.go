@@ -58,7 +58,7 @@ func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 		}
 		auth.SetNewRequestToken(w, user.UUID)
 
-		answer, resourceId, err := liveService.CreateLobbyIngestionEndpoint(ctx, offer, liveStream, userId)
+		answer, resourceId, err := liveService.CreateLobbyIngressEndpoint(ctx, offer, liveStream, userId)
 		if err != nil && errors.Is(err, lobby.ErrSessionAlreadyExists) {
 			w.WriteHeader(http.StatusConflict)
 			telemetry.RecordError(span, err)

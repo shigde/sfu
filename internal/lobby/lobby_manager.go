@@ -26,7 +26,7 @@ func NewLobbyManager(storage storage.Storage, e rtpEngine) *LobbyManager {
 	return &LobbyManager{lobbies}
 }
 
-func (m *LobbyManager) CreateLobbyIngestionEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
+func (m *LobbyManager) CreateLobbyIngressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Resource     uuid.UUID
 	RtpSessionId uuid.UUID
@@ -43,7 +43,7 @@ func (m *LobbyManager) CreateLobbyIngestionEndpoint(ctx context.Context, lobbyId
 	}
 
 	request := newLobbyRequest(ctx, user)
-	joinData := newJoinData(offer)
+	joinData := newIngressEndpointData(offer)
 	request.data = joinData
 
 	go lobby.runRequest(request)

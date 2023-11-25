@@ -15,9 +15,9 @@ type lobbyRequest struct {
 	data interface{}
 }
 
-type createIngestionEndpointData struct {
+type createIngressEndpointData struct {
 	offer    *webrtc.SessionDescription
-	response chan *createIngestionEndpointResponse
+	response chan *createIngressEndpointResponse
 }
 
 type startListenData struct {
@@ -49,9 +49,9 @@ func newLobbyRequest(ctx context.Context, user uuid.UUID) *lobbyRequest {
 	}
 }
 
-func newJoinData(offer *webrtc.SessionDescription) *createIngestionEndpointData {
-	resChan := make(chan *createIngestionEndpointResponse)
-	return &createIngestionEndpointData{
+func newIngressEndpointData(offer *webrtc.SessionDescription) *createIngressEndpointData {
+	resChan := make(chan *createIngressEndpointResponse)
+	return &createIngressEndpointData{
 		offer:    offer,
 		response: resChan,
 	}
@@ -97,7 +97,7 @@ func newLeaveData() *leaveData {
 	}
 }
 
-type createIngestionEndpointResponse struct {
+type createIngressEndpointResponse struct {
 	answer       *webrtc.SessionDescription
 	resource     uuid.UUID
 	RtpSessionId uuid.UUID

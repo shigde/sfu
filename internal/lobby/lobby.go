@@ -69,8 +69,8 @@ func (l *lobby) run() {
 		select {
 		case req := <-l.reqChan:
 			switch requestType := req.data.(type) {
-			case *createIngestionEndpointData:
-				l.handleCreateIngestionEndpoint(req)
+			case *createIngressEndpointData:
+				l.handleCreateIngressEndpoint(req)
 			case *startListenData:
 				l.handleStartListen(req)
 			case *listenData:
@@ -123,13 +123,13 @@ func (l *lobby) runRequest(req *lobbyRequest) {
 	}
 }
 
-func (l *lobby) handleCreateIngestionEndpoint(lobbyReq *lobbyRequest) {
+func (l *lobby) handleCreateIngressEndpoint(lobbyReq *lobbyRequest) {
 	slog.Info("lobby.lobby: handle join", "lobbyId", l.Id, "user", lobbyReq.user)
-	ctx, span := otel.Tracer(tracerName).Start(lobbyReq.ctx, "lobby:handleCreateIngestionEndpoint")
+	ctx, span := otel.Tracer(tracerName).Start(lobbyReq.ctx, "lobby:handleCreateIngressEndpoint")
 	lobbyReq.ctx = ctx
 	defer span.End()
 
-	data, _ := lobbyReq.data.(*createIngestionEndpointData)
+	data, _ := lobbyReq.data.(*createIngressEndpointData)
 	session, ok := l.sessions.FindByUserId(lobbyReq.user)
 	if ok {
 		select {
@@ -151,7 +151,7 @@ func (l *lobby) handleCreateIngestionEndpoint(lobbyReq *lobbyRequest) {
 	}()
 	select {
 	case answer := <-offerReq.respSDPChan:
-		data.response <- &createIngestionEndpointResponse{
+		data.response <- &createIngressEndpointResponse{
 			answer:       answer,
 			resource:     l.resourceId,
 			RtpSessionId: session.Id,

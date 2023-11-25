@@ -31,7 +31,7 @@ func newTestLobbyManager() *testLobbyManager {
 	return &testLobbyManager{}
 }
 
-func (l *testLobbyManager) CreateLobbyIngestionEndpoint(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ *webrtc.SessionDescription) (struct {
+func (l *testLobbyManager) CreateLobbyIngressEndpoint(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Resource     uuid.UUID
 	RtpSessionId uuid.UUID

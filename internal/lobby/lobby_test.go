@@ -30,7 +30,7 @@ func TestStreamLobby(t *testing.T) {
 		defer lobby.stop()
 
 		request := newLobbyRequest(context.Background(), uuid.New())
-		joinData := newJoinData(mockedOffer)
+		joinData := newIngressEndpointData(mockedOffer)
 		request.data = joinData
 
 		go lobby.runRequest(request)
@@ -51,7 +51,7 @@ func TestStreamLobby(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		request := newLobbyRequest(ctx, uuid.New())
-		joinData := newJoinData(mockedOffer)
+		joinData := newIngressEndpointData(mockedOffer)
 		request.data = joinData
 
 		cancel()
