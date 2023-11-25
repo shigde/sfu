@@ -43,15 +43,15 @@ func (m *LobbyManager) CreateLobbyIngressEndpoint(ctx context.Context, lobbyId u
 	}
 
 	request := newLobbyRequest(ctx, user)
-	joinData := newIngressEndpointData(offer)
-	request.data = joinData
+	ingressData := newIngressEndpointData(offer)
+	request.data = ingressData
 
 	go lobby.runRequest(request)
 
 	select {
 	case err := <-request.err:
 		return answerData, fmt.Errorf("requesting joining lobby: %w", err)
-	case rtpResourceData := <-joinData.response:
+	case rtpResourceData := <-ingressData.response:
 		answerData.Answer = rtpResourceData.answer
 		answerData.Resource = rtpResourceData.resource
 		answerData.RtpSessionId = rtpResourceData.RtpSessionId
@@ -59,7 +59,7 @@ func (m *LobbyManager) CreateLobbyIngressEndpoint(ctx context.Context, lobbyId u
 	}
 }
 
-func (m *LobbyManager) StartListenLobby(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID) (struct {
+func (m *LobbyManager) InitLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID) (struct {
 	Offer        *webrtc.SessionDescription
 	Active       bool
 	RtpSessionId uuid.UUID
@@ -73,8 +73,8 @@ func (m *LobbyManager) StartListenLobby(ctx context.Context, lobbyId uuid.UUID, 
 
 	if lobby, hasLobby := m.lobbies.getLobby(lobbyId); hasLobby {
 		request := newLobbyRequest(ctx, user)
-		listenData := newStartListenData()
-		request.data = listenData
+		egressData := newInitEgressEndpointData()
+		request.data = egressData
 
 		go lobby.runRequest(request)
 
@@ -87,7 +87,7 @@ func (m *LobbyManager) StartListenLobby(ctx context.Context, lobbyId uuid.UUID, 
 		select {
 		case err := <-request.err:
 			return data, fmt.Errorf("requesting listening lobby: %w", err)
-		case rtpResourceData := <-listenData.response:
+		case rtpResourceData := <-egressData.response:
 			data.Offer = rtpResourceData.offer
 			data.Active = true
 			data.RtpSessionId = rtpResourceData.RtpSessionId

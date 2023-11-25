@@ -14,7 +14,7 @@ type liveLobbyManager interface {
 		RtpSessionId uuid.UUID
 	}, error)
 
-	StartListenLobby(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID) (struct {
+	InitLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID) (struct {
 		Offer        *webrtc.SessionDescription
 		Active       bool
 		RtpSessionId uuid.UUID

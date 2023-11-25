@@ -20,8 +20,8 @@ type createIngressEndpointData struct {
 	response chan *createIngressEndpointResponse
 }
 
-type startListenData struct {
-	response chan *startListenResponse
+type initEgressEndpointData struct {
+	response chan *initEgressEndpointResponse
 }
 
 type listenData struct {
@@ -57,9 +57,9 @@ func newIngressEndpointData(offer *webrtc.SessionDescription) *createIngressEndp
 	}
 }
 
-func newStartListenData() *startListenData {
-	resChan := make(chan *startListenResponse)
-	return &startListenData{
+func newInitEgressEndpointData() *initEgressEndpointData {
+	resChan := make(chan *initEgressEndpointResponse)
+	return &initEgressEndpointData{
 		response: resChan,
 	}
 }
@@ -103,7 +103,7 @@ type createIngressEndpointResponse struct {
 	RtpSessionId uuid.UUID
 }
 
-type startListenResponse struct {
+type initEgressEndpointResponse struct {
 	offer        *webrtc.SessionDescription
 	RtpSessionId uuid.UUID
 }

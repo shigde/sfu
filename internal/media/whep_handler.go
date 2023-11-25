@@ -48,7 +48,7 @@ func whepOffer(streamService *stream.LiveStreamService, liveService *stream.Live
 			return
 		}
 
-		answer, err := liveService.StartListenLobby(ctx, liveStream, userId)
+		answer, err := liveService.InitLobbyEgressEndpoint(ctx, liveStream, userId)
 		if err != nil && errors.Is(err, stream.ErrLobbyNotActive) {
 			telemetry.RecordError(span, err)
 			w.WriteHeader(http.StatusNotFound)

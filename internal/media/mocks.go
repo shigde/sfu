@@ -47,7 +47,7 @@ func (l *testLobbyManager) CreateLobbyIngressEndpoint(_ context.Context, _ uuid.
 	return data, nil
 }
 
-func (l *testLobbyManager) StartListenLobby(_ context.Context, _ uuid.UUID, _ uuid.UUID) (struct {
+func (l *testLobbyManager) InitLobbyEgressEndpoint(_ context.Context, _ uuid.UUID, _ uuid.UUID) (struct {
 	Offer        *webrtc.SessionDescription
 	Active       bool
 	RtpSessionId uuid.UUID

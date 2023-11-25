@@ -107,7 +107,7 @@ func TestStreamLobby(t *testing.T) {
 		defer lobby.stop()
 
 		request := newLobbyRequest(context.Background(), uuid.New())
-		startData := newStartListenData()
+		startData := newInitEgressEndpointData()
 		request.data = startData
 
 		go lobby.runRequest(request)
@@ -134,7 +134,7 @@ func TestStreamLobby(t *testing.T) {
 		lobby.sessions.Add(session)
 
 		request := newLobbyRequest(context.Background(), user)
-		startData := newStartListenData()
+		startData := newInitEgressEndpointData()
 		request.data = startData
 
 		go lobby.runRequest(request)
@@ -163,7 +163,7 @@ func TestStreamLobby(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		request := newLobbyRequest(ctx, user)
-		startData := newStartListenData()
+		startData := newInitEgressEndpointData()
 		request.data = startData
 
 		cancel()

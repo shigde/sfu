@@ -30,8 +30,8 @@ func (s *LiveLobbyService) CreateLobbyIngressEndpoint(ctx context.Context, sdp *
 	return resourceData.Answer, resource, nil
 }
 
-func (s *LiveLobbyService) StartListenLobby(ctx context.Context, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, error) {
-	resourceData, err := s.lobbyManager.StartListenLobby(ctx, stream.Lobby.UUID, userId)
+func (s *LiveLobbyService) InitLobbyEgressEndpoint(ctx context.Context, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, error) {
+	resourceData, err := s.lobbyManager.InitLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId)
 	if err != nil {
 		return nil, fmt.Errorf("start listening lobby: %w", err)
 	}
