@@ -20,9 +20,9 @@ func NewLiveLobbyService(store storage, lobbyManager liveLobbyManager) *LiveLobb
 	}
 }
 
-func (s *LiveLobbyService) EnterLobby(ctx context.Context, sdp *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, string, error) {
+func (s *LiveLobbyService) CreateLobbyIngestionEndpoint(ctx context.Context, sdp *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, string, error) {
 	var resource string
-	resourceData, err := s.lobbyManager.AccessLobby(ctx, stream.Lobby.UUID, userId, sdp)
+	resourceData, err := s.lobbyManager.CreateLobbyIngestionEndpoint(ctx, stream.Lobby.UUID, userId, sdp)
 	if err != nil {
 		return nil, resource, fmt.Errorf("accessing lobby: %w", err)
 	}

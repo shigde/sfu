@@ -69,8 +69,8 @@ func (l *lobby) run() {
 		select {
 		case req := <-l.reqChan:
 			switch requestType := req.data.(type) {
-			case *joinData:
-				l.handleJoin(req)
+			case *createIngestionEndpointData:
+				l.handleCreateIngestionEndpoint(req)
 			case *startListenData:
 				l.handleStartListen(req)
 			case *listenData:
@@ -123,45 +123,45 @@ func (l *lobby) runRequest(req *lobbyRequest) {
 	}
 }
 
-func (l *lobby) handleJoin(joinReq *lobbyRequest) {
-	slog.Info("lobby.lobby: handle join", "lobbyId", l.Id, "user", joinReq.user)
-	ctx, span := otel.Tracer(tracerName).Start(joinReq.ctx, "lobby:handleJoin")
-	joinReq.ctx = ctx
+func (l *lobby) handleCreateIngestionEndpoint(lobbyReq *lobbyRequest) {
+	slog.Info("lobby.lobby: handle join", "lobbyId", l.Id, "user", lobbyReq.user)
+	ctx, span := otel.Tracer(tracerName).Start(lobbyReq.ctx, "lobby:handleCreateIngestionEndpoint")
+	lobbyReq.ctx = ctx
 	defer span.End()
 
-	data, _ := joinReq.data.(*joinData)
-	session, ok := l.sessions.FindByUserId(joinReq.user)
+	data, _ := lobbyReq.data.(*createIngestionEndpointData)
+	session, ok := l.sessions.FindByUserId(lobbyReq.user)
 	if ok {
 		select {
-		case joinReq.err <- ErrSessionAlreadyExists:
-		case <-joinReq.ctx.Done():
-			joinReq.err <- errLobbyRequestTimeout
+		case lobbyReq.err <- ErrSessionAlreadyExists:
+		case <-lobbyReq.ctx.Done():
+			lobbyReq.err <- errLobbyRequestTimeout
 		case <-l.quit:
-			joinReq.err <- errLobbyStopped
+			lobbyReq.err <- errLobbyStopped
 		}
 		return
 	}
-	session = newSession(joinReq.user, l.hub, l.rtpEngine, l.childQuitChan)
+	session = newSession(lobbyReq.user, l.hub, l.rtpEngine, l.childQuitChan)
 	l.sessions.Add(session)
-	offerReq := newSessionRequest(joinReq.ctx, data.offer, offerReq)
+	offerReq := newSessionRequest(lobbyReq.ctx, data.offer, offerReq)
 
 	go func() {
-		slog.Info("lobby.lobby: create offerReq request", "lobbyId", l.Id, "user", joinReq.user)
+		slog.Info("lobby.lobby: create offerReq request", "lobbyId", l.Id, "user", lobbyReq.user)
 		session.runRequest(offerReq)
 	}()
 	select {
 	case answer := <-offerReq.respSDPChan:
-		data.response <- &joinResponse{
+		data.response <- &createIngestionEndpointResponse{
 			answer:       answer,
 			resource:     l.resourceId,
 			RtpSessionId: session.Id,
 		}
 	case err := <-offerReq.err:
-		joinReq.err <- fmt.Errorf("start session for joing: %w", err)
-	case <-joinReq.ctx.Done():
-		joinReq.err <- errLobbyRequestTimeout
+		lobbyReq.err <- fmt.Errorf("start session for joing: %w", err)
+	case <-lobbyReq.ctx.Done():
+		lobbyReq.err <- errLobbyRequestTimeout
 	case <-l.quit:
-		joinReq.err <- errLobbyStopped
+		lobbyReq.err <- errLobbyStopped
 	}
 }
 

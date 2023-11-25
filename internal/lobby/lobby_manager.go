@@ -26,7 +26,7 @@ func NewLobbyManager(storage storage.Storage, e rtpEngine) *LobbyManager {
 	return &LobbyManager{lobbies}
 }
 
-func (m *LobbyManager) AccessLobby(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
+func (m *LobbyManager) CreateLobbyIngestionEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Resource     uuid.UUID
 	RtpSessionId uuid.UUID
