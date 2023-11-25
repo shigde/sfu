@@ -24,9 +24,9 @@ type initEgressEndpointData struct {
 	response chan *initEgressEndpointResponse
 }
 
-type listenData struct {
+type finalCreateEgressEndpointData struct {
 	answer   *webrtc.SessionDescription
-	response chan *listenResponse
+	response chan *finalCreateEgressEndpointResponse
 }
 
 type leaveData struct {
@@ -64,9 +64,9 @@ func newInitEgressEndpointData() *initEgressEndpointData {
 	}
 }
 
-func newListenData(answer *webrtc.SessionDescription) *listenData {
-	resChan := make(chan *listenResponse)
-	return &listenData{
+func newFinalCreateEgressEndpointData(answer *webrtc.SessionDescription) *finalCreateEgressEndpointData {
+	resChan := make(chan *finalCreateEgressEndpointResponse)
+	return &finalCreateEgressEndpointData{
 		answer:   answer,
 		response: resChan,
 	}
@@ -108,6 +108,6 @@ type initEgressEndpointResponse struct {
 	RtpSessionId uuid.UUID
 }
 
-type listenResponse struct {
+type finalCreateEgressEndpointResponse struct {
 	RtpSessionId uuid.UUID
 }

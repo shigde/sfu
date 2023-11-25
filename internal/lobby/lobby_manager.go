@@ -98,7 +98,7 @@ func (m *LobbyManager) InitLobbyEgressEndpoint(ctx context.Context, lobbyId uuid
 	return answerData, nil
 }
 
-func (m *LobbyManager) ListenLobby(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
+func (m *LobbyManager) FinalCreateLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Active       bool
 	RtpSessionId uuid.UUID
@@ -112,7 +112,7 @@ func (m *LobbyManager) ListenLobby(ctx context.Context, lobbyId uuid.UUID, user 
 
 	if lobby, hasLobby := m.lobbies.getLobby(lobbyId); hasLobby {
 		request := newLobbyRequest(ctx, user)
-		listenData := newListenData(offer)
+		listenData := newFinalCreateEgressEndpointData(offer)
 		request.data = listenData
 
 		go lobby.runRequest(request)

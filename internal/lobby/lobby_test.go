@@ -69,7 +69,7 @@ func TestStreamLobby(t *testing.T) {
 		lobby, user := testStreamLobbySetup(t)
 		defer lobby.stop()
 		request := newLobbyRequest(context.Background(), user)
-		listenData := newListenData(mockedOffer)
+		listenData := newFinalCreateEgressEndpointData(mockedOffer)
 		request.data = listenData
 
 		go lobby.runRequest(request)
@@ -88,7 +88,7 @@ func TestStreamLobby(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		request := newLobbyRequest(ctx, user)
-		listenData := newListenData(mockedAnswer)
+		listenData := newFinalCreateEgressEndpointData(mockedAnswer)
 		request.data = listenData
 
 		cancel()

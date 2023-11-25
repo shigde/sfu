@@ -73,8 +73,8 @@ func (l *lobby) run() {
 				l.handleCreateIngressEndpoint(req)
 			case *initEgressEndpointData:
 				l.handleInitEgressEndpoint(req)
-			case *listenData:
-				l.handleListen(req)
+			case *finalCreateEgressEndpointData:
+				l.handleFinalCreateEgressEndpointData(req)
 			case *leaveData:
 				l.handleLeave(req)
 			case *liveStreamData:
@@ -199,13 +199,13 @@ func (l *lobby) handleInitEgressEndpoint(req *lobbyRequest) {
 	}
 }
 
-func (l *lobby) handleListen(req *lobbyRequest) {
+func (l *lobby) handleFinalCreateEgressEndpointData(req *lobbyRequest) {
 	slog.Info("lobby.lobby: handle listen", "lobbyId", l.Id, "user", req.user)
-	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "lobby:handleListen")
+	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "lobby:handleFinalCreateEgressEndpointData")
 	req.ctx = ctx
 	defer span.End()
 
-	data, _ := req.data.(*listenData)
+	data, _ := req.data.(*finalCreateEgressEndpointData)
 	session, ok := l.sessions.FindByUserId(req.user)
 	if !ok {
 		select {
@@ -226,7 +226,7 @@ func (l *lobby) handleListen(req *lobbyRequest) {
 
 	select {
 	case _ = <-answerReq.respSDPChan:
-		data.response <- &listenResponse{
+		data.response <- &finalCreateEgressEndpointResponse{
 			RtpSessionId: session.Id,
 		}
 	case err := <-answerReq.err:

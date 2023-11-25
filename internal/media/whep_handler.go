@@ -116,7 +116,7 @@ func whepAnswer(streamService *stream.LiveStreamService, liveService *stream.Liv
 			return
 		}
 
-		_, err = liveService.ListenLobby(ctx, answer, liveStream, userId)
+		_, err = liveService.FinalCreateLobbyEgressEndpoint(ctx, answer, liveStream, userId)
 		if err != nil && errors.Is(err, stream.ErrLobbyNotActive) {
 			telemetry.RecordError(span, err)
 			w.WriteHeader(http.StatusNotFound)
@@ -172,7 +172,7 @@ func whepStaticAnswer(streamService *stream.LiveStreamService, liveService *stre
 			return
 		}
 
-		_, err = liveService.ListenLobby(ctx, answer, liveStream, userId)
+		_, err = liveService.FinalCreateLobbyEgressEndpoint(ctx, answer, liveStream, userId)
 		if err != nil && errors.Is(err, stream.ErrLobbyNotActive) {
 			telemetry.RecordError(span, err)
 			w.WriteHeader(http.StatusNotFound)

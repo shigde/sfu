@@ -121,13 +121,13 @@ func TestLobbyManager(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // trigger cancel for time out
-		_, err := manager.ListenLobby(ctx, lobby.Id, user, mockedAnswer)
+		_, err := manager.FinalCreateLobbyEgressEndpoint(ctx, lobby.Id, user, mockedAnswer)
 		assert.ErrorIs(t, err, errLobbyRequestTimeout)
 	})
 
 	t.Run("listen to a lobby", func(t *testing.T) {
 		manager, lobby, user := testLobbyManagerSetup(t)
-		data, err := manager.ListenLobby(context.Background(), lobby.Id, user, mockedAnswer)
+		data, err := manager.FinalCreateLobbyEgressEndpoint(context.Background(), lobby.Id, user, mockedAnswer)
 		assert.NoError(t, err)
 		assert.True(t, data.Active)
 		assert.False(t, uuid.Nil == data.RtpSessionId)
@@ -135,7 +135,7 @@ func TestLobbyManager(t *testing.T) {
 
 	t.Run("listen to a lobby but no session", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
-		_, err := manager.ListenLobby(context.Background(), lobby.Id, uuid.New(), mockedAnswer)
+		_, err := manager.FinalCreateLobbyEgressEndpoint(context.Background(), lobby.Id, uuid.New(), mockedAnswer)
 		assert.ErrorIs(t, err, errNoSession)
 	})
 

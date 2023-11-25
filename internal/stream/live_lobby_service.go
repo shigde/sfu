@@ -41,8 +41,8 @@ func (s *LiveLobbyService) InitLobbyEgressEndpoint(ctx context.Context, stream *
 	return resourceData.Offer, nil
 }
 
-func (s *LiveLobbyService) ListenLobby(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (bool, error) {
-	resourceData, err := s.lobbyManager.ListenLobby(ctx, stream.Lobby.UUID, userId, offer)
+func (s *LiveLobbyService) FinalCreateLobbyEgressEndpoint(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (bool, error) {
+	resourceData, err := s.lobbyManager.FinalCreateLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId, offer)
 	if err != nil {
 		return false, fmt.Errorf("listening lobby: %w", err)
 	}

@@ -63,7 +63,7 @@ func (l *testLobbyManager) InitLobbyEgressEndpoint(_ context.Context, _ uuid.UUI
 	return data, nil
 }
 
-func (l *testLobbyManager) ListenLobby(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ *webrtc.SessionDescription) (struct {
+func (l *testLobbyManager) FinalCreateLobbyEgressEndpoint(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Active       bool
 	RtpSessionId uuid.UUID
