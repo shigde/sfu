@@ -52,6 +52,14 @@ func (s *LiveLobbyService) FinalCreateLobbyEgressEndpoint(ctx context.Context, o
 	return resourceData.Active, nil
 }
 
+func (s *LiveLobbyService) CreateMainStreamLobbyEgressEndpoint(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, error) {
+	resourceData, err := s.lobbyManager.CreateMainStreamLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId, offer)
+	if err != nil {
+		return nil, fmt.Errorf("accessing lobby: %w", err)
+	}
+	return resourceData.Answer, nil
+}
+
 func (s *LiveLobbyService) LeaveLobby(ctx context.Context, stream *LiveStream, userId uuid.UUID) (bool, error) {
 	left, err := s.lobbyManager.LeaveLobby(ctx, stream.Lobby.UUID, userId)
 	if err != nil {

@@ -20,6 +20,11 @@ type createIngressEndpointData struct {
 	response chan *createIngressEndpointResponse
 }
 
+type createMainEgressEndpointData struct {
+	offer    *webrtc.SessionDescription
+	response chan *createMainEgressEndpointResponse
+}
+
 type initEgressEndpointData struct {
 	response chan *initEgressEndpointResponse
 }
@@ -52,6 +57,14 @@ func newLobbyRequest(ctx context.Context, user uuid.UUID) *lobbyRequest {
 func newIngressEndpointData(offer *webrtc.SessionDescription) *createIngressEndpointData {
 	resChan := make(chan *createIngressEndpointResponse)
 	return &createIngressEndpointData{
+		offer:    offer,
+		response: resChan,
+	}
+}
+
+func newMainEgressEndpointData(offer *webrtc.SessionDescription) *createMainEgressEndpointData {
+	resChan := make(chan *createMainEgressEndpointResponse)
+	return &createMainEgressEndpointData{
 		offer:    offer,
 		response: resChan,
 	}
@@ -100,6 +113,11 @@ func newLeaveData() *leaveData {
 type createIngressEndpointResponse struct {
 	answer       *webrtc.SessionDescription
 	resource     uuid.UUID
+	RtpSessionId uuid.UUID
+}
+
+type createMainEgressEndpointResponse struct {
+	answer       *webrtc.SessionDescription
 	RtpSessionId uuid.UUID
 }
 

@@ -26,6 +26,11 @@ type liveLobbyManager interface {
 		RtpSessionId uuid.UUID
 	}, error)
 
+	CreateMainStreamLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
+		Answer       *webrtc.SessionDescription
+		RtpSessionId uuid.UUID
+	}, error)
+
 	LeaveLobby(ctx context.Context, lobbyId uuid.UUID, userId uuid.UUID) (bool, error)
 
 	StartLiveStream(
