@@ -17,10 +17,11 @@ type sessionRequest struct {
 type sessionReqType int
 
 const (
-	startReq sessionReqType = iota + 1
-	offerReq
-	answerReq
+	offerIngressReq sessionReqType = iota + 1
+	initEgressReq
+	answerEgressReq
 	closeReq
+	offerStaticEgressReq
 )
 
 func newSessionRequest(ctx context.Context, sdp *webrtc.SessionDescription, reqType sessionReqType) *sessionRequest {
@@ -33,8 +34,8 @@ func newSessionRequest(ctx context.Context, sdp *webrtc.SessionDescription, reqT
 	}
 }
 
-func newStartRequest(ctx context.Context) *sessionRequest {
-	return newSessionRequest(ctx, nil, startReq)
+func newInitEgressRequest(ctx context.Context) *sessionRequest {
+	return newSessionRequest(ctx, nil, initEgressReq)
 }
 
 func newCloseRequest(ctx context.Context) *sessionRequest {

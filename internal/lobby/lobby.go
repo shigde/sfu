@@ -145,10 +145,10 @@ func (l *lobby) handleCreateIngressEndpoint(lobbyReq *lobbyRequest) {
 	}
 	session = newSession(lobbyReq.user, l.hub, l.rtpEngine, l.childQuitChan)
 	l.sessions.Add(session)
-	offerReq := newSessionRequest(lobbyReq.ctx, data.offer, offerReq)
+	offerReq := newSessionRequest(lobbyReq.ctx, data.offer, offerIngressReq)
 
 	go func() {
-		slog.Info("lobby.lobby: create offerReq request", "lobbyId", l.Id, "user", lobbyReq.user)
+		slog.Info("lobby.lobby: create offerIngressReq request", "lobbyId", l.Id, "user", lobbyReq.user)
 		session.runRequest(offerReq)
 	}()
 	select {
@@ -180,10 +180,10 @@ func (l *lobby) handleInitEgressEndpoint(req *lobbyRequest) {
 		req.err <- errNoSession
 		return
 	}
-	startSessionReq := newStartRequest(req.ctx)
+	startSessionReq := newInitEgressRequest(req.ctx)
 
 	go func() {
-		slog.Info("lobby.lobby: create offerReq request", "lobbyId", l.Id, "user", req.user)
+		slog.Info("lobby.lobby: create offerIngressReq request", "lobbyId", l.Id, "user", req.user)
 		session.runRequest(startSessionReq)
 	}()
 	select {
@@ -220,9 +220,9 @@ func (l *lobby) handleFinalCreateEgressEndpointData(req *lobbyRequest) {
 		return
 	}
 
-	answerReq := newSessionRequest(req.ctx, data.answer, answerReq)
+	answerReq := newSessionRequest(req.ctx, data.answer, answerEgressReq)
 	go func() {
-		slog.Info("lobby.lobby: create offerReq request", "lobbyId", l.Id, "user", req.user)
+		slog.Info("lobby.lobby: create offerIngressReq request", "lobbyId", l.Id, "user", req.user)
 		session.runRequest(answerReq)
 	}()
 
@@ -260,10 +260,10 @@ func (l *lobby) handleCreateMainEgressEndpointData(lobbyReq *lobbyRequest) {
 	}
 	session = newSession(lobbyReq.user, l.hub, l.rtpEngine, l.childQuitChan)
 	l.sessions.Add(session)
-	offerReq := newSessionRequest(lobbyReq.ctx, data.offer, offerReq)
+	offerReq := newSessionRequest(lobbyReq.ctx, data.offer, offerIngressReq)
 
 	go func() {
-		slog.Info("lobby.lobby: create offerReq request", "lobbyId", l.Id, "user", lobbyReq.user)
+		slog.Info("lobby.lobby: create offerIngressReq request", "lobbyId", l.Id, "user", lobbyReq.user)
 		session.runRequest(offerReq)
 	}()
 	select {
