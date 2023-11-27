@@ -165,33 +165,31 @@ func whepStaticAnswer(streamService *stream.LiveStreamService, liveService *stre
 			return
 		}
 
-		answer, err := getSdpPayload(w, r, webrtc.SDPTypeAnswer)
+		offer, err := getSdpPayload(w, r, webrtc.SDPTypeOffer)
 		if err != nil {
 			telemetry.RecordError(span, err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-
-		_, err = liveService.FinalCreateLobbyEgressEndpoint(ctx, answer, liveStream, userId)
+		answer, err := liveService.CreateMainStreamLobbyEgressEndpoint(ctx, offer, liveStream, userId)
 		if err != nil && errors.Is(err, stream.ErrLobbyNotActive) {
 			telemetry.RecordError(span, err)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		if err != nil {
-			telemetry.RecordError(span, err)
-			httpError(w, "error build whep", http.StatusInternalServerError, err)
-			return
-		}
+		response := []byte(answer.SDP)
+		hash := md5.Sum(response)
 
 		w.WriteHeader(http.StatusCreated)
+		contentLen, err := w.Write(response)
 		if err != nil {
 			telemetry.RecordError(span, err)
 			httpError(w, "error build response", http.StatusInternalServerError, err)
 			return
 		}
 
-		w.Header().Set("Content-Length", "0")
+		w.Header().Set("etag", fmt.Sprintf("%x", hash))
+		w.Header().Set("Content-Length", strconv.Itoa(contentLen))
 	}
 }

@@ -79,6 +79,20 @@ func (l *testLobbyManager) FinalCreateLobbyEgressEndpoint(_ context.Context, _ u
 	return data, nil
 }
 
+func (l *testLobbyManager) CreateMainStreamLobbyEgressEndpoint(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ *webrtc.SessionDescription) (struct {
+	Answer       *webrtc.SessionDescription
+	RtpSessionId uuid.UUID
+}, error) {
+	var data struct {
+		Answer       *webrtc.SessionDescription
+		RtpSessionId uuid.UUID
+	}
+
+	data.Answer = &webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: testAnswer}
+	data.RtpSessionId, _ = uuid.Parse(rtpSessionId)
+	return data, nil
+}
+
 func (l *testLobbyManager) LeaveLobby(ctx context.Context, liveStreamId uuid.UUID, userId uuid.UUID) (bool, error) {
 	return true, nil
 }
