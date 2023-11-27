@@ -25,7 +25,7 @@ func testStreamLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 }
 func TestStreamLobby(t *testing.T) {
 
-	t.Run("join lobby", func(t *testing.T) {
+	t.Run("new ingress endpoint", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -45,7 +45,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("cancel join lobby", func(t *testing.T) {
+	t.Run("cancel new ingress endpoint req lobby", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -65,7 +65,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("listen lobby", func(t *testing.T) {
+	t.Run("finally create new egress endpoint in lobby", func(t *testing.T) {
 		lobby, user := testStreamLobbySetup(t)
 		defer lobby.stop()
 		request := newLobbyRequest(context.Background(), user)
@@ -82,7 +82,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("cancel listen lobby", func(t *testing.T) {
+	t.Run("cancel req for finally create new egress endpoint in lobby", func(t *testing.T) {
 		lobby, user := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -102,7 +102,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("start listen lobby but no session was started before", func(t *testing.T) {
+	t.Run("init egress endpoint but no session was started before", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -122,7 +122,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("start listen lobby session", func(t *testing.T) {
+	t.Run("init egress endpoint", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -151,7 +151,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("cancel start listen lobby", func(t *testing.T) {
+	t.Run("cancel init egress endpoint lobby req", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -177,7 +177,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("stop session internally", func(t *testing.T) {
+	t.Run("stop a session internally", func(t *testing.T) {
 		lobby, user := testStreamLobbySetup(t)
 		defer lobby.stop()
 		session, _ := lobby.sessions.FindByUserId(user)
@@ -187,7 +187,7 @@ func TestStreamLobby(t *testing.T) {
 		assert.False(t, lobby.sessions.Contains(session.Id))
 	})
 
-	t.Run("leave lobby", func(t *testing.T) {
+	t.Run("leave a lobby", func(t *testing.T) {
 		lobby, user := testStreamLobbySetup(t)
 		defer lobby.stop()
 		request := newLobbyRequest(context.Background(), user)
@@ -199,6 +199,77 @@ func TestStreamLobby(t *testing.T) {
 		select {
 		case success := <-leaveData.response:
 			assert.True(t, success)
+		case <-time.After(time.Second * 3):
+			t.Fatalf("test fails because run in timeout")
+		}
+	})
+
+	t.Run("create static egress endpoint", func(t *testing.T) {
+		lobby, _ := testStreamLobbySetup(t)
+		defer lobby.stop()
+
+		user := uuid.New()
+		request := newLobbyRequest(context.Background(), user)
+		egressData := newMainEgressEndpointData(mockedOffer)
+		request.data = egressData
+
+		go lobby.runRequest(request)
+		answer := mockedAnswer
+
+		select {
+		case err := <-request.err:
+			t.Fatalf("test fails because an error: %v", err)
+		case data := <-egressData.response:
+			assert.Equal(t, answer, data.answer)
+			assert.False(t, uuid.Nil == data.RtpSessionId)
+		case <-time.After(time.Second * 3):
+			t.Fatalf("test fails because run in timeout")
+		}
+	})
+
+	t.Run("create static egress endpoint, but endpoint already exits", func(t *testing.T) {
+		lobby, _ := testStreamLobbySetup(t)
+		defer lobby.stop()
+
+		user := uuid.New()
+		// Creat a session to simulate existing endpoint
+		session := newSession(user, nil, nil, nil)
+		lobby.sessions.Add(session)
+
+		request := newLobbyRequest(context.Background(), user)
+		egressData := newMainEgressEndpointData(mockedOffer)
+		request.data = egressData
+
+		go lobby.runRequest(request)
+
+		select {
+		case err := <-request.err:
+			assert.ErrorIs(t, err, ErrSessionAlreadyExists)
+		case _ = <-egressData.response:
+			t.Fatalf("test fails because an error is expected")
+		case <-time.After(time.Second * 3):
+			t.Fatalf("test fails because run in timeout")
+		}
+	})
+
+	t.Run("cancel request to create static egress endpoint", func(t *testing.T) {
+		lobby, _ := testStreamLobbySetup(t)
+		defer lobby.stop()
+
+		user := uuid.New()
+		ctx, cancel := context.WithCancel(context.Background())
+		request := newLobbyRequest(ctx, user)
+		egressData := newMainEgressEndpointData(mockedOffer)
+		request.data = egressData
+
+		cancel()
+		go lobby.runRequest(request)
+
+		select {
+		case err := <-request.err:
+			assert.ErrorIs(t, err, errLobbyRequestTimeout)
+		case _ = <-egressData.response:
+			t.Fatalf("test fails because an error is expected")
 		case <-time.After(time.Second * 3):
 			t.Fatalf("test fails because run in timeout")
 		}
