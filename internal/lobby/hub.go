@@ -18,13 +18,13 @@ var (
 
 type hub struct {
 	sessionRepo *sessionRepository
-	forwarder   streamForwarder
+	streamer    mainStreamer
 	reqChan     chan *hubRequest
 	tracks      map[string]*rtp.TrackInfo
 	quit        chan struct{}
 }
 
-func newHub(sessionRepo *sessionRepository, forwarder streamForwarder, quit chan struct{}) *hub {
+func newHub(sessionRepo *sessionRepository, forwarder mainStreamer, quit chan struct{}) *hub {
 	tracks := make(map[string]*rtp.TrackInfo)
 	requests := make(chan *hubRequest)
 	hub := &hub{
@@ -122,8 +122,8 @@ func (h *hub) stop() error {
 }
 
 func (h *hub) onAddTrack(event *hubRequest) {
-	if event.track.GetStreamKind() == rtp.TrackInfoKindStream {
-		h.forwarder.AddTrack(event.track.GetLiveTrack())
+	if event.track.GetStreamKind() == rtp.TrackInfoKindMain {
+		h.streamer.AddTrack(event.track.GetLiveTrack())
 		return
 	}
 
@@ -136,8 +136,8 @@ func (h *hub) onAddTrack(event *hubRequest) {
 }
 
 func (h *hub) onRemoveTrack(event *hubRequest) {
-	if event.track.GetStreamKind() == rtp.TrackInfoKindStream {
-		// @TODO Implementing h.forwarder.stopSending()
+	if event.track.GetStreamKind() == rtp.TrackInfoKindMain {
+		// @TODO Implementing h.streamer.stopSending()
 		return
 	}
 
@@ -164,4 +164,8 @@ func (h *hub) onGetTrackList(event *hubRequest) {
 	case <-time.After(hubDispatchTimeout):
 		slog.Error("lobby.hub: onGetTrackList - interrupted because dispatch timeout")
 	}
+}
+
+func (h *hub) getMainTrackList() ([]*webrtc.TrackLocalStaticRTP, error) {
+	return nil, nil
 }

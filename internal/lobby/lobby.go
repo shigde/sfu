@@ -42,7 +42,7 @@ func newLobby(id uuid.UUID, rtpEngine rtpEngine) *lobby {
 	childQuitChan := make(chan uuid.UUID)
 	forwarder, err := rtp.NewUdpForwarder(id, quitChan)
 	if err != nil {
-		slog.Error("create udp forwarder", "err", err)
+		slog.Error("create udp streamer", "err", err)
 	}
 
 	streamer := rtmp.NewStreamer(quitChan)

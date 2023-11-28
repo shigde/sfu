@@ -21,6 +21,7 @@ var (
 	errSenderInSessionAlreadyExists   = errors.New("sender already exists")
 	errNoSenderInSession              = errors.New("no sender exists")
 	errSessionRequestTimeout          = errors.New("session request timeout error")
+	errUnknownSessionRequestType      = errors.New("unknown session request type")
 )
 
 var (
@@ -95,11 +96,15 @@ func (s *session) handleSessionReq(req *sessionRequest) {
 	var err error
 	switch req.sessionReqType {
 	case offerIngressReq:
-		sdp, err = s.handleOfferReq(req)
-	case answerEgressReq:
-		sdp, err = s.handleAnswerReq(req)
+		sdp, err = s.handleOfferIngressReq(req)
 	case initEgressReq:
-		sdp, err = s.handleInitReq(req)
+		sdp, err = s.handleInitEgressReq(req)
+	case answerEgressReq:
+		sdp, err = s.handleAnswerEgressReq(req)
+	case offerStaticEgressReq:
+		sdp, err = s.handleOfferStaticEgressReq(req)
+	default:
+		err = errUnknownSessionRequestType
 	}
 	if err != nil {
 		req.err <- fmt.Errorf("handle request: %w", err)
@@ -109,8 +114,8 @@ func (s *session) handleSessionReq(req *sessionRequest) {
 	req.respSDPChan <- sdp
 }
 
-func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
-	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleOfferReq")
+func (s *session) handleOfferIngressReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
+	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleOfferIngressReq")
 	defer span.End()
 
 	if s.receiver != nil {
@@ -142,8 +147,8 @@ func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescriptio
 	return answer, nil
 }
 
-func (s *session) handleAnswerReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
-	_, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleAnswerReq")
+func (s *session) handleAnswerEgressReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
+	_, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleAnswerEgressReq")
 	defer span.End()
 
 	if s.sender == nil || s.sender.endpoint == nil {
@@ -154,8 +159,8 @@ func (s *session) handleAnswerReq(req *sessionRequest) (*webrtc.SessionDescripti
 	return nil, nil
 }
 
-func (s *session) handleInitReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
-	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleInitReq")
+func (s *session) handleInitEgressReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
+	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleInitEgressReq")
 	defer span.End()
 
 	if s.sender != nil {
@@ -198,6 +203,32 @@ func (s *session) handleInitReq(req *sessionRequest) (*webrtc.SessionDescription
 	}
 
 	return offer, nil
+}
+
+func (s *session) handleOfferStaticEgressReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
+	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleOfferStaticEgressReq")
+	defer span.End()
+
+	s.sender = newSenderHandler(s.Id, s.user, s.receiver.messenger)
+
+	trackList, err := s.hub.getMainTrackList()
+	if err != nil {
+		return nil, fmt.Errorf("reading track list by creating rtp connection: %w", err)
+	}
+
+	endpoint, err := s.rtpEngine.NewStaticEgressEndpoint(ctx, s.Id, *req.reqSDP, trackList)
+
+	if err != nil {
+		return nil, fmt.Errorf("create rtp connection: %w", err)
+	}
+	s.receiver.endpoint = endpoint
+	ctxTimeout, cancel := context.WithTimeout(ctx, iceGatheringTimeout)
+	defer cancel()
+	answer, err := s.receiver.endpoint.GetLocalDescription(ctxTimeout)
+	if err != nil {
+		return nil, fmt.Errorf("create rtp answerEgressReq: %w", err)
+	}
+	return answer, nil
 }
 
 func (s *session) stop() error {

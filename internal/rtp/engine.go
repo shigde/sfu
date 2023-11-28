@@ -171,6 +171,9 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, sen
 		initComplete:   initComplete,
 	}, nil
 }
+func (e *Engine) NewStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, localTracks []*webrtc.TrackLocalStaticRTP, options ...EndpointOption) (*Endpoint, error) {
+	return nil, nil
+}
 
 func creatDC(pc *webrtc.PeerConnection, handler StateEventHandler) error {
 	ordered := false

@@ -66,10 +66,10 @@ func TestSDP(t *testing.T) {
 		assert.Equal(t, TrackInfoKindGuest, video.Kind)
 		liveAudio, hasLiveAudio := trackInfo["45def0ae-d3dd-4a2c-80c8-4aa37d6e2c2d a9345edd-5648-4d78-81be-02e0114adbcd"]
 		assert.True(t, hasLiveAudio)
-		assert.Equal(t, TrackInfoKindStream, liveAudio.Kind)
+		assert.Equal(t, TrackInfoKindMain, liveAudio.Kind)
 		liveVideo, hasLiveVideo := trackInfo["45def0ae-d3dd-4a2c-80c8-4aa37d6e2c2d a0a03556-3aff-4684-b3ab-59c7bf4cb4bc"]
 		assert.True(t, hasLiveVideo)
-		assert.Equal(t, TrackInfoKindStream, liveVideo.Kind)
+		assert.Equal(t, TrackInfoKindMain, liveVideo.Kind)
 	})
 
 	t.Run("set stream as main stream", func(t *testing.T) {

@@ -76,7 +76,7 @@ func (r *receiver) getStream(sessionId uuid.UUID, streamId string, trackId strin
 		switch info.Kind {
 		case TrackInfoKindGuest:
 			stream = newLocalStream(streamId, sessionId, r.dispatcher, info.Kind, r.quit)
-		case TrackInfoKindStream:
+		case TrackInfoKindMain:
 			stream = newLiveStream(streamId, sessionId, r.dispatcher, info.Kind, r.quit)
 		default:
 			stream = newLocalStream(streamId, sessionId, r.dispatcher, info.Kind, r.quit)

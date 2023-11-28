@@ -15,7 +15,7 @@ func testRtpSessionSetup(t *testing.T) (*session, *rtpEngineMock) {
 	t.Helper()
 	logging.SetupDebugLogger()
 	engine := mockRtpEngineForOffer(mockedAnswer)
-	forwarder := newStreamForwarderMock()
+	forwarder := newMainStreamerMock()
 	hub := newHub(newSessionRepository(), forwarder, nil)
 	session := newSession(uuid.New(), hub, engine, nil)
 	return session, engine
@@ -286,5 +286,41 @@ func TestRtpSessionStop(t *testing.T) {
 	//	assert.NoError(t, err)
 	//	err = session.stop()
 	//	assert.ErrorIs(t, err, errSessionAlreadyClosed)
+	//})
+}
+
+func TestRtpSessionOfferStaticEndpoint(t *testing.T) {
+	t.Run("offerStaticEgressReq to closed session", func(t *testing.T) {
+		var offer *webrtc.SessionDescription
+		session, _ := testRtpSessionSetup(t)
+		ctx := context.Background()
+		req := newSessionRequest(ctx, offer, offerStaticEgressReq)
+		_ = session.stop()
+		go session.runRequest(req)
+
+		select {
+		case <-req.respSDPChan:
+			t.Fatalf("No answerEgressReq was expected!")
+		case <-req.ctx.Done():
+			t.Fatalf("No canceling was expected!")
+		case err := <-req.err:
+			assert.ErrorIs(t, err, errSessionAlreadyClosed)
+		}
+	})
+
+	//t.Run("offerStaticEgressReq session", func(t *testing.T) {
+	//	var offer *webrtc.SessionDescription
+	//	session, _ := testRtpSessionSetup(t)
+	//	req := newSessionRequest(context.Background(), offer, offerStaticEgressReq)
+	//	go session.runRequest(req)
+	//
+	//	select {
+	//	case res := <-req.respSDPChan:
+	//		assert.Equal(t, mockedAnswer, res)
+	//	case <-req.ctx.Done():
+	//		t.Fatalf("No canceling was expected!")
+	//	case err := <-req.err:
+	//		t.Fatalf("No error was expected: %v", err)
+	//	}
 	//})
 }
