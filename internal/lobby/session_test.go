@@ -308,19 +308,19 @@ func TestRtpSessionOfferStaticEndpoint(t *testing.T) {
 		}
 	})
 
-	//t.Run("offerStaticEgressReq session", func(t *testing.T) {
-	//	var offer *webrtc.SessionDescription
-	//	session, _ := testRtpSessionSetup(t)
-	//	req := newSessionRequest(context.Background(), offer, offerStaticEgressReq)
-	//	go session.runRequest(req)
-	//
-	//	select {
-	//	case res := <-req.respSDPChan:
-	//		assert.Equal(t, mockedAnswer, res)
-	//	case <-req.ctx.Done():
-	//		t.Fatalf("No canceling was expected!")
-	//	case err := <-req.err:
-	//		t.Fatalf("No error was expected: %v", err)
-	//	}
-	//})
+	t.Run("offerStaticEgressReq session", func(t *testing.T) {
+		var offer *webrtc.SessionDescription
+		session, _ := testRtpSessionSetup(t)
+		req := newSessionRequest(context.Background(), offer, offerStaticEgressReq)
+		go session.runRequest(req)
+
+		select {
+		case res := <-req.respSDPChan:
+			assert.Equal(t, mockedAnswer, res)
+		case <-req.ctx.Done():
+			t.Fatalf("No canceling was expected!")
+		case err := <-req.err:
+			t.Fatalf("No error was expected: %v", err)
+		}
+	})
 }

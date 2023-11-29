@@ -33,7 +33,7 @@ func (e *rtpEngineMock) NewSenderEndpoint(_ context.Context, _ uuid.UUID, _ []*w
 	return e.conn, e.err
 }
 
-func (e *rtpEngineMock) NewStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, localTracks []*webrtc.TrackLocalStaticRTP, options ...rtp.EndpointOption) (*rtp.Endpoint, error) {
+func (e *rtpEngineMock) NewStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...rtp.EndpointOption) (*rtp.Endpoint, error) {
 	return e.conn, e.err
 }
 

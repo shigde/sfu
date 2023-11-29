@@ -21,7 +21,7 @@ type rtpEngine interface {
 
 	NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, localTracks []*webrtc.TrackLocalStaticRTP, stateHandler rtp.StateEventHandler) (*rtp.Endpoint, error)
 
-	NewStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, localTracks []*webrtc.TrackLocalStaticRTP, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
+	NewStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
 }
 
 func NewLobbyManager(storage storage.Storage, e rtpEngine) *LobbyManager {

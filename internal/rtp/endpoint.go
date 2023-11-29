@@ -23,14 +23,6 @@ type Endpoint struct {
 	onEstablished  func()
 }
 
-type EndpointOption func(*Endpoint)
-
-func EndpointWithOnEstablished(onEstablished func()) func(endpoint *Endpoint) {
-	return func(endpoint *Endpoint) {
-		endpoint.onEstablished = onEstablished
-	}
-}
-
 func (c *Endpoint) GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error) {
 	// block until ice gathering is complete before return local sdp
 	// all ice candidates should be part of the answer

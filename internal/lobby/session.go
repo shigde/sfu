@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/metric"
+	"github.com/shigde/sfu/internal/rtp"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
 )
@@ -215,8 +216,13 @@ func (s *session) handleOfferStaticEgressReq(req *sessionRequest) (*webrtc.Sessi
 	if err != nil {
 		return nil, fmt.Errorf("reading track list by creating rtp connection: %w", err)
 	}
+	option := make([]rtp.EndpointOption, len(trackList))
 
-	endpoint, err := s.rtpEngine.NewStaticEgressEndpoint(ctx, s.Id, *req.reqSDP, trackList)
+	for _, track := range trackList {
+		option = append(option, rtp.EndpointWithTrack(track))
+	}
+
+	endpoint, err := s.rtpEngine.NewStaticEgressEndpoint(ctx, s.Id, *req.reqSDP, option...)
 
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)

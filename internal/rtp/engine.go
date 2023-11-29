@@ -171,7 +171,7 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, sen
 		initComplete:   initComplete,
 	}, nil
 }
-func (e *Engine) NewStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, localTracks []*webrtc.TrackLocalStaticRTP, options ...EndpointOption) (*Endpoint, error) {
+func (e *Engine) NewStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
 	return nil, nil
 }
 
