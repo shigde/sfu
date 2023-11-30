@@ -31,6 +31,8 @@ The client initiates a POST request to request a WebRTC resource.
 Subsequently, the server creates a WebRTC endpoint and replies with an SDP offer.
 The client, in response, submits a PATCH request along with its own SDP answer.
 
+To consume all media of a lobby session, we use the alternatively (deprecated) WHEP protocol. (https://datatracker.ietf.org/doc/draft-murillo-whep/01/)
+
 !["live-stream"](./uml/sequence/lobby-listen-whep.png)
 
 #### Signaling
@@ -51,4 +53,8 @@ This session cookie represents a Lobby session and is obtained when you create a
 
 !["live-stream"](./uml/sequence/lobby-stream-stop.png)
 
+## Static WHIP
+https://datatracker.ietf.org/doc/draft-ietf-wish-whip/
 
+## Static WHEP
+https://datatracker.ietf.org/doc/draft-murillo-whep/

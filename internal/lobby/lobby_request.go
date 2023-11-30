@@ -15,18 +15,23 @@ type lobbyRequest struct {
 	data interface{}
 }
 
-type joinData struct {
+type createIngressEndpointData struct {
 	offer    *webrtc.SessionDescription
-	response chan *joinResponse
+	response chan *createIngressEndpointResponse
 }
 
-type startListenData struct {
-	response chan *startListenResponse
+type createMainEgressEndpointData struct {
+	offer    *webrtc.SessionDescription
+	response chan *createMainEgressEndpointResponse
 }
 
-type listenData struct {
+type initEgressEndpointData struct {
+	response chan *initEgressEndpointResponse
+}
+
+type finalCreateEgressEndpointData struct {
 	answer   *webrtc.SessionDescription
-	response chan *listenResponse
+	response chan *finalCreateEgressEndpointResponse
 }
 
 type leaveData struct {
@@ -49,24 +54,32 @@ func newLobbyRequest(ctx context.Context, user uuid.UUID) *lobbyRequest {
 	}
 }
 
-func newJoinData(offer *webrtc.SessionDescription) *joinData {
-	resChan := make(chan *joinResponse)
-	return &joinData{
+func newIngressEndpointData(offer *webrtc.SessionDescription) *createIngressEndpointData {
+	resChan := make(chan *createIngressEndpointResponse)
+	return &createIngressEndpointData{
 		offer:    offer,
 		response: resChan,
 	}
 }
 
-func newStartListenData() *startListenData {
-	resChan := make(chan *startListenResponse)
-	return &startListenData{
+func newMainEgressEndpointData(offer *webrtc.SessionDescription) *createMainEgressEndpointData {
+	resChan := make(chan *createMainEgressEndpointResponse)
+	return &createMainEgressEndpointData{
+		offer:    offer,
 		response: resChan,
 	}
 }
 
-func newListenData(answer *webrtc.SessionDescription) *listenData {
-	resChan := make(chan *listenResponse)
-	return &listenData{
+func newInitEgressEndpointData() *initEgressEndpointData {
+	resChan := make(chan *initEgressEndpointResponse)
+	return &initEgressEndpointData{
+		response: resChan,
+	}
+}
+
+func newFinalCreateEgressEndpointData(answer *webrtc.SessionDescription) *finalCreateEgressEndpointData {
+	resChan := make(chan *finalCreateEgressEndpointResponse)
+	return &finalCreateEgressEndpointData{
 		answer:   answer,
 		response: resChan,
 	}
@@ -97,17 +110,22 @@ func newLeaveData() *leaveData {
 	}
 }
 
-type joinResponse struct {
+type createIngressEndpointResponse struct {
 	answer       *webrtc.SessionDescription
 	resource     uuid.UUID
 	RtpSessionId uuid.UUID
 }
 
-type startListenResponse struct {
+type createMainEgressEndpointResponse struct {
+	answer       *webrtc.SessionDescription
+	RtpSessionId uuid.UUID
+}
+
+type initEgressEndpointResponse struct {
 	offer        *webrtc.SessionDescription
 	RtpSessionId uuid.UUID
 }
 
-type listenResponse struct {
+type finalCreateEgressEndpointResponse struct {
 	RtpSessionId uuid.UUID
 }

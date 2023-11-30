@@ -16,7 +16,7 @@ type TrackInfoKind int
 
 const (
 	TrackInfoKindGuest TrackInfoKind = iota + 1
-	TrackInfoKindStream
+	TrackInfoKindMain
 )
 
 func newTrackInfo(id uuid.UUID, track *webrtc.TrackLocalStaticRTP, liveTrack *LiveTrackStaticRTP, kind TrackInfoKind) *TrackInfo {
@@ -42,4 +42,11 @@ func (t *TrackInfo) GetTrack() *webrtc.TrackLocalStaticRTP {
 
 func (t *TrackInfo) GetLiveTrack() *LiveTrackStaticRTP {
 	return t.LiveTrack
+}
+
+func (t *TrackInfo) GetTrackLocal() webrtc.TrackLocal {
+	if t.Kind == TrackInfoKindMain {
+		return t.LiveTrack
+	}
+	return t.Track
 }

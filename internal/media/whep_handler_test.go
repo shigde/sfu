@@ -53,3 +53,30 @@ func TestWhepOfferReq(t *testing.T) {
 		assert.Equal(t, "0", listenRr.Header().Get("Content-Length"))
 	})
 }
+
+func TestWhepStaticOfferReq(t *testing.T) {
+	t.Run("Static WHEP Request without offer", func(t *testing.T) {
+		th, space, stream, _, bearer := testRouterSetup(t)
+
+		req := newSDPContentRequest("POST", fmt.Sprintf("/space/%s/stream/%s/static/whep", space.Identifier, stream.UUID.String()), nil, bearer, 0)
+		rr := httptest.NewRecorder()
+		th.router.ServeHTTP(rr, req)
+		// Then: status is 400 because payload empty
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+	})
+
+	t.Run("Static WHEP Request offer", func(t *testing.T) {
+		th, space, stream, _, bearer := testRouterSetup(t)
+
+		offer := []byte(testOffer)
+		body := bytes.NewBuffer(offer)
+		startReq := newSDPContentRequest("POST", fmt.Sprintf("/space/%s/stream/%s/static/whep", space.Identifier, stream.UUID.String()), body, bearer, len(offer))
+		startRr := httptest.NewRecorder()
+		th.router.ServeHTTP(startRr, startReq)
+
+		assert.Equal(t, http.StatusCreated, startRr.Code)
+		assert.Equal(t, "application/sdp", startRr.Header().Get("Content-Type"))
+		assert.Equal(t, strconv.Itoa(len([]byte(testAnswer))), startRr.Header().Get("Content-Length"))
+		assert.Equal(t, testAnswer, startRr.Body.String())
+	})
+}

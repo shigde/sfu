@@ -31,7 +31,7 @@ func newTestLobbyManager() *testLobbyManager {
 	return &testLobbyManager{}
 }
 
-func (l *testLobbyManager) AccessLobby(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ *webrtc.SessionDescription) (struct {
+func (l *testLobbyManager) CreateLobbyIngressEndpoint(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Resource     uuid.UUID
 	RtpSessionId uuid.UUID
@@ -47,7 +47,7 @@ func (l *testLobbyManager) AccessLobby(_ context.Context, _ uuid.UUID, _ uuid.UU
 	return data, nil
 }
 
-func (l *testLobbyManager) StartListenLobby(_ context.Context, _ uuid.UUID, _ uuid.UUID) (struct {
+func (l *testLobbyManager) InitLobbyEgressEndpoint(_ context.Context, _ uuid.UUID, _ uuid.UUID) (struct {
 	Offer        *webrtc.SessionDescription
 	Active       bool
 	RtpSessionId uuid.UUID
@@ -63,7 +63,7 @@ func (l *testLobbyManager) StartListenLobby(_ context.Context, _ uuid.UUID, _ uu
 	return data, nil
 }
 
-func (l *testLobbyManager) ListenLobby(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ *webrtc.SessionDescription) (struct {
+func (l *testLobbyManager) FinalCreateLobbyEgressEndpoint(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Active       bool
 	RtpSessionId uuid.UUID
@@ -75,6 +75,20 @@ func (l *testLobbyManager) ListenLobby(_ context.Context, _ uuid.UUID, _ uuid.UU
 	}
 	data.Answer = &webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: testAnswer}
 	data.Active = true
+	data.RtpSessionId, _ = uuid.Parse(rtpSessionId)
+	return data, nil
+}
+
+func (l *testLobbyManager) CreateMainStreamLobbyEgressEndpoint(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ *webrtc.SessionDescription) (struct {
+	Answer       *webrtc.SessionDescription
+	RtpSessionId uuid.UUID
+}, error) {
+	var data struct {
+		Answer       *webrtc.SessionDescription
+		RtpSessionId uuid.UUID
+	}
+
+	data.Answer = &webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: testAnswer}
 	data.RtpSessionId, _ = uuid.Parse(rtpSessionId)
 	return data, nil
 }

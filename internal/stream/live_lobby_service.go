@@ -20,9 +20,9 @@ func NewLiveLobbyService(store storage, lobbyManager liveLobbyManager) *LiveLobb
 	}
 }
 
-func (s *LiveLobbyService) EnterLobby(ctx context.Context, sdp *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, string, error) {
+func (s *LiveLobbyService) CreateLobbyIngressEndpoint(ctx context.Context, sdp *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, string, error) {
 	var resource string
-	resourceData, err := s.lobbyManager.AccessLobby(ctx, stream.Lobby.UUID, userId, sdp)
+	resourceData, err := s.lobbyManager.CreateLobbyIngressEndpoint(ctx, stream.Lobby.UUID, userId, sdp)
 	if err != nil {
 		return nil, resource, fmt.Errorf("accessing lobby: %w", err)
 	}
@@ -30,8 +30,8 @@ func (s *LiveLobbyService) EnterLobby(ctx context.Context, sdp *webrtc.SessionDe
 	return resourceData.Answer, resource, nil
 }
 
-func (s *LiveLobbyService) StartListenLobby(ctx context.Context, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, error) {
-	resourceData, err := s.lobbyManager.StartListenLobby(ctx, stream.Lobby.UUID, userId)
+func (s *LiveLobbyService) InitLobbyEgressEndpoint(ctx context.Context, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, error) {
+	resourceData, err := s.lobbyManager.InitLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId)
 	if err != nil {
 		return nil, fmt.Errorf("start listening lobby: %w", err)
 	}
@@ -41,8 +41,8 @@ func (s *LiveLobbyService) StartListenLobby(ctx context.Context, stream *LiveStr
 	return resourceData.Offer, nil
 }
 
-func (s *LiveLobbyService) ListenLobby(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (bool, error) {
-	resourceData, err := s.lobbyManager.ListenLobby(ctx, stream.Lobby.UUID, userId, offer)
+func (s *LiveLobbyService) FinalCreateLobbyEgressEndpoint(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (bool, error) {
+	resourceData, err := s.lobbyManager.FinalCreateLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId, offer)
 	if err != nil {
 		return false, fmt.Errorf("listening lobby: %w", err)
 	}
@@ -50,6 +50,14 @@ func (s *LiveLobbyService) ListenLobby(ctx context.Context, offer *webrtc.Sessio
 		return false, ErrLobbyNotActive
 	}
 	return resourceData.Active, nil
+}
+
+func (s *LiveLobbyService) CreateMainStreamLobbyEgressEndpoint(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, error) {
+	resourceData, err := s.lobbyManager.CreateMainStreamLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId, offer)
+	if err != nil {
+		return nil, fmt.Errorf("accessing lobby: %w", err)
+	}
+	return resourceData.Answer, nil
 }
 
 func (s *LiveLobbyService) LeaveLobby(ctx context.Context, stream *LiveStream, userId uuid.UUID) (bool, error) {

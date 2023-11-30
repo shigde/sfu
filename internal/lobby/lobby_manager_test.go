@@ -14,6 +14,8 @@ func testLobbyManagerSetup(t *testing.T) (*LobbyManager, *lobby, uuid.UUID) {
 	t.Helper()
 	logging.SetupDebugLogger()
 	store := storage.NewTestStore()
+	_ = store.GetDatabase().AutoMigrate(&LobbyEntity{})
+
 	engine := mockRtpEngineForOffer(mockedAnswer)
 
 	manager := NewLobbyManager(store, engine)
@@ -28,19 +30,19 @@ func testLobbyManagerSetup(t *testing.T) (*LobbyManager, *lobby, uuid.UUID) {
 }
 
 func TestLobbyManager(t *testing.T) {
-	t.Run("Access a lobby with timeout", func(t *testing.T) {
+	t.Run("Create lobby ingestion endpoint with timeout", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 		userId := uuid.New()
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // trigger cancel for time out
-		_, err := manager.AccessLobby(ctx, lobby.Id, userId, mockedOffer)
+		_, err := manager.CreateLobbyIngressEndpoint(ctx, lobby.Id, userId, mockedOffer)
 		assert.ErrorIs(t, err, errLobbyRequestTimeout)
 	})
 
-	t.Run("Access a new lobby", func(t *testing.T) {
+	t.Run("Create new lobby with ingestion endpoint", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 		userId := uuid.New()
-		data, err := manager.AccessLobby(context.Background(), lobby.Id, userId, mockedOffer)
+		data, err := manager.CreateLobbyIngressEndpoint(context.Background(), lobby.Id, userId, mockedOffer)
 
 		assert.NoError(t, err)
 		assert.Equal(t, mockedAnswer, data.Answer)
@@ -48,13 +50,13 @@ func TestLobbyManager(t *testing.T) {
 		assert.False(t, uuid.Nil == data.Resource)
 	})
 
-	t.Run("Access a already started lobby", func(t *testing.T) {
+	t.Run("Create ingestion endpoint when lobby already started", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 
-		_, err := manager.AccessLobby(context.Background(), lobby.Id, uuid.New(), mockedOffer)
+		_, err := manager.CreateLobbyIngressEndpoint(context.Background(), lobby.Id, uuid.New(), mockedOffer)
 		assert.NoError(t, err)
 
-		data, err := manager.AccessLobby(context.Background(), lobby.Id, uuid.New(), mockedOffer)
+		data, err := manager.CreateLobbyIngressEndpoint(context.Background(), lobby.Id, uuid.New(), mockedOffer)
 		assert.NoError(t, err)
 
 		assert.Equal(t, mockedAnswer, data.Answer)
@@ -67,7 +69,7 @@ func TestLobbyManager(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // trigger cancel for time out
-		_, err := manager.StartListenLobby(ctx, lobby.Id, user)
+		_, err := manager.InitLobbyEgressEndpoint(ctx, lobby.Id, user)
 		assert.ErrorIs(t, err, errLobbyRequestTimeout)
 	})
 
@@ -80,7 +82,7 @@ func TestLobbyManager(t *testing.T) {
 
 		oldTimeOut := waitingTimeOut
 		waitingTimeOut = 0
-		_, err := manager.StartListenLobby(context.Background(), lobby.Id, user)
+		_, err := manager.InitLobbyEgressEndpoint(context.Background(), lobby.Id, user)
 		assert.ErrorIs(t, err, errTimeoutByWaitingForMessenger)
 		waitingTimeOut = oldTimeOut
 	})
@@ -88,7 +90,7 @@ func TestLobbyManager(t *testing.T) {
 	t.Run("Start listen to a lobby, but no session exists", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 
-		_, err := manager.StartListenLobby(context.Background(), lobby.Id, uuid.New())
+		_, err := manager.InitLobbyEgressEndpoint(context.Background(), lobby.Id, uuid.New())
 		assert.ErrorIs(t, err, errNoSession)
 	})
 
@@ -101,7 +103,7 @@ func TestLobbyManager(t *testing.T) {
 		session.receiver.stopWaitingForMessenger()
 		lobby.sessions.Add(session)
 
-		data, err := manager.StartListenLobby(context.Background(), lobby.Id, user)
+		data, err := manager.InitLobbyEgressEndpoint(context.Background(), lobby.Id, user)
 		assert.NoError(t, err)
 		assert.Equal(t, mockedAnswer, data.Offer)
 		assert.False(t, uuid.Nil == data.RtpSessionId)
@@ -110,7 +112,7 @@ func TestLobbyManager(t *testing.T) {
 	t.Run("Start listen to a lobby but session already listen", func(t *testing.T) {
 		manager, lobby, user := testLobbyManagerSetup(t)
 
-		_, err := manager.StartListenLobby(context.Background(), lobby.Id, user)
+		_, err := manager.InitLobbyEgressEndpoint(context.Background(), lobby.Id, user)
 		assert.ErrorIs(t, err, errSenderInSessionAlreadyExists)
 	})
 
@@ -119,13 +121,13 @@ func TestLobbyManager(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // trigger cancel for time out
-		_, err := manager.ListenLobby(ctx, lobby.Id, user, mockedAnswer)
+		_, err := manager.FinalCreateLobbyEgressEndpoint(ctx, lobby.Id, user, mockedAnswer)
 		assert.ErrorIs(t, err, errLobbyRequestTimeout)
 	})
 
 	t.Run("listen to a lobby", func(t *testing.T) {
 		manager, lobby, user := testLobbyManagerSetup(t)
-		data, err := manager.ListenLobby(context.Background(), lobby.Id, user, mockedAnswer)
+		data, err := manager.FinalCreateLobbyEgressEndpoint(context.Background(), lobby.Id, user, mockedAnswer)
 		assert.NoError(t, err)
 		assert.True(t, data.Active)
 		assert.False(t, uuid.Nil == data.RtpSessionId)
@@ -133,7 +135,7 @@ func TestLobbyManager(t *testing.T) {
 
 	t.Run("listen to a lobby but no session", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
-		_, err := manager.ListenLobby(context.Background(), lobby.Id, uuid.New(), mockedAnswer)
+		_, err := manager.FinalCreateLobbyEgressEndpoint(context.Background(), lobby.Id, uuid.New(), mockedAnswer)
 		assert.ErrorIs(t, err, errNoSession)
 	})
 

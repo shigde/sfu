@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/metric"
+	"github.com/shigde/sfu/internal/rtp"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
 )
@@ -21,6 +22,7 @@ var (
 	errSenderInSessionAlreadyExists   = errors.New("sender already exists")
 	errNoSenderInSession              = errors.New("no sender exists")
 	errSessionRequestTimeout          = errors.New("session request timeout error")
+	errUnknownSessionRequestType      = errors.New("unknown session request type")
 )
 
 var (
@@ -94,12 +96,16 @@ func (s *session) handleSessionReq(req *sessionRequest) {
 	var sdp *webrtc.SessionDescription
 	var err error
 	switch req.sessionReqType {
-	case offerReq:
-		sdp, err = s.handleOfferReq(req)
-	case answerReq:
-		sdp, err = s.handleAnswerReq(req)
-	case startReq:
-		sdp, err = s.handleStartReq(req)
+	case offerIngressReq:
+		sdp, err = s.handleOfferIngressReq(req)
+	case initEgressReq:
+		sdp, err = s.handleInitEgressReq(req)
+	case answerEgressReq:
+		sdp, err = s.handleAnswerEgressReq(req)
+	case offerStaticEgressReq:
+		sdp, err = s.handleOfferStaticEgressReq(req)
+	default:
+		err = errUnknownSessionRequestType
 	}
 	if err != nil {
 		req.err <- fmt.Errorf("handle request: %w", err)
@@ -109,8 +115,8 @@ func (s *session) handleSessionReq(req *sessionRequest) {
 	req.respSDPChan <- sdp
 }
 
-func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
-	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleOfferReq")
+func (s *session) handleOfferIngressReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
+	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleOfferIngressReq")
 	defer span.End()
 
 	if s.receiver != nil {
@@ -137,13 +143,13 @@ func (s *session) handleOfferReq(req *sessionRequest) (*webrtc.SessionDescriptio
 	defer cancel()
 	answer, err := s.receiver.endpoint.GetLocalDescription(ctxTimeout)
 	if err != nil {
-		return nil, fmt.Errorf("create rtp answerReq: %w", err)
+		return nil, fmt.Errorf("create rtp answerEgressReq: %w", err)
 	}
 	return answer, nil
 }
 
-func (s *session) handleAnswerReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
-	_, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleAnswerReq")
+func (s *session) handleAnswerEgressReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
+	_, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleAnswerEgressReq")
 	defer span.End()
 
 	if s.sender == nil || s.sender.endpoint == nil {
@@ -154,8 +160,8 @@ func (s *session) handleAnswerReq(req *sessionRequest) (*webrtc.SessionDescripti
 	return nil, nil
 }
 
-func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
-	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleStartReq")
+func (s *session) handleInitEgressReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
+	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleInitEgressReq")
 	defer span.End()
 
 	if s.sender != nil {
@@ -179,7 +185,7 @@ func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescriptio
 
 	s.sender = newSenderHandler(s.Id, s.user, s.receiver.messenger)
 
-	trackList, err := s.hub.getTrackList(s.Id)
+	trackList, err := s.hub.getTrackList(filterForSession(s.Id))
 	if err != nil {
 		return nil, fmt.Errorf("reading track list by creating rtp connection: %w", err)
 	}
@@ -194,10 +200,47 @@ func (s *session) handleStartReq(req *sessionRequest) (*webrtc.SessionDescriptio
 	defer cancel()
 	offer, err := s.sender.endpoint.GetLocalDescription(ctxTimeout)
 	if err != nil {
-		return nil, fmt.Errorf("create rtp answerReq: %w", err)
+		return nil, fmt.Errorf("create rtp answerEgressReq: %w", err)
 	}
 
 	return offer, nil
+}
+
+func (s *session) handleOfferStaticEgressReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
+	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleOfferStaticEgressReq")
+	defer span.End()
+
+	// This sender Handler has no message handler.
+	// Without a message handler this sender is only a placeholder for the endpoint
+	s.sender = &senderHandler{
+		id:      uuid.New(),
+		session: s.Id,
+		user:    s.user,
+	}
+
+	trackList, err := s.hub.getTrackList(filterForSession(s.Id), filterForNotMain())
+	if err != nil {
+		return nil, fmt.Errorf("reading track list by creating rtp connection: %w", err)
+	}
+	option := make([]rtp.EndpointOption, len(trackList))
+
+	for _, track := range trackList {
+		option = append(option, rtp.EndpointWithTrack(track))
+	}
+
+	endpoint, err := s.rtpEngine.NewStaticEgressEndpoint(ctx, s.Id, *req.reqSDP, option...)
+
+	if err != nil {
+		return nil, fmt.Errorf("create rtp connection: %w", err)
+	}
+	s.sender.endpoint = endpoint
+	ctxTimeout, cancel := context.WithTimeout(ctx, iceGatheringTimeout)
+	defer cancel()
+	answer, err := s.sender.endpoint.GetLocalDescription(ctxTimeout)
+	if err != nil {
+		return nil, fmt.Errorf("create rtp answerEgressReq: %w", err)
+	}
+	return answer, nil
 }
 
 func (s *session) stop() error {
@@ -226,7 +269,7 @@ func (s *session) stop() error {
 	return nil
 }
 
-func (s *session) addTrack(track *webrtc.TrackLocalStaticRTP) {
+func (s *session) addTrack(track webrtc.TrackLocal) {
 	slog.Debug("lobby.sessions: addTrack", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
 	if s.sender != nil && s.sender.endpoint != nil {
 		slog.Debug("lobby.sessions: addTrack - to sender endpoint", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
@@ -234,7 +277,7 @@ func (s *session) addTrack(track *webrtc.TrackLocalStaticRTP) {
 	}
 }
 
-func (s *session) removeTrack(track *webrtc.TrackLocalStaticRTP) {
+func (s *session) removeTrack(track webrtc.TrackLocal) {
 	slog.Debug("lobby.sessions: removeTrack", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
 	if s.sender != nil && s.sender.endpoint != nil {
 		slog.Debug("lobby.sessions: removeTrack - from sender endpoint", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)

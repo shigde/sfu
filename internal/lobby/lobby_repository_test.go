@@ -12,6 +12,7 @@ import (
 func testRtpStreamLobbyRepositorySetup(t *testing.T) *lobbyRepository {
 	t.Helper()
 	store := storage.NewTestStore()
+	_ = store.GetDatabase().AutoMigrate(&LobbyEntity{})
 	var engine rtpEngine
 	repository := newLobbyRepository(store, engine)
 

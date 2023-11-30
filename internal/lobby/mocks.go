@@ -29,7 +29,11 @@ func (e *rtpEngineMock) NewReceiverEndpoint(_ context.Context, _ uuid.UUID, _ we
 	return e.conn, e.err
 }
 
-func (e *rtpEngineMock) NewSenderEndpoint(_ context.Context, _ uuid.UUID, _ []*webrtc.TrackLocalStaticRTP, _ rtp.StateEventHandler) (*rtp.Endpoint, error) {
+func (e *rtpEngineMock) NewSenderEndpoint(_ context.Context, _ uuid.UUID, _ []webrtc.TrackLocal, _ rtp.StateEventHandler) (*rtp.Endpoint, error) {
+	return e.conn, e.err
+}
+
+func (e *rtpEngineMock) NewStaticEgressEndpoint(_ context.Context, _ uuid.UUID, _ webrtc.SessionDescription, _ ...rtp.EndpointOption) (*rtp.Endpoint, error) {
 	return e.conn, e.err
 }
 
@@ -56,16 +60,27 @@ func mockIdelConnection() *rtp.Endpoint {
 	return rtp.NewMockConnection(ops)
 }
 
-type streamForwarderMock struct {
+type mainStreamerMock struct {
 	Tracks map[string]*rtp.LiveTrackStaticRTP
 }
 
-func newStreamForwarderMock() *streamForwarderMock {
+func newMainStreamerMock() *mainStreamerMock {
 	tracks := make(map[string]*rtp.LiveTrackStaticRTP)
-	return &streamForwarderMock{
+	return &mainStreamerMock{
 		Tracks: tracks,
 	}
 }
-func (sf *streamForwarderMock) AddTrack(track *rtp.LiveTrackStaticRTP) {
+func (sf *mainStreamerMock) AddTrack(track *rtp.LiveTrackStaticRTP) {
 	sf.Tracks[track.ID()] = track
+}
+
+func (sf *mainStreamerMock) RemoveTrack(track *rtp.LiveTrackStaticRTP) {
+	delete(sf.Tracks, track.ID())
+}
+func (sf *mainStreamerMock) GetTracks() []*rtp.LiveTrackStaticRTP {
+	tracks := make([]*rtp.LiveTrackStaticRTP, len(sf.Tracks))
+	for _, track := range sf.Tracks {
+		tracks = append(tracks, track)
+	}
+	return tracks
 }

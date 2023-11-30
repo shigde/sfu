@@ -212,3 +212,7 @@ func (f *UdpForwarder) AddTrack(track *LiveTrackStaticRTP) {
 		slog.Error("binding track", "err", err)
 	}
 }
+
+func (f *UdpForwarder) RemoveTrack(_ *LiveTrackStaticRTP) {
+
+}

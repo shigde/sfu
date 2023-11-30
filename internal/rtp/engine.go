@@ -101,7 +101,7 @@ func (e *Engine) NewReceiverEndpoint(ctx context.Context, sessionId uuid.UUID, o
 	}, nil
 }
 
-func (e *Engine) NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, sendingTracks []*webrtc.TrackLocalStaticRTP, handler StateEventHandler) (*Endpoint, error) {
+func (e *Engine) NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, sendingTracks []webrtc.TrackLocal, handler StateEventHandler) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create sender-endpoint")
 	defer span.End()
 
@@ -170,6 +170,39 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, sen
 		gatherComplete: gatherComplete,
 		initComplete:   initComplete,
 	}, nil
+}
+func (e *Engine) NewStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
+	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create static egress endpoint")
+	defer span.End()
+
+	peerConnection, err := e.api.NewPeerConnection(e.config)
+	if err != nil {
+		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
+	}
+	sender := newSender(sessionId, peerConnection)
+	endpoint := &Endpoint{
+		peerConnection: peerConnection,
+		sender:         sender,
+	}
+	for _, opt := range options {
+		opt(endpoint)
+	}
+
+	if err := peerConnection.SetRemoteDescription(offer); err != nil {
+		return nil, err
+	}
+
+	endpoint.gatherComplete = webrtc.GatheringCompletePromise(peerConnection)
+	answer, err := peerConnection.CreateAnswer(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = peerConnection.SetLocalDescription(answer); err != nil {
+		return nil, err
+	}
+
+	return endpoint, nil
 }
 
 func creatDC(pc *webrtc.PeerConnection, handler StateEventHandler) error {

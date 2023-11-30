@@ -42,7 +42,7 @@ func newLobby(id uuid.UUID, rtpEngine rtpEngine) *lobby {
 	childQuitChan := make(chan uuid.UUID)
 	forwarder, err := rtp.NewUdpForwarder(id, quitChan)
 	if err != nil {
-		slog.Error("create udp forwarder", "err", err)
+		slog.Error("create udp streamer", "err", err)
 	}
 
 	streamer := rtmp.NewStreamer(quitChan)
@@ -69,12 +69,14 @@ func (l *lobby) run() {
 		select {
 		case req := <-l.reqChan:
 			switch requestType := req.data.(type) {
-			case *joinData:
-				l.handleJoin(req)
-			case *startListenData:
-				l.handleStartListen(req)
-			case *listenData:
-				l.handleListen(req)
+			case *createIngressEndpointData:
+				l.handleCreateIngressEndpoint(req)
+			case *initEgressEndpointData:
+				l.handleInitEgressEndpoint(req)
+			case *finalCreateEgressEndpointData:
+				l.handleFinalCreateEgressEndpointData(req)
+			case *createMainEgressEndpointData:
+				l.handleCreateMainEgressEndpointData(req)
 			case *leaveData:
 				l.handleLeave(req)
 			case *liveStreamData:
@@ -123,70 +125,70 @@ func (l *lobby) runRequest(req *lobbyRequest) {
 	}
 }
 
-func (l *lobby) handleJoin(joinReq *lobbyRequest) {
-	slog.Info("lobby.lobby: handle join", "lobbyId", l.Id, "user", joinReq.user)
-	ctx, span := otel.Tracer(tracerName).Start(joinReq.ctx, "lobby:handleJoin")
-	joinReq.ctx = ctx
+func (l *lobby) handleCreateIngressEndpoint(lobbyReq *lobbyRequest) {
+	slog.Info("lobby.lobby: handle join", "lobbyId", l.Id, "user", lobbyReq.user)
+	ctx, span := otel.Tracer(tracerName).Start(lobbyReq.ctx, "lobby:handleCreateIngressEndpoint")
+	lobbyReq.ctx = ctx
 	defer span.End()
 
-	data, _ := joinReq.data.(*joinData)
-	session, ok := l.sessions.FindByUserId(joinReq.user)
+	data, _ := lobbyReq.data.(*createIngressEndpointData)
+	session, ok := l.sessions.FindByUserId(lobbyReq.user)
 	if ok {
 		select {
-		case joinReq.err <- ErrSessionAlreadyExists:
-		case <-joinReq.ctx.Done():
-			joinReq.err <- errLobbyRequestTimeout
+		case lobbyReq.err <- ErrSessionAlreadyExists:
+		case <-lobbyReq.ctx.Done():
+			lobbyReq.err <- errLobbyRequestTimeout
 		case <-l.quit:
-			joinReq.err <- errLobbyStopped
+			lobbyReq.err <- errLobbyStopped
 		}
 		return
 	}
-	session = newSession(joinReq.user, l.hub, l.rtpEngine, l.childQuitChan)
+	session = newSession(lobbyReq.user, l.hub, l.rtpEngine, l.childQuitChan)
 	l.sessions.Add(session)
-	offerReq := newSessionRequest(joinReq.ctx, data.offer, offerReq)
+	offerReq := newSessionRequest(lobbyReq.ctx, data.offer, offerIngressReq)
 
 	go func() {
-		slog.Info("lobby.lobby: create offerReq request", "lobbyId", l.Id, "user", joinReq.user)
+		slog.Info("lobby.lobby: create offerIngressReq request", "lobbyId", l.Id, "user", lobbyReq.user)
 		session.runRequest(offerReq)
 	}()
 	select {
 	case answer := <-offerReq.respSDPChan:
-		data.response <- &joinResponse{
+		data.response <- &createIngressEndpointResponse{
 			answer:       answer,
 			resource:     l.resourceId,
 			RtpSessionId: session.Id,
 		}
 	case err := <-offerReq.err:
-		joinReq.err <- fmt.Errorf("start session for joing: %w", err)
-	case <-joinReq.ctx.Done():
-		joinReq.err <- errLobbyRequestTimeout
+		lobbyReq.err <- fmt.Errorf("start session for joing: %w", err)
+	case <-lobbyReq.ctx.Done():
+		lobbyReq.err <- errLobbyRequestTimeout
 	case <-l.quit:
-		joinReq.err <- errLobbyStopped
+		lobbyReq.err <- errLobbyStopped
 	}
 }
 
-func (l *lobby) handleStartListen(req *lobbyRequest) {
+func (l *lobby) handleInitEgressEndpoint(req *lobbyRequest) {
 	slog.Info("lobby.lobby: handle start listen", "lobbyId", l.Id, "user", req.user)
-	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "lobby:handleStartListen")
+	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "lobby:handleInitEgressEndpoint")
 	req.ctx = ctx
 	defer span.End()
 
-	data, _ := req.data.(*startListenData)
+	data, _ := req.data.(*initEgressEndpointData)
 
 	session, ok := l.sessions.FindByUserId(req.user)
 	if !ok {
 		req.err <- errNoSession
 		return
 	}
-	startSessionReq := newStartRequest(req.ctx)
+	startSessionReq := newInitEgressRequest(req.ctx)
 
 	go func() {
-		slog.Info("lobby.lobby: create offerReq request", "lobbyId", l.Id, "user", req.user)
+		slog.Info("lobby.lobby: create offerIngressReq request", "lobbyId", l.Id, "user", req.user)
 		session.runRequest(startSessionReq)
 	}()
 	select {
 	case offer := <-startSessionReq.respSDPChan:
-		data.response <- &startListenResponse{
+		data.response <- &initEgressEndpointResponse{
 			offer:        offer,
 			RtpSessionId: session.Id,
 		}
@@ -199,13 +201,13 @@ func (l *lobby) handleStartListen(req *lobbyRequest) {
 	}
 }
 
-func (l *lobby) handleListen(req *lobbyRequest) {
+func (l *lobby) handleFinalCreateEgressEndpointData(req *lobbyRequest) {
 	slog.Info("lobby.lobby: handle listen", "lobbyId", l.Id, "user", req.user)
-	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "lobby:handleListen")
+	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "lobby:handleFinalCreateEgressEndpointData")
 	req.ctx = ctx
 	defer span.End()
 
-	data, _ := req.data.(*listenData)
+	data, _ := req.data.(*finalCreateEgressEndpointData)
 	session, ok := l.sessions.FindByUserId(req.user)
 	if !ok {
 		select {
@@ -218,15 +220,15 @@ func (l *lobby) handleListen(req *lobbyRequest) {
 		return
 	}
 
-	answerReq := newSessionRequest(req.ctx, data.answer, answerReq)
+	answerReq := newSessionRequest(req.ctx, data.answer, answerEgressReq)
 	go func() {
-		slog.Info("lobby.lobby: create offerReq request", "lobbyId", l.Id, "user", req.user)
+		slog.Info("lobby.lobby: create offerIngressReq request", "lobbyId", l.Id, "user", req.user)
 		session.runRequest(answerReq)
 	}()
 
 	select {
 	case _ = <-answerReq.respSDPChan:
-		data.response <- &listenResponse{
+		data.response <- &finalCreateEgressEndpointResponse{
 			RtpSessionId: session.Id,
 		}
 	case err := <-answerReq.err:
@@ -235,6 +237,47 @@ func (l *lobby) handleListen(req *lobbyRequest) {
 		req.err <- errLobbyRequestTimeout
 	case <-l.quit:
 		req.err <- errLobbyStopped
+	}
+}
+
+func (l *lobby) handleCreateMainEgressEndpointData(lobbyReq *lobbyRequest) {
+	slog.Info("lobby.lobby: handle join", "lobbyId", l.Id, "user", lobbyReq.user)
+	ctx, span := otel.Tracer(tracerName).Start(lobbyReq.ctx, "lobby:handleCreateMainEgressEndpointData")
+	lobbyReq.ctx = ctx
+	defer span.End()
+
+	data, _ := lobbyReq.data.(*createMainEgressEndpointData)
+	session, ok := l.sessions.FindByUserId(lobbyReq.user)
+	if ok {
+		select {
+		case lobbyReq.err <- ErrSessionAlreadyExists:
+		case <-lobbyReq.ctx.Done():
+			lobbyReq.err <- errLobbyRequestTimeout
+		case <-l.quit:
+			lobbyReq.err <- errLobbyStopped
+		}
+		return
+	}
+	session = newSession(lobbyReq.user, l.hub, l.rtpEngine, l.childQuitChan)
+	l.sessions.Add(session)
+	offerReq := newSessionRequest(lobbyReq.ctx, data.offer, offerIngressReq)
+
+	go func() {
+		slog.Info("lobby.lobby: create offerIngressReq request", "lobbyId", l.Id, "user", lobbyReq.user)
+		session.runRequest(offerReq)
+	}()
+	select {
+	case answer := <-offerReq.respSDPChan:
+		data.response <- &createMainEgressEndpointResponse{
+			answer:       answer,
+			RtpSessionId: session.Id,
+		}
+	case err := <-offerReq.err:
+		lobbyReq.err <- fmt.Errorf("start session for joing: %w", err)
+	case <-lobbyReq.ctx.Done():
+		lobbyReq.err <- errLobbyRequestTimeout
+	case <-l.quit:
+		lobbyReq.err <- errLobbyStopped
 	}
 }
 

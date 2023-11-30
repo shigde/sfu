@@ -8,21 +8,26 @@ import (
 )
 
 type liveLobbyManager interface {
-	AccessLobby(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
+	CreateLobbyIngressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 		Answer       *webrtc.SessionDescription
 		Resource     uuid.UUID
 		RtpSessionId uuid.UUID
 	}, error)
 
-	StartListenLobby(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID) (struct {
+	InitLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID) (struct {
 		Offer        *webrtc.SessionDescription
 		Active       bool
 		RtpSessionId uuid.UUID
 	}, error)
 
-	ListenLobby(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
+	FinalCreateLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 		Answer       *webrtc.SessionDescription
 		Active       bool
+		RtpSessionId uuid.UUID
+	}, error)
+
+	CreateMainStreamLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
+		Answer       *webrtc.SessionDescription
 		RtpSessionId uuid.UUID
 	}, error)
 
