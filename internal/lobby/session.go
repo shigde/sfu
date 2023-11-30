@@ -210,7 +210,13 @@ func (s *session) handleOfferStaticEgressReq(req *sessionRequest) (*webrtc.Sessi
 	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleOfferStaticEgressReq")
 	defer span.End()
 
-	s.sender = newSenderHandler(s.Id, s.user, s.receiver.messenger)
+	// This sender Handler has no message handler.
+	// Without a message handler this sender is only a placeholder for the endpoint
+	s.sender = &senderHandler{
+		id:      uuid.New(),
+		session: s.Id,
+		user:    s.user,
+	}
 
 	trackList, err := s.hub.getTrackList(filterForSession(s.Id), filterForNotMain())
 	if err != nil {
@@ -227,10 +233,10 @@ func (s *session) handleOfferStaticEgressReq(req *sessionRequest) (*webrtc.Sessi
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
-	s.receiver.endpoint = endpoint
+	s.sender.endpoint = endpoint
 	ctxTimeout, cancel := context.WithTimeout(ctx, iceGatheringTimeout)
 	defer cancel()
-	answer, err := s.receiver.endpoint.GetLocalDescription(ctxTimeout)
+	answer, err := s.sender.endpoint.GetLocalDescription(ctxTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp answerEgressReq: %w", err)
 	}
