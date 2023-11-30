@@ -43,3 +43,10 @@ func (t *TrackInfo) GetTrack() *webrtc.TrackLocalStaticRTP {
 func (t *TrackInfo) GetLiveTrack() *LiveTrackStaticRTP {
 	return t.LiveTrack
 }
+
+func (t *TrackInfo) GetTrackLocal() webrtc.TrackLocal {
+	if t.Kind == TrackInfoKindMain {
+		return t.LiveTrack
+	}
+	return t.Track
+}

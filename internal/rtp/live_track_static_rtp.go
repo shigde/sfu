@@ -147,3 +147,7 @@ func (s *LiveTrackStaticRTP) Write(b []byte) (n int, err error) {
 
 	return len(b), s.writeRTP(packet)
 }
+
+func (s *LiveTrackStaticRTP) RID() string {
+	return s.streamID
+}

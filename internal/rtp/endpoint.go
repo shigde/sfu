@@ -48,7 +48,7 @@ func (c *Endpoint) SetInitComplete() {
 	}
 }
 
-func (c *Endpoint) hasTrack(track *webrtc.TrackLocalStaticRTP) bool {
+func (c *Endpoint) hasTrack(track webrtc.TrackLocal) bool {
 	slog.Debug("rtp.connection: has Tracks")
 	rtpSenderList := c.peerConnection.GetSenders()
 	for _, rtpSender := range rtpSenderList {
@@ -61,7 +61,7 @@ func (c *Endpoint) hasTrack(track *webrtc.TrackLocalStaticRTP) bool {
 	return false
 }
 
-func (c *Endpoint) getSender(track *webrtc.TrackLocalStaticRTP) (*webrtc.RTPSender, bool) {
+func (c *Endpoint) getSender(track webrtc.TrackLocal) (*webrtc.RTPSender, bool) {
 	slog.Debug("rtp.connection: has Tracks")
 	rtpSenderList := c.peerConnection.GetSenders()
 	for _, rtpSender := range rtpSenderList {
@@ -74,7 +74,7 @@ func (c *Endpoint) getSender(track *webrtc.TrackLocalStaticRTP) (*webrtc.RTPSend
 	return nil, false
 }
 
-func (c *Endpoint) AddTrack(track *webrtc.TrackLocalStaticRTP) {
+func (c *Endpoint) AddTrack(track webrtc.TrackLocal) {
 	slog.Debug("rtp.connection: Add Track", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
 	if has := c.hasTrack(track); !has {
 		slog.Debug("rtp.connection: Add Track to connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind(), "signalState", c.peerConnection.SignalingState().String())
@@ -84,7 +84,7 @@ func (c *Endpoint) AddTrack(track *webrtc.TrackLocalStaticRTP) {
 	}
 }
 
-func (c *Endpoint) RemoveTrack(track *webrtc.TrackLocalStaticRTP) {
+func (c *Endpoint) RemoveTrack(track webrtc.TrackLocal) {
 	slog.Debug("rtp.connection: Remove Track", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
 	if sender, has := c.getSender(track); has {
 		slog.Debug("rtp.connection: Remove Track from connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())

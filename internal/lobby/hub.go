@@ -78,7 +78,7 @@ func (h *hub) DispatchRemoveTrack(track *rtp.TrackInfo) {
 	}
 }
 
-func (h *hub) getTrackList(sessionId uuid.UUID) ([]*webrtc.TrackLocalStaticRTP, error) {
+func (h *hub) getTrackList(filters ...filterHubTracks) ([]webrtc.TrackLocal, error) {
 	var hubList []*rtp.TrackInfo
 	trackListChan := make(chan []*rtp.TrackInfo)
 	select {
@@ -98,10 +98,16 @@ func (h *hub) getTrackList(sessionId uuid.UUID) ([]*webrtc.TrackLocalStaticRTP, 
 	case <-time.After(hubDispatchTimeout):
 		slog.Error("lobby.hub: get track list - interrupted because dispatch timeout")
 	}
-	list := make([]*webrtc.TrackLocalStaticRTP, 0)
+	list := make([]webrtc.TrackLocal, 0)
 	for _, track := range hubList {
-		if track.GetSessionId() != sessionId {
-			list = append(list, track.GetTrack())
+		if len(filters) == 0 {
+			list = append(list, track.GetTrackLocal())
+		}
+
+		for _, f := range filters {
+			if !f(track) {
+				list = append(list, track.GetTrackLocal())
+			}
 		}
 	}
 	return list, nil
@@ -124,29 +130,28 @@ func (h *hub) stop() error {
 func (h *hub) onAddTrack(event *hubRequest) {
 	if event.track.GetStreamKind() == rtp.TrackInfoKindMain {
 		h.streamer.AddTrack(event.track.GetLiveTrack())
-		return
 	}
 
-	h.tracks[event.track.GetTrack().ID()] = event.track
+	h.tracks[event.track.GetTrackLocal().ID()] = event.track
 	h.sessionRepo.Iter(func(s *session) {
-		if s.Id != event.track.GetSessionId() {
-			s.addTrack(event.track.GetTrack())
+		if filterForSession(s.Id)(event.track) {
+			s.addTrack(event.track.GetTrackLocal())
 		}
 	})
 }
 
 func (h *hub) onRemoveTrack(event *hubRequest) {
 	if event.track.GetStreamKind() == rtp.TrackInfoKindMain {
-		// @TODO Implementing h.streamer.stopSending()
+		h.streamer.RemoveTrack(event.track.GetLiveTrack())
 		return
 	}
 
-	if _, ok := h.tracks[event.track.GetTrack().ID()]; ok {
-		delete(h.tracks, event.track.GetTrack().ID())
+	if _, ok := h.tracks[event.track.GetTrackLocal().ID()]; ok {
+		delete(h.tracks, event.track.GetTrackLocal().ID())
 	}
 	h.sessionRepo.Iter(func(s *session) {
-		if s.Id != event.track.GetSessionId() {
-			s.removeTrack(event.track.GetTrack())
+		if filterForSession(s.Id)(event.track) {
+			s.removeTrack(event.track.GetTrackLocal())
 		}
 	})
 }
@@ -166,6 +171,15 @@ func (h *hub) onGetTrackList(event *hubRequest) {
 	}
 }
 
-func (h *hub) getMainTrackList() ([]*webrtc.TrackLocalStaticRTP, error) {
-	return nil, nil
+type filterHubTracks func(*rtp.TrackInfo) bool
+
+func filterForSession(sessionId uuid.UUID) filterHubTracks {
+	return func(track *rtp.TrackInfo) bool {
+		return sessionId != track.GetSessionId()
+	}
+}
+func filterForNotMain() filterHubTracks {
+	return func(track *rtp.TrackInfo) bool {
+		return track.Kind != rtp.TrackInfoKindMain
+	}
 }

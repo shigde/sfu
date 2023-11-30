@@ -213,10 +213,6 @@ func (f *UdpForwarder) AddTrack(track *LiveTrackStaticRTP) {
 	}
 }
 
-func (f *UdpForwarder) RemoveTrack(_ string) {
+func (f *UdpForwarder) RemoveTrack(_ *LiveTrackStaticRTP) {
 
-}
-
-func (f *UdpForwarder) GetTracks() []*LiveTrackStaticRTP {
-	return nil
 }

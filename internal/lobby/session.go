@@ -185,7 +185,7 @@ func (s *session) handleInitEgressReq(req *sessionRequest) (*webrtc.SessionDescr
 
 	s.sender = newSenderHandler(s.Id, s.user, s.receiver.messenger)
 
-	trackList, err := s.hub.getTrackList(s.Id)
+	trackList, err := s.hub.getTrackList(filterForSession(s.Id))
 	if err != nil {
 		return nil, fmt.Errorf("reading track list by creating rtp connection: %w", err)
 	}
@@ -212,7 +212,7 @@ func (s *session) handleOfferStaticEgressReq(req *sessionRequest) (*webrtc.Sessi
 
 	s.sender = newSenderHandler(s.Id, s.user, s.receiver.messenger)
 
-	trackList, err := s.hub.getMainTrackList()
+	trackList, err := s.hub.getTrackList(filterForSession(s.Id), filterForNotMain())
 	if err != nil {
 		return nil, fmt.Errorf("reading track list by creating rtp connection: %w", err)
 	}
@@ -263,7 +263,7 @@ func (s *session) stop() error {
 	return nil
 }
 
-func (s *session) addTrack(track *webrtc.TrackLocalStaticRTP) {
+func (s *session) addTrack(track webrtc.TrackLocal) {
 	slog.Debug("lobby.sessions: addTrack", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
 	if s.sender != nil && s.sender.endpoint != nil {
 		slog.Debug("lobby.sessions: addTrack - to sender endpoint", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
@@ -271,7 +271,7 @@ func (s *session) addTrack(track *webrtc.TrackLocalStaticRTP) {
 	}
 }
 
-func (s *session) removeTrack(track *webrtc.TrackLocalStaticRTP) {
+func (s *session) removeTrack(track webrtc.TrackLocal) {
 	slog.Debug("lobby.sessions: removeTrack", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
 	if s.sender != nil && s.sender.endpoint != nil {
 		slog.Debug("lobby.sessions: removeTrack - from sender endpoint", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
