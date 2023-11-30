@@ -13,14 +13,14 @@ var errSenderAlreadyClosed = errors.New("sender already closed")
 type sender struct {
 	id              uuid.UUID
 	conn            *webrtc.PeerConnection
-	addTrackChan    <-chan *webrtc.TrackLocalStaticRTP
-	removeTrackChan <-chan *webrtc.TrackLocalStaticRTP
+	addTrackChan    <-chan webrtc.TrackLocal
+	removeTrackChan <-chan webrtc.TrackLocal
 	quit            chan struct{}
 }
 
 func newSender(sessionId uuid.UUID, conn *webrtc.PeerConnection) *sender {
-	addTrack := make(<-chan *webrtc.TrackLocalStaticRTP, 1)
-	removeTrack := make(<-chan *webrtc.TrackLocalStaticRTP, 1)
+	addTrack := make(<-chan webrtc.TrackLocal, 1)
+	removeTrack := make(<-chan webrtc.TrackLocal, 1)
 	quit := make(chan struct{})
 	sender := &sender{
 		id:              sessionId,
@@ -60,7 +60,7 @@ func (s *sender) stop() error {
 	return nil
 }
 
-func (s *sender) addTrackToConnection(track *webrtc.TrackLocalStaticRTP) {
+func (s *sender) addTrackToConnection(track webrtc.TrackLocal) {
 	_, err := s.conn.AddTrack(track)
 	if err != nil {
 		slog.Error("rtc.sender: add track to connection",
@@ -71,7 +71,7 @@ func (s *sender) addTrackToConnection(track *webrtc.TrackLocalStaticRTP) {
 	}
 }
 
-func (s *sender) removeTrackFromConnection(track *webrtc.TrackLocalStaticRTP) {
+func (s *sender) removeTrackFromConnection(track webrtc.TrackLocal) {
 	senders := s.conn.GetSenders()
 	for _, sender := range senders {
 		if sender.Track().ID() == track.ID() {

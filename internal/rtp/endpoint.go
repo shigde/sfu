@@ -16,7 +16,7 @@ type Endpoint struct {
 	peerConnection peerConnection
 	receiver       *receiver
 	sender         *sender
-	AddTrackChan   <-chan *webrtc.TrackLocalStaticRTP
+	AddTrackChan   <-chan webrtc.TrackLocal
 	gatherComplete <-chan struct{}
 	initComplete   chan struct{}
 	closed         chan struct{}
