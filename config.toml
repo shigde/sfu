@@ -25,11 +25,11 @@ key = "SecretValueReplaceThis"
 defaultexpiretime = 604800  # 1 week not implemented et jet
 
 [metric.prometheus]
-enable = false
+enable = true
 endpoint = "/metrics" # Endpoint where the Prometheus metrics are delivered
 
 [telemetry]
-enable = false
+enable = true
 
 [rtp]
 # Setup ice server for turn and stun
