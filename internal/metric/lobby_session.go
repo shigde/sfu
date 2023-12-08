@@ -20,7 +20,7 @@ func RunningSessionsInc(lobby string, session string) {
 }
 func RunningSessionsDec(lobby string, session string) {
 	if lobbySessions != nil {
-		lobbySessions.runningSessions.With(prometheus.Labels{"lobby": lobby, "session": session}).Dec()
+		lobbySessions.runningSessions.Delete(prometheus.Labels{"lobby": lobby, "session": session})
 	}
 }
 

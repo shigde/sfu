@@ -20,7 +20,7 @@ func RunningLobbyInc(stream string, lobby string) {
 }
 func RunningLobbyDec(stream string, lobby string) {
 	if lobbyMetric != nil {
-		lobbyMetric.runningLobby.With(prometheus.Labels{"stream": stream, "lobby": lobby}).Dec()
+		lobbyMetric.runningLobby.Delete(prometheus.Labels{"stream": stream, "lobby": lobby})
 	}
 }
 
