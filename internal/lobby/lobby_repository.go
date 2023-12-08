@@ -37,13 +37,13 @@ func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUI
 	currentLobby, ok := r.lobbies[lobbyId]
 	if !ok {
 		lobby := newLobby(lobbyId, r.rtpEngine)
-		entity, err := r.queryLobbyEntity(context.Background(), lobbyId.String())
+		entity, err := r.queryLobbyEntity(ctx, lobbyId.String())
 		if err != nil {
 			return nil, fmt.Errorf("fetching lobby entity: %w", err)
 		}
 
 		entity.IsRunning = true
-		if entity, err = r.updateLobbyEntity(context.Background(), entity); err != nil {
+		if entity, err = r.updateLobbyEntity(ctx, entity); err != nil {
 			return nil, fmt.Errorf("updating lobby entity as running: %w", err)
 		}
 
@@ -74,13 +74,16 @@ func (r *lobbyRepository) setLobbyLive(ctx context.Context, id uuid.UUID, isLive
 	return false
 }
 
-func (r *lobbyRepository) Delete(id uuid.UUID) bool {
+func (r *lobbyRepository) Delete(ctx context.Context, id uuid.UUID) bool {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	if lobby, ok := r.lobbies[id]; ok {
 		lobby.entity.IsRunning = false
-		_, _ = r.updateLobbyEntity(context.Background(), lobby.entity)
+		if _, err := r.updateLobbyEntity(ctx, lobby.entity); err != nil {
+			return false
+		}
 		delete(r.lobbies, id)
+		metric.RunningLobbyDec(metric.StreamFromContext(ctx), id.String())
 		return true
 	}
 	return false
