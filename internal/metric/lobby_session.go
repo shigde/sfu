@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -9,40 +10,33 @@ import (
 var lobbySessions *LobbySessionMetric
 
 type LobbySessionMetric struct {
-	RunningSessions prometheus.Gauge
-	SessionStates   *prometheus.GaugeVec
+	runningSessions *prometheus.GaugeVec
 }
 
-func RunningSessionsInc() {
+func RunningSessionsInc(lobby string, session string) {
 	if lobbySessions != nil {
-		lobbySessions.RunningSessions.Inc()
+		lobbySessions.runningSessions.With(prometheus.Labels{"lobby": lobby, "session": session}).Inc()
 	}
 }
-func RunningSessionsDec() {
+func RunningSessionsDec(lobby string, session string) {
 	if lobbySessions != nil {
-		lobbySessions.RunningSessions.Dec()
+		lobbySessions.runningSessions.With(prometheus.Labels{"lobby": lobby, "session": session}).Dec()
 	}
 }
 
 func NewLobbySessionMetrics() (*LobbySessionMetric, error) {
-	m := &LobbySessionMetric{
-		RunningSessions: prometheus.NewGauge(prometheus.GaugeOpts{
-			Namespace: "shig",
-			Name:      "running_lobby_sessions",
-			Help:      "Number of currently running lobby sessions.",
-		}),
-		SessionStates: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: "shig",
-			Name:      "lobby_session_state",
-			Help:      "Information about the current lobby session state.",
-		}, []string{"session_state"}),
+	if lobbySessions != nil {
+		return nil, errors.New("lobby session metric already exists")
 	}
-	if err := prometheus.Register(m.RunningSessions); err != nil {
+	lobbySessions = &LobbySessionMetric{
+		runningSessions: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: "shig",
+			Name:      "lobby_session",
+			Help:      "running lobby sessions",
+		}, []string{"lobby", "session"}),
+	}
+	if err := prometheus.Register(lobbySessions.runningSessions); err != nil {
 		return nil, fmt.Errorf("register runningSessions metric: %w", err)
 	}
-
-	if err := prometheus.Register(m.SessionStates); err != nil {
-		return nil, fmt.Errorf("register sessionStates metric: %w", err)
-	}
-	return m, nil
+	return lobbySessions, nil
 }

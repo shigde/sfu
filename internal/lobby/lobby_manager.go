@@ -40,7 +40,7 @@ func (m *LobbyManager) CreateLobbyIngressEndpoint(ctx context.Context, lobbyId u
 		RtpSessionId uuid.UUID
 	}
 
-	lobby, err := m.lobbies.getOrCreateLobby(lobbyId)
+	lobby, err := m.lobbies.getOrCreateLobby(ctx, lobbyId)
 	if err != nil {
 		return answerData, fmt.Errorf("getting or creating lobby: %w", err)
 	}

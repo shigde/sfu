@@ -6,6 +6,7 @@ import (
 
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/sfu"
 	"github.com/shigde/sfu/internal/telemetry"
@@ -42,8 +43,8 @@ func ParseConfig(file string) (*sfu.Config, error) {
 		return nil, fmt.Errorf("log.logfile should not be empty")
 	}
 
-	if len(config.MetricConfig.Prometheus.Endpoint) == 0 {
-		return nil, fmt.Errorf("metric.prometheus.endpoint should not be empty")
+	if err := metric.ValidateMetricConfig(config.MetricConfig); err != nil {
+		return nil, err
 	}
 
 	if err := auth.ValidateSecurityConfig(config.SecurityConfig); err != nil {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
+	"github.com/shigde/sfu/internal/metric"
 )
 
 type LiveLobbyService struct {
@@ -22,6 +23,7 @@ func NewLiveLobbyService(store storage, lobbyManager liveLobbyManager) *LiveLobb
 
 func (s *LiveLobbyService) CreateLobbyIngressEndpoint(ctx context.Context, sdp *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, string, error) {
 	var resource string
+	ctx = metric.ContextWithStream(ctx, stream.UUID.String())
 	resourceData, err := s.lobbyManager.CreateLobbyIngressEndpoint(ctx, stream.Lobby.UUID, userId, sdp)
 	if err != nil {
 		return nil, resource, fmt.Errorf("accessing lobby: %w", err)
@@ -31,6 +33,7 @@ func (s *LiveLobbyService) CreateLobbyIngressEndpoint(ctx context.Context, sdp *
 }
 
 func (s *LiveLobbyService) InitLobbyEgressEndpoint(ctx context.Context, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, error) {
+	ctx = metric.ContextWithStream(ctx, stream.UUID.String())
 	resourceData, err := s.lobbyManager.InitLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId)
 	if err != nil {
 		return nil, fmt.Errorf("start listening lobby: %w", err)
@@ -42,6 +45,7 @@ func (s *LiveLobbyService) InitLobbyEgressEndpoint(ctx context.Context, stream *
 }
 
 func (s *LiveLobbyService) FinalCreateLobbyEgressEndpoint(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (bool, error) {
+	ctx = metric.ContextWithStream(ctx, stream.UUID.String())
 	resourceData, err := s.lobbyManager.FinalCreateLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId, offer)
 	if err != nil {
 		return false, fmt.Errorf("listening lobby: %w", err)
@@ -53,6 +57,7 @@ func (s *LiveLobbyService) FinalCreateLobbyEgressEndpoint(ctx context.Context, o
 }
 
 func (s *LiveLobbyService) CreateMainStreamLobbyEgressEndpoint(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, error) {
+	ctx = metric.ContextWithStream(ctx, stream.UUID.String())
 	resourceData, err := s.lobbyManager.CreateMainStreamLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId, offer)
 	if err != nil {
 		return nil, fmt.Errorf("accessing lobby: %w", err)
@@ -61,6 +66,7 @@ func (s *LiveLobbyService) CreateMainStreamLobbyEgressEndpoint(ctx context.Conte
 }
 
 func (s *LiveLobbyService) LeaveLobby(ctx context.Context, stream *LiveStream, userId uuid.UUID) (bool, error) {
+	ctx = metric.ContextWithStream(ctx, stream.UUID.String())
 	left, err := s.lobbyManager.LeaveLobby(ctx, stream.Lobby.UUID, userId)
 	if err != nil {
 		return false, fmt.Errorf("leave lobby: %w", err)
@@ -69,6 +75,7 @@ func (s *LiveLobbyService) LeaveLobby(ctx context.Context, stream *LiveStream, u
 }
 
 func (s *LiveLobbyService) StartLiveStream(ctx context.Context, stream *LiveStream, streamInfo *LiveStreamInfo, userId uuid.UUID) error {
+	ctx = metric.ContextWithStream(ctx, stream.UUID.String())
 	if err := s.lobbyManager.StartLiveStream(ctx, stream.Lobby.UUID, streamInfo.StreamKey, streamInfo.RtmpUrl, userId); err != nil {
 		return fmt.Errorf("start live stream: %w", err)
 	}
@@ -76,6 +83,7 @@ func (s *LiveLobbyService) StartLiveStream(ctx context.Context, stream *LiveStre
 }
 
 func (s *LiveLobbyService) StopLiveStream(ctx context.Context, stream *LiveStream, userId uuid.UUID) error {
+	ctx = metric.ContextWithStream(ctx, stream.UUID.String())
 	if err := s.lobbyManager.StopLiveStream(ctx, stream.Lobby.UUID, userId); err != nil {
 		return fmt.Errorf("stop live stream: %w", err)
 	}

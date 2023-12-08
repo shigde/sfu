@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
-	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/rtp"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
@@ -46,7 +45,6 @@ type session struct {
 func newSession(user uuid.UUID, hub *hub, engine rtpEngine, onInternallyQuit chan<- uuid.UUID) *session {
 	quit := make(chan struct{})
 	requests := make(chan *sessionRequest)
-	metric.RunningSessionsInc()
 
 	session := &session{
 		Id:               uuid.New(),
@@ -264,7 +262,6 @@ func (s *session) stop() error {
 				slog.Error("lobby.sessions: closing receiver", "sessionId", s.Id, "user", s.user)
 			}
 		}
-		metric.RunningSessionsDec()
 	}
 	return nil
 }

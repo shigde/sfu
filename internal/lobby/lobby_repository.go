@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/storage"
 	"gorm.io/gorm"
 )
@@ -30,7 +31,7 @@ func newLobbyRepository(store storage.Storage, rtpEngine rtpEngine) *lobbyReposi
 	}
 }
 
-func (r *lobbyRepository) getOrCreateLobby(lobbyId uuid.UUID) (*lobby, error) {
+func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUID) (*lobby, error) {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	currentLobby, ok := r.lobbies[lobbyId]
@@ -48,6 +49,8 @@ func (r *lobbyRepository) getOrCreateLobby(lobbyId uuid.UUID) (*lobby, error) {
 
 		lobby.entity = entity
 		r.lobbies[lobbyId] = lobby
+
+		metric.RunningLobbyInc(metric.StreamFromContext(ctx), lobbyId.String())
 		return lobby, nil
 	}
 	return currentLobby, nil

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/rtmp"
 	"github.com/shigde/sfu/internal/rtp"
 	"go.opentelemetry.io/otel"
@@ -158,6 +159,7 @@ func (l *lobby) handleCreateIngressEndpoint(lobbyReq *lobbyRequest) {
 			resource:     l.resourceId,
 			RtpSessionId: session.Id,
 		}
+		metric.RunningSessionsInc(l.Id.String(), session.Id.String())
 	case err := <-offerReq.err:
 		lobbyReq.err <- fmt.Errorf("start session for joing: %w", err)
 	case <-lobbyReq.ctx.Done():
@@ -334,6 +336,7 @@ func (l *lobby) deleteSessionByUserId(userId uuid.UUID) (bool, error) {
 		if err := session.stop(); err != nil {
 			return deleted, fmt.Errorf("stopping rtp session (sessionId = %s for userId = %s): %w", session.Id, userId, err)
 		}
+		metric.RunningSessionsDec(l.Id.String(), session.Id.String())
 		return deleted, nil
 	}
 	return false, errNoSession
