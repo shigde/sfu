@@ -148,6 +148,7 @@ func (l *lobby) handleCreateIngressEndpoint(lobbyReq *lobbyRequest) {
 	}
 	session = newSession(lobbyReq.user, l.hub, l.rtpEngine, l.sessionQuit)
 	l.sessions.Add(session)
+	metric.RunningSessionsInc(l.Id.String(), session.Id.String())
 	offerReq := newSessionRequest(lobbyReq.ctx, data.offer, offerIngressReq)
 
 	go func() {
@@ -161,7 +162,6 @@ func (l *lobby) handleCreateIngressEndpoint(lobbyReq *lobbyRequest) {
 			resource:     l.resourceId,
 			RtpSessionId: session.Id,
 		}
-		metric.RunningSessionsInc(l.Id.String(), session.Id.String())
 	case err := <-offerReq.err:
 		lobbyReq.err <- fmt.Errorf("start session for joing: %w", err)
 	case <-lobbyReq.ctx.Done():
