@@ -8,12 +8,14 @@ import (
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/storage"
+	"golang.org/x/exp/slog"
 )
 
 const tracerName = "github.com/shigde/sfu/internal/lobby"
 
 type LobbyManager struct {
-	lobbies *lobbyRepository
+	lobbies               *lobbyRepository
+	lobbyGarbageCollector chan<- uuid.UUID
 }
 
 type rtpEngine interface {
@@ -26,7 +28,15 @@ type rtpEngine interface {
 
 func NewLobbyManager(storage storage.Storage, e rtpEngine) *LobbyManager {
 	lobbies := newLobbyRepository(storage, e)
-	return &LobbyManager{lobbies}
+	lobbyGarbageCollector := make(chan uuid.UUID)
+	go func() {
+		for id := range lobbyGarbageCollector {
+			if ok := lobbies.delete(context.Background(), id); !ok {
+				slog.Warn("lobby could not delete", "lobby", id)
+			}
+		}
+	}()
+	return &LobbyManager{lobbies, lobbyGarbageCollector}
 }
 
 func (m *LobbyManager) CreateLobbyIngressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
@@ -40,7 +50,7 @@ func (m *LobbyManager) CreateLobbyIngressEndpoint(ctx context.Context, lobbyId u
 		RtpSessionId uuid.UUID
 	}
 
-	lobby, err := m.lobbies.getOrCreateLobby(ctx, lobbyId)
+	lobby, err := m.lobbies.getOrCreateLobby(ctx, lobbyId, m.lobbyGarbageCollector)
 	if err != nil {
 		return answerData, fmt.Errorf("getting or creating lobby: %w", err)
 	}

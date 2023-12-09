@@ -15,9 +15,9 @@ func testStreamLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 	logging.SetupDebugLogger()
 	// set one session in lobby
 	engine := mockRtpEngineForOffer(mockedAnswer)
-	lobby := newLobby(uuid.New(), engine)
+	lobby := newLobby(uuid.New(), engine, make(chan uuid.UUID))
 	user := uuid.New()
-	session := newSession(user, lobby.hub, engine, lobby.childQuitChan)
+	session := newSession(user, lobby.hub, engine, lobby.sessionQuit)
 	session.sender = newSenderHandler(session.Id, user, newMockedMessenger(t))
 	session.sender.endpoint = mockConnection(mockedAnswer)
 	lobby.sessions.Add(session)
@@ -127,7 +127,7 @@ func TestStreamLobby(t *testing.T) {
 		defer lobby.stop()
 
 		user := uuid.New()
-		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), lobby.childQuitChan)
+		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), lobby.sessionQuit)
 		session.receiver = newReceiverHandler(session.Id, session.user, nil)
 		session.receiver.messenger = newMockedMessenger(t)
 		session.receiver.stopWaitingForMessenger()
@@ -156,7 +156,7 @@ func TestStreamLobby(t *testing.T) {
 		defer lobby.stop()
 
 		user := uuid.New()
-		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), lobby.childQuitChan)
+		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), lobby.sessionQuit)
 		session.receiver = newReceiverHandler(session.Id, session.user, nil)
 		session.receiver.messenger = newMockedMessenger(t)
 		lobby.sessions.Add(session)

@@ -23,20 +23,21 @@ var (
 )
 
 type lobby struct {
-	Id            uuid.UUID
-	sessions      *sessionRepository
-	forwarder     *rtp.UdpForwarder
-	streamer      *rtmp.Streamer
-	hub           *hub
-	rtpEngine     rtpEngine
-	resourceId    uuid.UUID
-	entity        *LobbyEntity
-	quit          chan struct{}
-	reqChan       chan *lobbyRequest
-	childQuitChan chan uuid.UUID
+	Id                    uuid.UUID
+	sessions              *sessionRepository
+	forwarder             *rtp.UdpForwarder
+	streamer              *rtmp.Streamer
+	hub                   *hub
+	rtpEngine             rtpEngine
+	resourceId            uuid.UUID
+	entity                *LobbyEntity
+	quit                  chan struct{}
+	reqChan               chan *lobbyRequest
+	sessionQuit           chan uuid.UUID
+	lobbyGarbageCollector chan<- uuid.UUID
 }
 
-func newLobby(id uuid.UUID, rtpEngine rtpEngine) *lobby {
+func newLobby(id uuid.UUID, rtpEngine rtpEngine, lobbyGarbageCollector chan<- uuid.UUID) *lobby {
 	sessions := newSessionRepository()
 	quitChan := make(chan struct{})
 	reqChan := make(chan *lobbyRequest)
@@ -49,16 +50,17 @@ func newLobby(id uuid.UUID, rtpEngine rtpEngine) *lobby {
 	streamer := rtmp.NewStreamer(quitChan)
 	hub := newHub(sessions, forwarder, quitChan)
 	lobby := &lobby{
-		Id:            id,
-		resourceId:    uuid.New(),
-		rtpEngine:     rtpEngine,
-		sessions:      sessions,
-		forwarder:     forwarder,
-		streamer:      streamer,
-		hub:           hub,
-		quit:          quitChan,
-		reqChan:       reqChan,
-		childQuitChan: childQuitChan,
+		Id:                    id,
+		resourceId:            uuid.New(),
+		rtpEngine:             rtpEngine,
+		sessions:              sessions,
+		forwarder:             forwarder,
+		streamer:              streamer,
+		hub:                   hub,
+		quit:                  quitChan,
+		reqChan:               reqChan,
+		sessionQuit:           childQuitChan,
+		lobbyGarbageCollector: lobbyGarbageCollector,
 	}
 	go lobby.run()
 	return lobby
@@ -85,10 +87,10 @@ func (l *lobby) run() {
 			default:
 				slog.Error("lobby.lobby: not supported request type in lobby", "type", requestType)
 			}
-		case id := <-l.childQuitChan:
-			slog.Debug("join leave lobby")
+		case id := <-l.sessionQuit:
+			slog.Debug("lobby.lobby: session quit lobby", "session", id)
 			if _, err := l.deleteSessionByUserId(id); err != nil {
-				slog.Error("lobby.lobby: deleting session because internally reason", "err", err)
+				slog.Error("lobby.lobby: deleting session because internally reason", "err", err, "session", id)
 			}
 		case <-l.quit:
 			slog.Info("lobby.lobby: close lobby", "lobbyId", l.Id)
@@ -144,7 +146,7 @@ func (l *lobby) handleCreateIngressEndpoint(lobbyReq *lobbyRequest) {
 		}
 		return
 	}
-	session = newSession(lobbyReq.user, l.hub, l.rtpEngine, l.childQuitChan)
+	session = newSession(lobbyReq.user, l.hub, l.rtpEngine, l.sessionQuit)
 	l.sessions.Add(session)
 	offerReq := newSessionRequest(lobbyReq.ctx, data.offer, offerIngressReq)
 
@@ -260,7 +262,7 @@ func (l *lobby) handleCreateMainEgressEndpointData(lobbyReq *lobbyRequest) {
 		}
 		return
 	}
-	session = newSession(lobbyReq.user, l.hub, l.rtpEngine, l.childQuitChan)
+	session = newSession(lobbyReq.user, l.hub, l.rtpEngine, l.sessionQuit)
 	l.sessions.Add(session)
 	offerReq := newSessionRequest(lobbyReq.ctx, data.offer, offerIngressReq)
 
@@ -337,6 +339,16 @@ func (l *lobby) deleteSessionByUserId(userId uuid.UUID) (bool, error) {
 			return deleted, fmt.Errorf("stopping rtp session (sessionId = %s for userId = %s): %w", session.Id, userId, err)
 		}
 		metric.RunningSessionsDec(l.Id.String(), session.Id.String())
+
+		// When Lobby is empty then it is time to close the lobby.
+		// But we have to take care about races, because in the meanwhile a new session request could be made.
+		// We leave to the lobby manager the dealing with races.
+		if l.sessions.Len() == 0 {
+			// Spawn a routine to not block the lobby process at all
+			go func() {
+				l.lobbyGarbageCollector <- l.Id
+			}()
+		}
 		return deleted, nil
 	}
 	return false, errNoSession
