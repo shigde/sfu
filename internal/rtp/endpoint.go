@@ -15,8 +15,6 @@ var ErrIceGatheringInterruption = errors.New("getting ice gathering interrupted"
 type Endpoint struct {
 	peerConnection peerConnection
 	receiver       *receiver
-	sender         *sender
-	AddTrackChan   <-chan webrtc.TrackLocal
 	gatherComplete <-chan struct{}
 	initComplete   chan struct{}
 	closed         chan struct{}

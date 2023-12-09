@@ -110,7 +110,6 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, sen
 		return nil, fmt.Errorf("create sender peer connection: %w ", err)
 	}
 
-	sender := newSender(sessionId, peerConnection)
 	peerConnection.OnICEConnectionStateChange(handler.OnConnectionStateChange)
 
 	initComplete := make(chan struct{})
@@ -165,8 +164,6 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, sen
 
 	return &Endpoint{
 		peerConnection: peerConnection,
-		sender:         sender,
-		AddTrackChan:   sender.addTrackChan,
 		gatherComplete: gatherComplete,
 		initComplete:   initComplete,
 	}, nil
@@ -179,10 +176,8 @@ func (e *Engine) NewStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUI
 	if err != nil {
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
 	}
-	sender := newSender(sessionId, peerConnection)
 	endpoint := &Endpoint{
 		peerConnection: peerConnection,
-		sender:         sender,
 	}
 	for _, opt := range options {
 		opt(endpoint)

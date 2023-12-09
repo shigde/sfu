@@ -14,6 +14,6 @@ func EndpointWithOnEstablished(onEstablished func()) func(endpoint *Endpoint) {
 
 func EndpointWithTrack(track webrtc.TrackLocal) func(endpoint *Endpoint) {
 	return func(endpoint *Endpoint) {
-		endpoint.sender.addTrackToConnection(track)
+		endpoint.AddTrack(track)
 	}
 }
