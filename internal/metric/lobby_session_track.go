@@ -52,12 +52,12 @@ func PacketDel(labels Labels) {
 
 func PacketBytesInc(labels Labels, pkg uint64) {
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packet.With(toPromLabels(labels)).Add(float64(pkg))
+		trackMetric.packetBytes.With(toPromLabels(labels)).Add(float64(pkg))
 	}
 }
 func PacketBytesDel(labels Labels) {
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packet.Delete(toPromLabels(labels))
+		trackMetric.packetBytes.Delete(toPromLabels(labels))
 	}
 }
 
@@ -80,64 +80,79 @@ func PliInc(labels Labels, pli uint32) {
 		return
 	}
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packet.With(toPromLabels(labels)).Add(float64(pkg))
+		trackMetric.pli.With(toPromLabels(labels)).Add(float64(pli))
 	}
 }
 func PliDel(labels Labels) {
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packet.Delete(toPromLabels(labels))
+		trackMetric.pli.Delete(toPromLabels(labels))
 	}
 }
 
-func FirInc(labels Labels, pkg uint64) {
+func FirInc(labels Labels, fir uint32) {
+	if fir == 0 {
+		return
+	}
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packet.With(toPromLabels(labels)).Add(float64(pkg))
+		trackMetric.fir.With(toPromLabels(labels)).Add(float64(fir))
 	}
 }
 func FirDel(labels Labels) {
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packet.Delete(toPromLabels(labels))
+		trackMetric.fir.Delete(toPromLabels(labels))
 	}
 }
-func PacketLossTotalInc(labels Labels, pkg uint64) {
+func PacketLossTotalInc(labels Labels, pkg uint32) {
+	if pkg == 0 {
+		return
+	}
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packet.With(toPromLabels(labels)).Add(float64(pkg))
+		trackMetric.packetLossTotal.With(toPromLabels(labels)).Add(float64(pkg))
 	}
 }
 func PacketLossTotalDel(labels Labels) {
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packet.Delete(toPromLabels(labels))
+		trackMetric.packetLossTotal.Delete(toPromLabels(labels))
 	}
 }
-func PacketLossInc(labels Labels, pkg uint64) {
+func PacketLossInc(labels Labels, pkg uint32) {
+	if pkg == 0 {
+		return
+	}
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packet.With(toPromLabels(labels)).Add(float64(pkg))
+		trackMetric.packetLoss.With(toPromLabels(labels)).Observe(float64(pkg))
 	}
 }
 func PacketLossDel(labels Labels) {
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packet.Delete(toPromLabels(labels))
+		trackMetric.packetLoss.Delete(toPromLabels(labels))
 	}
 }
-func JitterInc(labels Labels, pkg uint64) {
+func JitterInc(labels Labels, jitter uint32) {
+	if jitter == 0 {
+		return
+	}
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packet.With(toPromLabels(labels)).Add(float64(pkg))
+		trackMetric.jitter.With(toPromLabels(labels)).Observe(float64(jitter))
 	}
 }
 func JitterDel(labels Labels) {
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packet.Delete(toPromLabels(labels))
+		trackMetric.jitter.Delete(toPromLabels(labels))
 	}
 }
 
-func RttInc(labels Labels, pkg uint64) {
+func RttInc(labels Labels, rtt uint32) {
+	if rtt == 0 {
+		return
+	}
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packet.With(toPromLabels(labels)).Add(float64(pkg))
+		trackMetric.rtt.With(toPromLabels(labels)).Observe(float64(rtt))
 	}
 }
 func RttDel(labels Labels) {
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packet.Delete(toPromLabels(labels))
+		trackMetric.rtt.Delete(toPromLabels(labels))
 	}
 }
 
@@ -229,15 +244,18 @@ func NewLobbySessionTrackMetrics() (*LobbySessionTrackMetric, error) {
 		return nil, errors.New("lobby session track metric already exists")
 	}
 
-	lobbySessionTrackMetric = &LobbySessionTrackMetric{
-		runningTracks: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: "shig",
-			Name:      "lobby_session_tracks_",
-			Help:      "running lobby session tracks",
-		}, []string{"session", "track"}),
+	ingress, err := newTrackMetric("ingress")
+	if err != nil {
+		return nil, errors.New("create ingress metric")
 	}
-	if err := prometheus.Register(lobbySessionTrackMetric.runningTracks); err != nil {
-		return nil, fmt.Errorf("register runningLobby metric: %w", err)
+	egress, err := newTrackMetric("egress")
+	if err != nil {
+		return nil, errors.New("create egress metric")
+	}
+
+	lobbySessionTrackMetric = &LobbySessionTrackMetric{
+		ingressTracks: ingress,
+		egressTracks:  egress,
 	}
 
 	return lobbySessionTrackMetric, nil
