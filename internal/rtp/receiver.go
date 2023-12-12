@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/pion/interceptor/pkg/stats"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/telemetry"
 	"go.opentelemetry.io/otel"
@@ -19,13 +21,18 @@ type receiver struct {
 	streams    map[string]Stream
 	dispatcher TrackDispatcher
 	trackInfos map[string]*TrackInfo
+	stats      statsGetter
 	quit       chan struct{}
 }
 
-func newReceiver(sessionId uuid.UUID, d TrackDispatcher, trackInfos map[string]*TrackInfo) *receiver {
+type statsGetter interface {
+	getStatsGetter(id string) (stats.Getter, bool)
+}
+
+func newReceiver(sessionId uuid.UUID, d TrackDispatcher, s statsGetter, trackInfos map[string]*TrackInfo) *receiver {
 	streams := make(map[string]Stream)
 	quit := make(chan struct{})
-	return &receiver{sync.RWMutex{}, sessionId, streams, d, trackInfos, quit}
+	return &receiver{sync.RWMutex{}, sessionId, streams, d, trackInfos, s, quit}
 }
 
 func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.RTPReceiver) {
@@ -34,6 +41,20 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 	defer span.End()
 
 	stream := r.getStream(r.id, remoteTrack.StreamID(), remoteTrack.ID())
+
+	go func(track *webrtc.TrackRemote) {
+		statsGetter, ok := r.stats.getStatsGetter("r.statsId")
+		if !ok {
+			return
+		}
+		for {
+			statsGetter.Get(uint32(track.SSRC()))
+			//fmt.Printf("Stats for: %s\n", remoteTrack.Codec().MimeType)
+			//fmt.Println(stats.InboundRTPStreamStats)
+
+			time.Sleep(time.Second * 5)
+		}
+	}(remoteTrack)
 
 	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "audio") {
 		slog.Debug("rtp.receiver: on audio track")

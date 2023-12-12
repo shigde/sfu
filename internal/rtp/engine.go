@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pion/interceptor"
 	"github.com/pion/interceptor/pkg/intervalpli"
+	"github.com/pion/interceptor/pkg/stats"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/static"
 	"go.opentelemetry.io/otel"
@@ -16,17 +17,30 @@ import (
 const tracerName = "github.com/shigde/sfu/internal/engine"
 
 type Engine struct {
-	config webrtc.Configuration
-	api    *webrtc.API
+	config         webrtc.Configuration
+	api            *webrtc.API
+	interceptorMap *interceptorMap
 }
 
 func NewEngine(rtpConfig *RtpConfig) (*Engine, error) {
 	config := rtpConfig.getWebrtcConf()
 
+	im := newInterceptorMap()
 	m := &webrtc.MediaEngine{}
 	if err := m.RegisterDefaultCodecs(); err != nil {
 		return nil, fmt.Errorf("register  default codecs: %w ", err)
 	}
+
+	statsInterceptorFactory, err := stats.NewInterceptor()
+	if err != nil {
+		return nil, fmt.Errorf("create stats interceptor factory: %w", err)
+	}
+
+	go func() {
+		statsInterceptorFactory.OnNewPeerConnection(func(id string, getter stats.Getter) {
+			im.setStatsGetter(id, getter)
+		})
+	}()
 
 	// Create a InterceptorRegistry. This is the user configurable RTP/RTCP Pipeline.
 	// This provides NACKs, RTCP Reports and other features. If you use `webrtc.NewPeerConnection`
@@ -48,6 +62,7 @@ func NewEngine(rtpConfig *RtpConfig) (*Engine, error) {
 		return nil, fmt.Errorf("create interval Pli factory: %w ", err)
 	}
 	i.Add(intervalPliFactory)
+	i.Add(statsInterceptorFactory)
 
 	api := webrtc.NewAPI(webrtc.WithMediaEngine(m), webrtc.WithInterceptorRegistry(i))
 	return &Engine{
@@ -59,8 +74,8 @@ func NewEngine(rtpConfig *RtpConfig) (*Engine, error) {
 func (e *Engine) NewReceiverEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, dispatcher TrackDispatcher, handler StateEventHandler) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create receiver-endpoint")
 	defer span.End()
-
 	peerConnection, err := e.api.NewPeerConnection(e.config)
+
 	if err != nil {
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
 	}
@@ -70,7 +85,7 @@ func (e *Engine) NewReceiverEndpoint(ctx context.Context, sessionId uuid.UUID, o
 		return nil, fmt.Errorf("parsing track info: %w ", err)
 	}
 
-	receiver := newReceiver(sessionId, dispatcher, trackInfos)
+	receiver := newReceiver(sessionId, dispatcher, e.interceptorMap, trackInfos)
 	peerConnection.OnTrack(receiver.onTrack)
 
 	peerConnection.OnICEConnectionStateChange(handler.OnConnectionStateChange)
