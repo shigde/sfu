@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/pion/interceptor/pkg/stats"
 	"github.com/pion/webrtc/v3"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
@@ -13,7 +14,18 @@ import (
 func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID, offer webrtc.SessionDescription, dispatcher TrackDispatcher, handler StateEventHandler) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create egress endpoint")
 	defer span.End()
-	api, err := e.createApi()
+
+	trackInfos, err := getTrackInfo(offer, sessionId)
+	if err != nil {
+		return nil, fmt.Errorf("parsing track info: %w ", err)
+	}
+
+	receiver := newReceiver(sessionId, dispatcher, trackInfos)
+	withGetter := withOnStatsGetter(func(getter stats.Getter) {
+		receiver.stats = getter
+	})
+
+	api, err := e.createApi(withGetter)
 	if err != nil {
 		return nil, fmt.Errorf("creating api: %w", err)
 	}
@@ -22,13 +34,6 @@ func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID
 	if err != nil {
 		return nil, fmt.Errorf("create egress peer connection: %w ", err)
 	}
-
-	trackInfos, err := getTrackInfo(offer, sessionId)
-	if err != nil {
-		return nil, fmt.Errorf("parsing track info: %w ", err)
-	}
-
-	receiver := newReceiver(sessionId, dispatcher, nil, trackInfos)
 	peerConnection.OnTrack(receiver.onTrack)
 
 	peerConnection.OnICEConnectionStateChange(handler.OnConnectionStateChange)

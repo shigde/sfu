@@ -21,18 +21,21 @@ type receiver struct {
 	streams    map[string]Stream
 	dispatcher TrackDispatcher
 	trackInfos map[string]*TrackInfo
-	stats      statsGetter
 	quit       chan struct{}
+	stats      stats.Getter
 }
 
-type statsGetter interface {
-	getStatsGetter(id string) (stats.Getter, bool)
-}
-
-func newReceiver(sessionId uuid.UUID, d TrackDispatcher, s statsGetter, trackInfos map[string]*TrackInfo) *receiver {
+func newReceiver(sessionId uuid.UUID, d TrackDispatcher, trackInfos map[string]*TrackInfo) *receiver {
 	streams := make(map[string]Stream)
 	quit := make(chan struct{})
-	return &receiver{sync.RWMutex{}, sessionId, streams, d, trackInfos, s, quit}
+	return &receiver{
+		RWMutex:    sync.RWMutex{},
+		id:         sessionId,
+		streams:    streams,
+		dispatcher: d,
+		trackInfos: trackInfos,
+		quit:       quit,
+	}
 }
 
 func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.RTPReceiver) {
@@ -42,19 +45,20 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 
 	stream := r.getStream(r.id, remoteTrack.StreamID(), remoteTrack.ID())
 
-	go func(track *webrtc.TrackRemote) {
-		statsGetter, ok := r.stats.getStatsGetter("r.statsId")
-		if !ok {
-			return
-		}
-		for {
-			statsGetter.Get(uint32(track.SSRC()))
-			//fmt.Printf("Stats for: %s\n", remoteTrack.Codec().MimeType)
-			//fmt.Println(stats.InboundRTPStreamStats)
+	if r.stats != nil {
+		go func(track *webrtc.TrackRemote, statsGetter stats.Getter, cancel <-chan struct{}) {
+			for {
+				select {
+				case <-cancel:
+					return
+				case <-time.After(5 * time.Second):
 
-			time.Sleep(time.Second * 5)
-		}
-	}(remoteTrack)
+					statsRep := statsGetter.Get(uint32(track.SSRC()))
+					fmt.Println(statsRep.InboundRTPStreamStats)
+				}
+			}
+		}(remoteTrack, r.stats, r.quit)
+	}
 
 	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "audio") {
 		slog.Debug("rtp.receiver: on audio track")

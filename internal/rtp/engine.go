@@ -26,23 +26,31 @@ func NewEngine(rtpConfig *RtpConfig) (*Engine, error) {
 	}, nil
 }
 
-func (e *Engine) createApi() (*webrtc.API, error) {
-	im := newInterceptorMap()
+func (e *Engine) createApi(options ...engineApiOption) (*engineApi, error) {
+	api := &engineApi{}
+
+	for _, o := range options {
+		o(api)
+	}
+
 	m := &webrtc.MediaEngine{}
 	if err := m.RegisterDefaultCodecs(); err != nil {
 		return nil, fmt.Errorf("register  default codecs: %w ", err)
 	}
 
-	statsInterceptorFactory, err := stats.NewInterceptor()
-	if err != nil {
-		return nil, fmt.Errorf("create stats interceptor factory: %w", err)
-	}
+	var statsInterceptorFactory *stats.InterceptorFactory
+	var err error
+	if api.onStatsGetter != nil {
+		if statsInterceptorFactory, err = stats.NewInterceptor(); err != nil {
+			return nil, fmt.Errorf("create stats interceptor factory: %w", err)
+		}
 
-	go func() {
-		statsInterceptorFactory.OnNewPeerConnection(func(id string, getter stats.Getter) {
-			im.setStatsGetter(id, getter)
-		})
-	}()
+		go func() {
+			statsInterceptorFactory.OnNewPeerConnection(func(_ string, getter stats.Getter) {
+				api.onStatsGetter(getter)
+			})
+		}()
+	}
 
 	// Create a InterceptorRegistry. This is the user configurable RTP/RTCP Pipeline.
 	// This provides NACKs, RTCP Reports and other features. If you use `webrtc.NewPeerConnection`
@@ -64,9 +72,11 @@ func (e *Engine) createApi() (*webrtc.API, error) {
 		return nil, fmt.Errorf("create interval Pli factory: %w ", err)
 	}
 	i.Add(intervalPliFactory)
-	i.Add(statsInterceptorFactory)
+	if statsInterceptorFactory != nil {
+		i.Add(statsInterceptorFactory)
+	}
 
-	api := webrtc.NewAPI(webrtc.WithMediaEngine(m), webrtc.WithInterceptorRegistry(i))
+	api.API = webrtc.NewAPI(webrtc.WithMediaEngine(m), webrtc.WithInterceptorRegistry(i))
 	return api, nil
 }
 
