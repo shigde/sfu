@@ -19,9 +19,9 @@ type LobbyManager struct {
 }
 
 type rtpEngine interface {
-	EstablishEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, d rtp.TrackDispatcher, stateHandler rtp.StateEventHandler) (*rtp.Endpoint, error)
+	EstablishIngressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, d rtp.TrackDispatcher, stateHandler rtp.StateEventHandler) (*rtp.Endpoint, error)
 
-	EstablishIngressEndpoint(ctx context.Context, sessionId uuid.UUID, localTracks []webrtc.TrackLocal, stateHandler rtp.StateEventHandler) (*rtp.Endpoint, error)
+	EstablishEgressEndpoint(ctx context.Context, sessionId uuid.UUID, localTracks []webrtc.TrackLocal, stateHandler rtp.StateEventHandler) (*rtp.Endpoint, error)
 
 	EstablishStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
 }

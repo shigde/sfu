@@ -25,11 +25,11 @@ func newRtpEngineMock() *rtpEngineMock {
 	return &rtpEngineMock{}
 }
 
-func (e *rtpEngineMock) EstablishEgressEndpoint(_ context.Context, _ uuid.UUID, _ webrtc.SessionDescription, _ rtp.TrackDispatcher, _ rtp.StateEventHandler) (*rtp.Endpoint, error) {
+func (e *rtpEngineMock) EstablishIngressEndpoint(_ context.Context, _ uuid.UUID, _ webrtc.SessionDescription, _ rtp.TrackDispatcher, _ rtp.StateEventHandler) (*rtp.Endpoint, error) {
 	return e.conn, e.err
 }
 
-func (e *rtpEngineMock) EstablishIngressEndpoint(_ context.Context, _ uuid.UUID, _ []webrtc.TrackLocal, _ rtp.StateEventHandler) (*rtp.Endpoint, error) {
+func (e *rtpEngineMock) EstablishEgressEndpoint(_ context.Context, _ uuid.UUID, _ []webrtc.TrackLocal, _ rtp.StateEventHandler) (*rtp.Endpoint, error) {
 	return e.conn, e.err
 }
 
