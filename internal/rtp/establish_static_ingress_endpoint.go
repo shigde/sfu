@@ -8,7 +8,7 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-func NewLocalStaticSenderEndpoint(e *Engine, sendingTracks []webrtc.TrackLocal, options ...EndpointOption) (*Endpoint, error) {
+func EstablishStaticIngressEndpoint(e *Engine, sendingTracks []webrtc.TrackLocal, options ...EndpointOption) (*Endpoint, error) {
 	stateHandler := newMediaStateEventHandler()
 	api, err := e.createApi()
 	if err != nil {

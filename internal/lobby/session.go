@@ -132,7 +132,7 @@ func (s *session) handleOfferIngressReq(req *sessionRequest) (*webrtc.SessionDes
 		return true
 	})
 
-	endpoint, err := s.rtpEngine.NewReceiverEndpoint(ctx, s.Id, *req.reqSDP, s.hub, s.receiver)
+	endpoint, err := s.rtpEngine.EstablishEgressEndpoint(ctx, s.Id, *req.reqSDP, s.hub, s.receiver)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
@@ -188,7 +188,7 @@ func (s *session) handleInitEgressReq(req *sessionRequest) (*webrtc.SessionDescr
 		return nil, fmt.Errorf("reading track list by creating rtp connection: %w", err)
 	}
 
-	endpoint, err := s.rtpEngine.NewSenderEndpoint(ctx, s.Id, trackList, s.sender)
+	endpoint, err := s.rtpEngine.EstablishIngressEndpoint(ctx, s.Id, trackList, s.sender)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
@@ -226,7 +226,7 @@ func (s *session) handleOfferStaticEgressReq(req *sessionRequest) (*webrtc.Sessi
 		option = append(option, rtp.EndpointWithTrack(track))
 	}
 
-	endpoint, err := s.rtpEngine.NewStaticEgressEndpoint(ctx, s.Id, *req.reqSDP, option...)
+	endpoint, err := s.rtpEngine.EstablishStaticEgressEndpoint(ctx, s.Id, *req.reqSDP, option...)
 
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)

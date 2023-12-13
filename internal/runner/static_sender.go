@@ -61,7 +61,7 @@ func (mr *StaticSender) Run(ctx context.Context, onEstablished chan<- struct{}) 
 		}
 	})
 
-	endpoint, err := rtp.NewLocalStaticSenderEndpoint(engine, localTracks, withOnEstablished)
+	endpoint, err := rtp.EstablishStaticIngressEndpoint(engine, localTracks, withOnEstablished)
 	if err != nil {
 		return fmt.Errorf("building new webrtc endpoint: %w", err)
 	}

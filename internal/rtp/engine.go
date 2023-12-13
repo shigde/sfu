@@ -71,8 +71,8 @@ func (e *Engine) createApi() (*webrtc.API, error) {
 	return api, nil
 }
 
-func (e *Engine) NewReceiverEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, dispatcher TrackDispatcher, handler StateEventHandler) (*Endpoint, error) {
-	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create receiver-endpoint")
+func (e *Engine) EstablishEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, dispatcher TrackDispatcher, handler StateEventHandler) (*Endpoint, error) {
+	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create egress endpoint")
 	defer span.End()
 	api, err := e.createApi()
 	if err != nil {
@@ -81,7 +81,7 @@ func (e *Engine) NewReceiverEndpoint(ctx context.Context, sessionId uuid.UUID, o
 
 	peerConnection, err := api.NewPeerConnection(e.config)
 	if err != nil {
-		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
+		return nil, fmt.Errorf("create egress peer connection: %w ", err)
 	}
 
 	trackInfos, err := getTrackInfo(offer, sessionId)
@@ -95,7 +95,7 @@ func (e *Engine) NewReceiverEndpoint(ctx context.Context, sessionId uuid.UUID, o
 	peerConnection.OnICEConnectionStateChange(handler.OnConnectionStateChange)
 
 	peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
-		slog.Debug("rtp.engine: receiverEndpoint new DataChannel", "label", d.Label(), "id", d.ID())
+		slog.Debug("rtp.engine: egress endpoint new DataChannel", "label", d.Label(), "id", d.ID())
 		handler.OnChannel(d)
 	})
 
@@ -120,8 +120,8 @@ func (e *Engine) NewReceiverEndpoint(ctx context.Context, sessionId uuid.UUID, o
 	}, nil
 }
 
-func (e *Engine) NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, sendingTracks []webrtc.TrackLocal, handler StateEventHandler) (*Endpoint, error) {
-	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create sender-endpoint")
+func (e *Engine) EstablishIngressEndpoint(ctx context.Context, sessionId uuid.UUID, sendingTracks []webrtc.TrackLocal, handler StateEventHandler) (*Endpoint, error) {
+	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create ingress endpoint")
 	defer span.End()
 	api, err := e.createApi()
 	if err != nil {
@@ -191,7 +191,7 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, sen
 		initComplete:   initComplete,
 	}, nil
 }
-func (e *Engine) NewStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
+func (e *Engine) EstablishStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create static egress endpoint")
 	defer span.End()
 	api, err := e.createApi()
