@@ -8,7 +8,7 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-func EstablishStaticIngressEndpoint(e *Engine, sendingTracks []webrtc.TrackLocal, options ...EndpointOption) (*Endpoint, error) {
+func EstablishStaticIngressEndpoint(ctx context.Context, e *Engine, sendingTracks []webrtc.TrackLocal, options ...EndpointOption) (*Endpoint, error) {
 	stateHandler := newMediaStateEventHandler()
 	api, err := e.createApi()
 	if err != nil {
@@ -23,8 +23,8 @@ func EstablishStaticIngressEndpoint(e *Engine, sendingTracks []webrtc.TrackLocal
 		opt(endpoint)
 	}
 
-	// This makes no sense
-	_, iceConnectedCtxCancel := context.WithCancel(context.Background())
+	// This makes no sense, please find another way to deal with context
+	_, iceConnectedCtxCancel := context.WithCancel(ctx)
 
 	peerConnection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
 		slog.Debug("rtp.engine: connection State has changed", "state", connectionState.String())

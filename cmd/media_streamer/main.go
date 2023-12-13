@@ -95,11 +95,11 @@ func main() {
 
 type mediaObserver struct {
 	id        uuid.UUID
-	endpoint  *rtp.Connetcion
+	endpoint  *rtp.Connection
 	messenger *media.Messenger
 }
 
-func newMediaObserver(endpoint *rtp.Connetcion, messenger *media.Messenger) *mediaObserver {
+func newMediaObserver(endpoint *rtp.Connection, messenger *media.Messenger) *mediaObserver {
 	return &mediaObserver{id: uuid.New(), endpoint: endpoint, messenger: messenger}
 }
 

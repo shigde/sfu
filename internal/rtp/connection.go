@@ -6,12 +6,12 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
-type Connetcion struct {
+type Connection struct {
 	PeerConnection *webrtc.PeerConnection
 	GatherComplete <-chan struct{}
 }
 
-func (c *Connetcion) GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error) {
+func (c *Connection) GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error) {
 	select {
 	case <-c.GatherComplete:
 		return c.PeerConnection.LocalDescription(), nil

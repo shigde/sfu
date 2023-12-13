@@ -300,7 +300,7 @@ func (e *Engine) NewStaticMediaSenderEndpoint(media *static.MediaFile) (*Endpoin
 }
 
 // NewSignalConnection can be used to listen on lobby events.
-func (e *Engine) NewSignalConnection(ctx context.Context, handler StateEventHandler) (*Connetcion, error) {
+func (e *Engine) NewSignalConnection(ctx context.Context, handler StateEventHandler) (*Connection, error) {
 	api, err := e.createApi()
 	if err != nil {
 		return nil, fmt.Errorf("creating api: %w", err)
@@ -336,11 +336,11 @@ func (e *Engine) NewSignalConnection(ctx context.Context, handler StateEventHand
 		return nil, err
 	}
 
-	return &Connetcion{PeerConnection: peerConnection, GatherComplete: gatherComplete}, nil
+	return &Connection{PeerConnection: peerConnection, GatherComplete: gatherComplete}, nil
 }
 
 // NewStaticReceiverEndpoint can be used to receive Medias from a lobby.
-func (e *Engine) NewReceiverConnection(ctx context.Context, offer webrtc.SessionDescription, handler StateEventHandler, rtmpEndpoint string) (*Connetcion, error) {
+func (e *Engine) NewReceiverConnection(ctx context.Context, offer webrtc.SessionDescription, handler StateEventHandler, rtmpEndpoint string) (*Connection, error) {
 	api, err := e.createApi()
 	if err != nil {
 		return nil, fmt.Errorf("creating api: %w", err)
@@ -379,7 +379,7 @@ func (e *Engine) NewReceiverConnection(ctx context.Context, offer webrtc.Session
 		return nil, err
 	}
 
-	return &Connetcion{
+	return &Connection{
 		PeerConnection: peerConnection,
 		GatherComplete: gatherComplete,
 	}, nil
