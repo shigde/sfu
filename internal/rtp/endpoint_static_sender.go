@@ -10,7 +10,11 @@ import (
 
 func NewLocalStaticSenderEndpoint(e *Engine, sendingTracks []webrtc.TrackLocal, options ...EndpointOption) (*Endpoint, error) {
 	stateHandler := newMediaStateEventHandler()
-	peerConnection, err := e.api.NewPeerConnection(e.config)
+	api, err := e.createApi()
+	if err != nil {
+		return nil, fmt.Errorf("creating api: %w", err)
+	}
+	peerConnection, err := api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
 	}

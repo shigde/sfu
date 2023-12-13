@@ -17,14 +17,17 @@ import (
 const tracerName = "github.com/shigde/sfu/internal/engine"
 
 type Engine struct {
-	config         webrtc.Configuration
-	api            *webrtc.API
-	interceptorMap *interceptorMap
+	config webrtc.Configuration
 }
 
 func NewEngine(rtpConfig *RtpConfig) (*Engine, error) {
 	config := rtpConfig.getWebrtcConf()
+	return &Engine{
+		config: config,
+	}, nil
+}
 
+func (e *Engine) createApi() (*webrtc.API, error) {
 	im := newInterceptorMap()
 	m := &webrtc.MediaEngine{}
 	if err := m.RegisterDefaultCodecs(); err != nil {
@@ -65,17 +68,18 @@ func NewEngine(rtpConfig *RtpConfig) (*Engine, error) {
 	i.Add(statsInterceptorFactory)
 
 	api := webrtc.NewAPI(webrtc.WithMediaEngine(m), webrtc.WithInterceptorRegistry(i))
-	return &Engine{
-		config: config,
-		api:    api,
-	}, nil
+	return api, nil
 }
 
 func (e *Engine) NewReceiverEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, dispatcher TrackDispatcher, handler StateEventHandler) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create receiver-endpoint")
 	defer span.End()
-	peerConnection, err := e.api.NewPeerConnection(e.config)
+	api, err := e.createApi()
+	if err != nil {
+		return nil, fmt.Errorf("creating api: %w", err)
+	}
 
+	peerConnection, err := api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
 	}
@@ -85,7 +89,7 @@ func (e *Engine) NewReceiverEndpoint(ctx context.Context, sessionId uuid.UUID, o
 		return nil, fmt.Errorf("parsing track info: %w ", err)
 	}
 
-	receiver := newReceiver(sessionId, dispatcher, e.interceptorMap, trackInfos)
+	receiver := newReceiver(sessionId, dispatcher, nil, trackInfos)
 	peerConnection.OnTrack(receiver.onTrack)
 
 	peerConnection.OnICEConnectionStateChange(handler.OnConnectionStateChange)
@@ -119,8 +123,12 @@ func (e *Engine) NewReceiverEndpoint(ctx context.Context, sessionId uuid.UUID, o
 func (e *Engine) NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, sendingTracks []webrtc.TrackLocal, handler StateEventHandler) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create sender-endpoint")
 	defer span.End()
+	api, err := e.createApi()
+	if err != nil {
+		return nil, fmt.Errorf("creating api: %w", err)
+	}
 
-	peerConnection, err := e.api.NewPeerConnection(e.config)
+	peerConnection, err := api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create sender peer connection: %w ", err)
 	}
@@ -186,8 +194,12 @@ func (e *Engine) NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, sen
 func (e *Engine) NewStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create static egress endpoint")
 	defer span.End()
+	api, err := e.createApi()
+	if err != nil {
+		return nil, fmt.Errorf("creating api: %w", err)
+	}
 
-	peerConnection, err := e.api.NewPeerConnection(e.config)
+	peerConnection, err := api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
 	}
@@ -237,7 +249,11 @@ func creatDC(pc *webrtc.PeerConnection, handler StateEventHandler) error {
 // @deprecated
 func (e *Engine) NewStaticMediaSenderEndpoint(media *static.MediaFile) (*Endpoint, error) {
 	stateHandler := newMediaStateEventHandler()
-	peerConnection, err := e.api.NewPeerConnection(e.config)
+	api, err := e.createApi()
+	if err != nil {
+		return nil, fmt.Errorf("creating api: %w", err)
+	}
+	peerConnection, err := api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
 	}
@@ -285,7 +301,11 @@ func (e *Engine) NewStaticMediaSenderEndpoint(media *static.MediaFile) (*Endpoin
 
 // NewSignalConnection can be used to listen on lobby events.
 func (e *Engine) NewSignalConnection(ctx context.Context, handler StateEventHandler) (*Connetcion, error) {
-	peerConnection, err := e.api.NewPeerConnection(e.config)
+	api, err := e.createApi()
+	if err != nil {
+		return nil, fmt.Errorf("creating api: %w", err)
+	}
+	peerConnection, err := api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
 	}
@@ -321,7 +341,11 @@ func (e *Engine) NewSignalConnection(ctx context.Context, handler StateEventHand
 
 // NewStaticReceiverEndpoint can be used to receive Medias from a lobby.
 func (e *Engine) NewReceiverConnection(ctx context.Context, offer webrtc.SessionDescription, handler StateEventHandler, rtmpEndpoint string) (*Connetcion, error) {
-	peerConnection, err := e.api.NewPeerConnection(e.config)
+	api, err := e.createApi()
+	if err != nil {
+		return nil, fmt.Errorf("creating api: %w", err)
+	}
+	peerConnection, err := api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
 	}

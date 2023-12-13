@@ -24,8 +24,11 @@ func (i *interceptorMap) setStatsGetter(id string, getter stats.Getter) {
 	i.stats[id] = getter
 }
 func (i *interceptorMap) getStatsGetter(id string) (stats.Getter, bool) {
-	i.statsLocker.RUnlock()
+	i.statsLocker.RLock()
 	defer i.statsLocker.RUnlock()
+	if len(i.stats) < 1 {
+		return nil, false
+	}
 	statsGetter, ok := i.stats[id]
 	return statsGetter, ok
 }
