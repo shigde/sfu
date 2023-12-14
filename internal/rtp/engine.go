@@ -44,12 +44,9 @@ func (e *Engine) createApi(options ...engineApiOption) (*engineApi, error) {
 		if statsInterceptorFactory, err = stats.NewInterceptor(); err != nil {
 			return nil, fmt.Errorf("create stats interceptor factory: %w", err)
 		}
-
-		go func() {
-			statsInterceptorFactory.OnNewPeerConnection(func(_ string, getter stats.Getter) {
-				api.onStatsGetter(getter)
-			})
-		}()
+		statsInterceptorFactory.OnNewPeerConnection(func(_ string, getter stats.Getter) {
+			api.onStatsGetter(getter)
+		})
 	}
 
 	// Create a InterceptorRegistry. This is the user configurable RTP/RTCP Pipeline.

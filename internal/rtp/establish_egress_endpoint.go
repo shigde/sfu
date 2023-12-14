@@ -37,7 +37,11 @@ func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID
 		<-initComplete
 		if sendingTracks != nil {
 			for _, track := range sendingTracks {
+
+				//peerConnection.GetTransceivers()[1].Sender().GetParameters().Codecs.Encodings[1].SSRC
 				if _, err = peerConnection.AddTrack(track); err != nil {
+					//a, b := s.GetParameters().Encodings[0].SSRC
+
 					slog.Error("rtp.engine: adding track to connection", "err", err)
 				}
 			}
