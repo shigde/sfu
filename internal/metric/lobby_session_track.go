@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/pion/interceptor/pkg/stats"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -14,6 +15,7 @@ const (
 	Session   LabelType = "session"
 	Stream    LabelType = "stream"
 	TrackId   LabelType = "track"
+	SSRC      LabelType = "ssrc"
 	TrackKind LabelType = "kind"      // video | audio
 	TrackType LabelType = "type"      // guest | main
 	Direction LabelType = "direction" // ingress | egress
@@ -37,6 +39,23 @@ type TrackMetric struct {
 type LobbySessionTrackMetric struct {
 	ingressTracks *TrackMetric
 	egressTracks  *TrackMetric
+}
+
+func BuildTrackLabels(session string, stream string, track string, kind string, trackType string, direction string) Labels {
+	labels := Labels{
+		Session:   session,
+		Stream:    stream,
+		TrackId:   track,
+		TrackKind: kind,
+		TrackType: trackType,
+		Direction: direction,
+	}
+
+	return labels
+}
+
+func RecordTrackSats(labels Labels, stats *stats.Stats) {
+
 }
 
 func PacketInc(labels Labels, pkg uint64) {

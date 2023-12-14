@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pion/interceptor/pkg/stats"
 	"github.com/pion/webrtc/v3"
+	rtpStats "github.com/shigde/sfu/internal/rtp/stats"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
 )
@@ -22,7 +23,7 @@ func EstablishIngressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUI
 
 	receiver := newReceiver(sessionId, dispatcher, trackInfos)
 	withGetter := withOnStatsGetter(func(getter stats.Getter) {
-		receiver.stats = getter
+		receiver.statsRegistry = rtpStats.NewRegistry(sessionId.String(), getter)
 	})
 
 	api, err := e.createApi(withGetter)

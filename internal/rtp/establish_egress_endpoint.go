@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/pion/interceptor/pkg/stats"
 	"github.com/pion/webrtc/v3"
+	rtpStats "github.com/shigde/sfu/internal/rtp/stats"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
 )
@@ -13,7 +15,13 @@ import (
 func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID, sendingTracks []webrtc.TrackLocal, handler StateEventHandler) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create ingress endpoint")
 	defer span.End()
-	api, err := e.createApi()
+
+	endpoint := &Endpoint{}
+	withStatsGetter := withOnStatsGetter(func(getter stats.Getter) {
+		endpoint.statsRegistry = rtpStats.NewRegistry(sessionId.String(), getter)
+	})
+
+	api, err := e.createApi(withStatsGetter)
 	if err != nil {
 		return nil, fmt.Errorf("creating api: %w", err)
 	}
@@ -78,10 +86,8 @@ func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID
 	if err = peerConnection.SetLocalDescription(offer); err != nil {
 		return nil, err
 	}
-
-	return &Endpoint{
-		peerConnection: peerConnection,
-		gatherComplete: gatherComplete,
-		initComplete:   initComplete,
-	}, nil
+	endpoint.peerConnection = peerConnection
+	endpoint.gatherComplete = gatherComplete
+	endpoint.initComplete = initComplete
+	return endpoint, nil
 }

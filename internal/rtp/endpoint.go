@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/pion/webrtc/v3"
+	"github.com/shigde/sfu/internal/metric"
+	"github.com/shigde/sfu/internal/rtp/stats"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
 )
@@ -19,6 +21,7 @@ type Endpoint struct {
 	initComplete   chan struct{}
 	closed         chan struct{}
 	onEstablished  func()
+	statsRegistry  *stats.Registry
 }
 
 func (c *Endpoint) GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error) {
@@ -73,21 +76,44 @@ func (c *Endpoint) getSender(track webrtc.TrackLocal) (*webrtc.RTPSender, bool) 
 }
 
 func (c *Endpoint) AddTrack(track webrtc.TrackLocal) {
-	slog.Debug("rtp.connection: Add Track", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
+	slog.Debug("endpoint: Add Track", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
 	if has := c.hasTrack(track); !has {
 		slog.Debug("rtp.connection: Add Track to connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind(), "signalState", c.peerConnection.SignalingState().String())
-		if _, err := c.peerConnection.AddTrack(track); err != nil {
+		var sender *webrtc.RTPSender
+		var err error
+		if sender, err = c.peerConnection.AddTrack(track); err == nil {
 			slog.Error("rtp.connection: Add Track to connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind(), "signalState", c.peerConnection.SignalingState().String())
+			return
+		}
+		// collect stats
+		if c.statsRegistry != nil {
+			labels := metric.Labels{
+				metric.Stream:    track.StreamID(),
+				metric.TrackId:   track.ID(),
+				metric.TrackKind: track.Kind().String(),
+				metric.TrackType: "guest",
+				metric.Direction: "egress",
+			}
+			for _, param := range sender.GetParameters().Encodings {
+				if err = c.statsRegistry.StartWorker(labels, param.SSRC); err != nil {
+					slog.Error("endpoint: start stats worker", "err", err, "ssrc", param.SSRC)
+				}
+			}
 		}
 	}
 }
 
 func (c *Endpoint) RemoveTrack(track webrtc.TrackLocal) {
-	slog.Debug("rtp.connection: Remove Track", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
+	slog.Debug("rtp.endpoint: Remove Track", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
 	if sender, has := c.getSender(track); has {
-		slog.Debug("rtp.connection: Remove Track from connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
+		slog.Debug("rtp.endpoint: Remove Track from connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
 		if err := c.peerConnection.RemoveTrack(sender); err != nil {
-			slog.Error("rtp.connection: Remove Track from connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
+			slog.Error("rtp.endpoint: Remove Track from connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
+		}
+		if c.statsRegistry != nil {
+			for _, param := range sender.GetParameters().Encodings {
+				c.statsRegistry.StopWorker(param.SSRC)
+			}
 		}
 	}
 }
@@ -95,6 +121,9 @@ func (c *Endpoint) RemoveTrack(track webrtc.TrackLocal) {
 func (c *Endpoint) Close() error {
 	if err := c.peerConnection.Close(); err != nil {
 		return fmt.Errorf("closing peer connection: %w", err)
+	}
+	if c.statsRegistry != nil {
+		c.statsRegistry.StopAllWorker()
 	}
 	return nil
 }

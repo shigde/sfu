@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/google/uuid"
-	"github.com/pion/interceptor/pkg/stats"
+	"github.com/shigde/sfu/internal/rtp/stats"
+
 	"github.com/pion/webrtc/v3"
+	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/telemetry"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
@@ -17,12 +18,12 @@ import (
 
 type receiver struct {
 	sync.RWMutex
-	id         uuid.UUID
-	streams    map[string]Stream
-	dispatcher TrackDispatcher
-	trackInfos map[string]*TrackInfo
-	quit       chan struct{}
-	stats      stats.Getter
+	id            uuid.UUID
+	streams       map[string]Stream
+	dispatcher    TrackDispatcher
+	trackInfos    map[string]*TrackInfo
+	quit          chan struct{}
+	statsRegistry *stats.Registry
 }
 
 func newReceiver(sessionId uuid.UUID, d TrackDispatcher, trackInfos map[string]*TrackInfo) *receiver {
@@ -45,19 +46,23 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 
 	stream := r.getStream(r.id, remoteTrack.StreamID(), remoteTrack.ID())
 
-	if r.stats != nil {
-		go func(track *webrtc.TrackRemote, statsGetter stats.Getter, cancel <-chan struct{}) {
-			for {
-				select {
-				case <-cancel:
-					return
-				case <-time.After(5 * time.Second):
+	// collect metrics
+	if r.statsRegistry != nil {
+		streamType := "guest"
+		if stream.getKind() == TrackInfoKindMain {
+			streamType = "main"
+		}
 
-					statsRep := statsGetter.Get(uint32(track.SSRC()))
-					fmt.Println(statsRep.InboundRTPStreamStats)
-				}
-			}
-		}(remoteTrack, r.stats, r.quit)
+		labels := metric.Labels{
+			metric.Stream:    remoteTrack.StreamID(),
+			metric.TrackId:   remoteTrack.ID(),
+			metric.TrackKind: remoteTrack.Kind().String(),
+			metric.TrackType: streamType,
+			metric.Direction: "ingress",
+		}
+		if err := r.statsRegistry.StartWorker(labels, remoteTrack.SSRC()); err != nil {
+			slog.Error("rtp.receiver: start stats worker", "err", err)
+		}
 	}
 
 	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "audio") {
@@ -117,6 +122,9 @@ func (r *receiver) stop() {
 	case <-r.quit:
 		slog.Warn("receiver: the receiver was already closed", "id", r.id)
 	default:
+		if r.statsRegistry != nil {
+			r.statsRegistry.StopAllWorker()
+		}
 		close(r.quit)
 		slog.Info("receiver: stopped was triggered", "id", r.id)
 	}
