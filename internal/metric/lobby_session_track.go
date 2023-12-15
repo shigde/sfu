@@ -22,7 +22,7 @@ const (
 )
 
 var lobbySessionTrackMetric *LobbySessionTrackMetric
-var lobbySessionTrackMetricLabels = []string{string(Session), string(Stream), string(TrackId), string(TrackKind), string(TrackPurpose), string(Direction)}
+var lobbySessionTrackMetricLabels = []string{string(Session), string(Stream), string(TrackId), string(TrackKind), string(SSRC), string(TrackPurpose), string(Direction)}
 
 type TrackMetric struct {
 	packet          *prometheus.CounterVec
@@ -313,7 +313,7 @@ func chooseDirection(labels Labels) *TrackMetric {
 }
 
 func toPromLabels(labels Labels) prometheus.Labels {
-	var promLabel prometheus.Labels
+	var promLabel = make(prometheus.Labels)
 	for key, val := range labels {
 		promLabel[string(key)] = val
 	}

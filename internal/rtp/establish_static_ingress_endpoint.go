@@ -47,7 +47,7 @@ func EstablishStaticIngressEndpoint(ctx context.Context, e *Engine, sendingTrack
 		}
 	}
 
-	err = creatDC(peerConnection, stateHandler)
+	err = creatDC(peerConnection, stateHandler.OnChannel)
 
 	if err != nil {
 		return nil, fmt.Errorf("creating data channel: %w", err)

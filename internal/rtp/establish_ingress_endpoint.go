@@ -2,6 +2,7 @@ package rtp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -9,19 +10,27 @@ import (
 	"github.com/pion/webrtc/v3"
 	rtpStats "github.com/shigde/sfu/internal/rtp/stats"
 	"go.opentelemetry.io/otel"
-	"golang.org/x/exp/slog"
 )
 
-func EstablishIngressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID, offer webrtc.SessionDescription, dispatcher TrackDispatcher, handler StateEventHandler) (*Endpoint, error) {
+func EstablishIngressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create egress endpoint")
 	defer span.End()
+
+	endpoint := &Endpoint{}
+	for _, opt := range options {
+		opt(endpoint)
+	}
 
 	trackInfos, err := getTrackInfo(offer, sessionId)
 	if err != nil {
 		return nil, fmt.Errorf("parsing track info: %w ", err)
 	}
 
-	receiver := newReceiver(sessionId, dispatcher, trackInfos)
+	if endpoint.dispatcher == nil {
+		return nil, errors.New("no track dispatcher found")
+	}
+
+	receiver := newReceiver(sessionId, endpoint.dispatcher, trackInfos)
 	withGetter := withOnStatsGetter(func(getter stats.Getter) {
 		receiver.statsRegistry = rtpStats.NewRegistry(sessionId.String(), getter)
 	})
@@ -37,12 +46,12 @@ func EstablishIngressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUI
 	}
 	peerConnection.OnTrack(receiver.onTrack)
 
-	peerConnection.OnICEConnectionStateChange(handler.OnConnectionStateChange)
-
-	peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
-		slog.Debug("rtp.engine: egress endpoint new DataChannel", "label", d.Label(), "id", d.ID())
-		handler.OnChannel(d)
-	})
+	if endpoint.onICEConnectionStateChange != nil {
+		peerConnection.OnICEConnectionStateChange(endpoint.onICEConnectionStateChange)
+	}
+	if endpoint.onChannel != nil {
+		peerConnection.OnDataChannel(endpoint.onChannel)
+	}
 
 	if err := peerConnection.SetRemoteDescription(offer); err != nil {
 		return nil, err
@@ -58,9 +67,8 @@ func EstablishIngressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUI
 		return nil, err
 	}
 
-	return &Endpoint{
-		peerConnection: peerConnection,
-		receiver:       receiver,
-		gatherComplete: gatherComplete,
-	}, nil
+	endpoint.peerConnection = peerConnection
+	endpoint.receiver = receiver
+	endpoint.gatherComplete = gatherComplete
+	return endpoint, nil
 }

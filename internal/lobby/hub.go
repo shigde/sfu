@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/rtp"
 	"golang.org/x/exp/slog"
 )
@@ -78,7 +77,7 @@ func (h *hub) DispatchRemoveTrack(track *rtp.TrackInfo) {
 	}
 }
 
-func (h *hub) getTrackList(filters ...filterHubTracks) ([]webrtc.TrackLocal, error) {
+func (h *hub) getTrackList(filters ...filterHubTracks) ([]*rtp.TrackInfo, error) {
 	var hubList []*rtp.TrackInfo
 	trackListChan := make(chan []*rtp.TrackInfo)
 	select {
@@ -98,15 +97,15 @@ func (h *hub) getTrackList(filters ...filterHubTracks) ([]webrtc.TrackLocal, err
 	case <-time.After(hubDispatchTimeout):
 		slog.Error("lobby.hub: get track list - interrupted because dispatch timeout")
 	}
-	list := make([]webrtc.TrackLocal, 0)
+	list := make([]*rtp.TrackInfo, 0)
 	for _, track := range hubList {
 		if len(filters) == 0 {
-			list = append(list, track.GetTrackLocal())
+			list = append(list, track)
 		}
 
 		for _, f := range filters {
 			if !f(track) {
-				list = append(list, track.GetTrackLocal())
+				list = append(list, track)
 			}
 		}
 	}
@@ -135,7 +134,7 @@ func (h *hub) onAddTrack(event *hubRequest) {
 	h.tracks[event.track.GetTrackLocal().ID()] = event.track
 	h.sessionRepo.Iter(func(s *session) {
 		if filterForSession(s.Id)(event.track) {
-			s.addTrack(event.track.GetTrackLocal())
+			s.addTrack(event.track)
 		}
 	})
 }
@@ -151,7 +150,7 @@ func (h *hub) onRemoveTrack(event *hubRequest) {
 	}
 	h.sessionRepo.Iter(func(s *session) {
 		if filterForSession(s.Id)(event.track) {
-			s.removeTrack(event.track.GetTrackLocal())
+			s.removeTrack(event.track)
 		}
 	})
 }

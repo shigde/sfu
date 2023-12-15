@@ -20,8 +20,14 @@ type Endpoint struct {
 	gatherComplete <-chan struct{}
 	initComplete   chan struct{}
 	closed         chan struct{}
-	onEstablished  func()
 	statsRegistry  *stats.Registry
+	// Endpoint Optional
+	onChannel                  func(dc *webrtc.DataChannel)
+	onEstablished              func()
+	onNegotiationNeeded        func(offer webrtc.SessionDescription)
+	onICEConnectionStateChange func(webrtc.ICEConnectionState)
+	initTracks                 []*initTrack
+	dispatcher                 TrackDispatcher
 }
 
 func (c *Endpoint) GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error) {
@@ -135,5 +141,14 @@ type peerConnection interface {
 	AddTrack(track webrtc.TrackLocal) (*webrtc.RTPSender, error)
 	RemoveTrack(sender *webrtc.RTPSender) error
 	SignalingState() webrtc.SignalingState
+
+	OnICEConnectionStateChange(f func(webrtc.ICEConnectionState))
+
+	OnNegotiationNeeded(f func())
 	Close() error
+}
+
+type initTrack struct {
+	purpose Purpose
+	track   webrtc.TrackLocal
 }
