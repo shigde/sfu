@@ -41,21 +41,42 @@ type LobbySessionTrackMetric struct {
 	egressTracks  *TrackMetric
 }
 
-func BuildTrackLabels(session string, stream string, track string, kind string, trackType string, direction string) Labels {
-	labels := Labels{
-		Session:   session,
-		Stream:    stream,
-		TrackId:   track,
-		TrackKind: kind,
-		TrackType: trackType,
-		Direction: direction,
+func RecordTrackStats(labels Labels, statsRec *stats.Stats) {
+	if labels[Direction] == "ingress" {
+		PacketInc(labels, statsRec.InboundRTPStreamStats.PacketsReceived)
+		PacketBytesInc(labels, statsRec.InboundRTPStreamStats.BytesReceived)
+		NackInc(labels, statsRec.InboundRTPStreamStats.NACKCount)
+		PliInc(labels, statsRec.InboundRTPStreamStats.PLICount)
+		FirInc(labels, statsRec.InboundRTPStreamStats.FIRCount)
+		PacketLossTotalInc(labels, statsRec.InboundRTPStreamStats.PacketsLost)
+		PacketLossInc(labels, statsRec.InboundRTPStreamStats.PacketsLost)
+		JitterInc(labels, statsRec.InboundRTPStreamStats.Jitter)
+		RttInc(labels, statsRec.RemoteOutboundRTPStreamStats.RoundTripTimeMeasurements)
 	}
 
-	return labels
+	if labels[Direction] == "egress" {
+		PacketInc(labels, statsRec.OutboundRTPStreamStats.PacketsSent)
+		PacketBytesInc(labels, statsRec.OutboundRTPStreamStats.BytesSent)
+		NackInc(labels, statsRec.OutboundRTPStreamStats.NACKCount)
+		PliInc(labels, statsRec.OutboundRTPStreamStats.PLICount)
+		FirInc(labels, statsRec.OutboundRTPStreamStats.FIRCount)
+		PacketLossTotalInc(labels, statsRec.RemoteInboundRTPStreamStats.PacketsLost)
+		PacketLossInc(labels, statsRec.RemoteInboundRTPStreamStats.PacketsLost)
+		JitterInc(labels, statsRec.RemoteInboundRTPStreamStats.Jitter)
+		RttInc(labels, statsRec.RemoteInboundRTPStreamStats.RoundTripTimeMeasurements)
+	}
 }
 
-func RecordTrackSats(labels Labels, stats *stats.Stats) {
-
+func CleanTrackStats(labels Labels) {
+	PacketDel(labels)
+	PacketBytesDel(labels)
+	NackDel(labels)
+	PliDel(labels)
+	FirDel(labels)
+	PacketLossTotalDel(labels)
+	PacketLossDel(labels)
+	JitterDel(labels)
+	RttDel(labels)
 }
 
 func PacketInc(labels Labels, pkg uint64) {
@@ -121,7 +142,7 @@ func FirDel(labels Labels) {
 		trackMetric.fir.Delete(toPromLabels(labels))
 	}
 }
-func PacketLossTotalInc(labels Labels, pkg uint32) {
+func PacketLossTotalInc(labels Labels, pkg int64) {
 	if pkg == 0 {
 		return
 	}
@@ -134,7 +155,7 @@ func PacketLossTotalDel(labels Labels) {
 		trackMetric.packetLossTotal.Delete(toPromLabels(labels))
 	}
 }
-func PacketLossInc(labels Labels, pkg uint32) {
+func PacketLossInc(labels Labels, pkg int64) {
 	if pkg == 0 {
 		return
 	}
@@ -147,12 +168,12 @@ func PacketLossDel(labels Labels) {
 		trackMetric.packetLoss.Delete(toPromLabels(labels))
 	}
 }
-func JitterInc(labels Labels, jitter uint32) {
+func JitterInc(labels Labels, jitter float64) {
 	if jitter == 0 {
 		return
 	}
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.jitter.With(toPromLabels(labels)).Observe(float64(jitter))
+		trackMetric.jitter.With(toPromLabels(labels)).Observe(jitter)
 	}
 }
 func JitterDel(labels Labels) {
@@ -161,7 +182,7 @@ func JitterDel(labels Labels) {
 	}
 }
 
-func RttInc(labels Labels, rtt uint32) {
+func RttInc(labels Labels, rtt uint64) {
 	if rtt == 0 {
 		return
 	}

@@ -12,10 +12,11 @@ func worker(labels metric.Labels, ssrc webrtc.SSRC, statsGetter stats.Getter, ca
 	for {
 		select {
 		case <-cancel:
+			metric.CleanTrackStats(labels)
 			return
 		case <-time.After(5 * time.Second):
 			statsRep := statsGetter.Get(uint32(ssrc))
-			metric.RecordTrackSats(labels, statsRep)
+			metric.RecordTrackStats(labels, statsRep)
 		}
 	}
 }

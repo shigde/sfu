@@ -6,30 +6,30 @@ import (
 )
 
 type TrackInfo struct {
-	Kind      TrackInfoKind
+	Purpose   Purpose
 	SessionId uuid.UUID
 	Track     *webrtc.TrackLocalStaticRTP
 	LiveTrack *LiveTrackStaticRTP
 }
 
-type TrackInfoKind int
+type Purpose int
 
 const (
-	TrackInfoKindGuest TrackInfoKind = iota + 1
-	TrackInfoKindMain
+	PurposeGuest Purpose = iota + 1
+	PurposeMain
 )
 
-func newTrackInfo(id uuid.UUID, track *webrtc.TrackLocalStaticRTP, liveTrack *LiveTrackStaticRTP, kind TrackInfoKind) *TrackInfo {
+func newTrackInfo(id uuid.UUID, track *webrtc.TrackLocalStaticRTP, liveTrack *LiveTrackStaticRTP, purpose Purpose) *TrackInfo {
 	return &TrackInfo{
 		SessionId: id,
 		Track:     track,
 		LiveTrack: liveTrack,
-		Kind:      kind,
+		Purpose:   purpose,
 	}
 }
 
-func (t *TrackInfo) GetStreamKind() TrackInfoKind {
-	return t.Kind
+func (t *TrackInfo) GetPurpose() Purpose {
+	return t.Purpose
 }
 
 func (t *TrackInfo) GetSessionId() uuid.UUID {
@@ -45,7 +45,7 @@ func (t *TrackInfo) GetLiveTrack() *LiveTrackStaticRTP {
 }
 
 func (t *TrackInfo) GetTrackLocal() webrtc.TrackLocal {
-	if t.Kind == TrackInfoKindMain {
+	if t.Purpose == PurposeMain {
 		return t.LiveTrack
 	}
 	return t.Track

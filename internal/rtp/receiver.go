@@ -49,7 +49,7 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 	// collect metrics
 	if r.statsRegistry != nil {
 		streamType := "guest"
-		if stream.getKind() == TrackInfoKindMain {
+		if stream.getPurpose() == PurposeMain {
 			streamType = "main"
 		}
 
@@ -73,7 +73,7 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 			// stop handler goroutine because error
 			return
 		}
-		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, stream.getAudioTrack(), stream.getLiveAudioTrack(), stream.getKind()))
+		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, stream.getAudioTrack(), stream.getLiveAudioTrack(), stream.getPurpose()))
 	}
 
 	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "video") {
@@ -84,14 +84,14 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 			// stop handler goroutine because error
 			return
 		}
-		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, stream.getVideoTrack(), stream.getLiveVideoTrack(), stream.getKind()))
+		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, stream.getVideoTrack(), stream.getLiveVideoTrack(), stream.getPurpose()))
 	}
 }
 func (r *receiver) getTrackInfo(streamID string, trackId string) *TrackInfo {
 	mid := fmt.Sprintf("%s %s", streamID, trackId)
 	info, found := r.trackInfos[mid]
 	if !found {
-		info = &TrackInfo{SessionId: r.id, Kind: TrackInfoKindGuest}
+		info = &TrackInfo{SessionId: r.id, Purpose: PurposeGuest}
 		r.trackInfos[mid] = info
 	}
 	return info
@@ -103,13 +103,13 @@ func (r *receiver) getStream(sessionId uuid.UUID, streamId string, trackId strin
 	info := r.getTrackInfo(streamId, trackId)
 	stream, ok := r.streams[streamId]
 	if !ok {
-		switch info.Kind {
-		case TrackInfoKindGuest:
-			stream = newLocalStream(streamId, sessionId, r.dispatcher, info.Kind, r.quit)
-		case TrackInfoKindMain:
-			stream = newLiveStream(streamId, sessionId, r.dispatcher, info.Kind, r.quit)
+		switch info.Purpose {
+		case PurposeGuest:
+			stream = newLocalStream(streamId, sessionId, r.dispatcher, info.Purpose, r.quit)
+		case PurposeMain:
+			stream = newLiveStream(streamId, sessionId, r.dispatcher, info.Purpose, r.quit)
 		default:
-			stream = newLocalStream(streamId, sessionId, r.dispatcher, info.Kind, r.quit)
+			stream = newLocalStream(streamId, sessionId, r.dispatcher, info.Purpose, r.quit)
 		}
 		r.streams[streamId] = stream
 	}

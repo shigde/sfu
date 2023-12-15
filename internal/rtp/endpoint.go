@@ -76,13 +76,13 @@ func (c *Endpoint) getSender(track webrtc.TrackLocal) (*webrtc.RTPSender, bool) 
 }
 
 func (c *Endpoint) AddTrack(track webrtc.TrackLocal) {
-	slog.Debug("endpoint: Add Track", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
+	slog.Debug("endpoint: Add Track", "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind())
 	if has := c.hasTrack(track); !has {
-		slog.Debug("rtp.connection: Add Track to connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind(), "signalState", c.peerConnection.SignalingState().String())
+		slog.Debug("rtp.connection: Add Track to connection", "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind(), "signalState", c.peerConnection.SignalingState().String())
 		var sender *webrtc.RTPSender
 		var err error
 		if sender, err = c.peerConnection.AddTrack(track); err == nil {
-			slog.Error("rtp.connection: Add Track to connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind(), "signalState", c.peerConnection.SignalingState().String())
+			slog.Error("rtp.connection: Add Track to connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind(), "signalState", c.peerConnection.SignalingState().String())
 			return
 		}
 		// collect stats
@@ -104,11 +104,11 @@ func (c *Endpoint) AddTrack(track webrtc.TrackLocal) {
 }
 
 func (c *Endpoint) RemoveTrack(track webrtc.TrackLocal) {
-	slog.Debug("rtp.endpoint: Remove Track", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
+	slog.Debug("rtp.endpoint: Remove Track", "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind())
 	if sender, has := c.getSender(track); has {
-		slog.Debug("rtp.endpoint: Remove Track from connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
+		slog.Debug("rtp.endpoint: Remove Track from connection", "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind())
 		if err := c.peerConnection.RemoveTrack(sender); err != nil {
-			slog.Error("rtp.endpoint: Remove Track from connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
+			slog.Error("rtp.endpoint: Remove Track from connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind())
 		}
 		if c.statsRegistry != nil {
 			for _, param := range sender.GetParameters().Encodings {

@@ -30,11 +30,11 @@ func getTrackInfo(sdp webrtc.SessionDescription, session uuid.UUID) (map[string]
 
 		switch strings.TrimSpace(infoString) {
 		case "1":
-			trackInfo.Kind = TrackInfoKindGuest
+			trackInfo.Purpose = PurposeGuest
 		case "2":
-			trackInfo.Kind = TrackInfoKindMain
+			trackInfo.Purpose = PurposeMain
 		default:
-			trackInfo.Kind = TrackInfoKindGuest
+			trackInfo.Purpose = PurposeGuest
 		}
 		msid, fund := desc.Attribute("msid")
 		if fund {
@@ -56,7 +56,7 @@ func MarkStreamAsMain(sdpOrigin *webrtc.SessionDescription, streamID string) (*w
 		}
 		msid, fund := desc.Attribute("msid")
 		if fund && strings.Contains(msid, streamID) {
-			info := sdp.Information(fmt.Sprintf("%d", TrackInfoKindMain))
+			info := sdp.Information(fmt.Sprintf("%d", PurposeMain))
 			desc.MediaTitle = &info
 		}
 	}

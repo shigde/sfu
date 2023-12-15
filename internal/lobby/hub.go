@@ -128,7 +128,7 @@ func (h *hub) stop() error {
 }
 
 func (h *hub) onAddTrack(event *hubRequest) {
-	if event.track.GetStreamKind() == rtp.TrackInfoKindMain {
+	if event.track.GetPurpose() == rtp.PurposeMain {
 		h.streamer.AddTrack(event.track.GetLiveTrack())
 	}
 
@@ -141,7 +141,7 @@ func (h *hub) onAddTrack(event *hubRequest) {
 }
 
 func (h *hub) onRemoveTrack(event *hubRequest) {
-	if event.track.GetStreamKind() == rtp.TrackInfoKindMain {
+	if event.track.GetPurpose() == rtp.PurposeMain {
 		h.streamer.RemoveTrack(event.track.GetLiveTrack())
 		return
 	}
@@ -180,6 +180,6 @@ func filterForSession(sessionId uuid.UUID) filterHubTracks {
 }
 func filterForNotMain() filterHubTracks {
 	return func(track *rtp.TrackInfo) bool {
-		return track.Kind != rtp.TrackInfoKindMain
+		return track.Purpose != rtp.PurposeMain
 	}
 }

@@ -76,7 +76,7 @@ func (f *UdpForwarder) Stop() {
 
 //func (f *UdpForwarder) AddTrack(trackInfo *TrackInfo) {
 //
-//	if trackInfo.RemoteTrack.Kind() == webrtc.RTPCodecTypeAudio {
+//	if trackInfo.RemoteTrack.Purpose() == webrtc.RTPCodecTypeAudio {
 //		go func(track *TrackInfo) {
 //			f.log("writing audio")
 //			if err := f.writeTrack(f.audio, track.RemoteTrack); err != nil {
@@ -86,7 +86,7 @@ func (f *UdpForwarder) Stop() {
 //		}(trackInfo)
 //	}
 //
-//	if trackInfo.RemoteTrack.Kind() == webrtc.RTPCodecTypeVideo {
+//	if trackInfo.RemoteTrack.Purpose() == webrtc.RTPCodecTypeVideo {
 //		go func(track *TrackInfo) {
 //			f.log("writing video")
 //			if err := f.writeTrack(f.video, track.RemoteTrack); err != nil {
