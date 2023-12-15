@@ -48,17 +48,12 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 
 	// collect metrics
 	if r.statsRegistry != nil {
-		streamType := "guest"
-		if stream.getPurpose() == PurposeMain {
-			streamType = "main"
-		}
-
 		labels := metric.Labels{
-			metric.Stream:    remoteTrack.StreamID(),
-			metric.TrackId:   remoteTrack.ID(),
-			metric.TrackKind: remoteTrack.Kind().String(),
-			metric.TrackType: streamType,
-			metric.Direction: "ingress",
+			metric.Stream:       remoteTrack.StreamID(),
+			metric.TrackId:      remoteTrack.ID(),
+			metric.TrackKind:    remoteTrack.Kind().String(),
+			metric.TrackPurpose: stream.getPurpose().toString(),
+			metric.Direction:    "ingress",
 		}
 		if err := r.statsRegistry.StartWorker(labels, remoteTrack.SSRC()); err != nil {
 			slog.Error("rtp.receiver: start stats worker", "err", err)

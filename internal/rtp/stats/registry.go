@@ -2,7 +2,6 @@ package stats
 
 import (
 	"errors"
-	"strconv"
 	"sync"
 
 	"github.com/pion/interceptor/pkg/stats"
@@ -38,7 +37,8 @@ func (r *Registry) StartWorker(labels metric.Labels, ssrc webrtc.SSRC) error {
 	r.Unlock()
 
 	labels[metric.Session] = r.session
-	labels[metric.SSRC] = strconv.Itoa(int(ssrc))
+	labels[metric.SSRC] = SSRCtoString(ssrc)
+
 	go worker(labels, ssrc, r.statsGetter, cancel)
 
 	return nil

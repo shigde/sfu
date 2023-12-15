@@ -19,6 +19,17 @@ const (
 	PurposeMain
 )
 
+func (p Purpose) toString() string {
+	switch p {
+	case PurposeGuest:
+		return "guest"
+	case PurposeMain:
+		return "main"
+	default:
+		return "guest"
+	}
+}
+
 func newTrackInfo(id uuid.UUID, track *webrtc.TrackLocalStaticRTP, liveTrack *LiveTrackStaticRTP, purpose Purpose) *TrackInfo {
 	return &TrackInfo{
 		SessionId: id,

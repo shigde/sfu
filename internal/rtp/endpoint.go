@@ -75,7 +75,7 @@ func (c *Endpoint) getSender(track webrtc.TrackLocal) (*webrtc.RTPSender, bool) 
 	return nil, false
 }
 
-func (c *Endpoint) AddTrack(track webrtc.TrackLocal) {
+func (c *Endpoint) AddTrack(track webrtc.TrackLocal, purpose Purpose) {
 	slog.Debug("endpoint: Add Track", "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind())
 	if has := c.hasTrack(track); !has {
 		slog.Debug("rtp.connection: Add Track to connection", "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind(), "signalState", c.peerConnection.SignalingState().String())
@@ -88,11 +88,11 @@ func (c *Endpoint) AddTrack(track webrtc.TrackLocal) {
 		// collect stats
 		if c.statsRegistry != nil {
 			labels := metric.Labels{
-				metric.Stream:    track.StreamID(),
-				metric.TrackId:   track.ID(),
-				metric.TrackKind: track.Kind().String(),
-				metric.TrackType: "guest",
-				metric.Direction: "egress",
+				metric.Stream:       track.StreamID(),
+				metric.TrackId:      track.ID(),
+				metric.TrackKind:    track.Kind().String(),
+				metric.TrackPurpose: purpose.toString(),
+				metric.Direction:    "egress",
 			}
 			for _, param := range sender.GetParameters().Encodings {
 				if err = c.statsRegistry.StartWorker(labels, param.SSRC); err != nil {
