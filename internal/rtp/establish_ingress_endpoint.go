@@ -32,7 +32,9 @@ func EstablishIngressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUI
 
 	receiver := newReceiver(sessionId, endpoint.dispatcher, trackInfos)
 	withGetter := withOnStatsGetter(func(getter stats.Getter) {
-		receiver.statsRegistry = rtpStats.NewRegistry(sessionId.String(), getter)
+		statsRegistry := rtpStats.NewRegistry(sessionId.String(), getter)
+		receiver.statsRegistry = statsRegistry
+		endpoint.statsRegistry = statsRegistry
 	})
 
 	api, err := e.createApi(withGetter)

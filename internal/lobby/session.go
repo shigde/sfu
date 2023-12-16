@@ -190,7 +190,7 @@ func (s *session) handleInitEgressReq(req *sessionRequest) (*webrtc.SessionDescr
 	if err != nil {
 		return nil, fmt.Errorf("reading track list by creating rtp connection: %w", err)
 	}
-	option := make([]rtp.EndpointOption, len(trackList))
+	option := make([]rtp.EndpointOption, 0)
 	for _, track := range trackList {
 		option = append(option, rtp.EndpointWithTrack(track.GetTrackLocal(), track.GetPurpose()))
 	}
@@ -259,20 +259,21 @@ func (s *session) stop() error {
 		slog.Error("lobby.sessions: the rtp sessions was already closed", "sessionId", s.Id, "user", s.user)
 		return errSessionAlreadyClosed
 	default:
-		close(s.quit)
-		slog.Info("lobby.sessions: stopped was triggered", "sessionId", s.Id, "user", s.user)
-		<-s.quit
+
 		if s.sender != nil {
 			if err := s.sender.close(); err != nil {
-				slog.Error("lobby.sessions: closing sender", "sessionId", s.Id, "user", s.user)
+				slog.Error("lobby.sessions: closing sender", "err", err, "sessionId", s.Id, "user", s.user)
 			}
 		}
 
 		if s.receiver != nil {
 			if err := s.receiver.close(); err != nil {
-				slog.Error("lobby.sessions: closing receiver", "sessionId", s.Id, "user", s.user)
+				slog.Error("lobby.sessions: closing receiver", "err", err, "sessionId", s.Id, "user", s.user)
 			}
 		}
+		close(s.quit)
+		slog.Info("lobby.sessions: stopped was triggered", "sessionId", s.Id, "user", s.user)
+		<-s.quit
 	}
 	return nil
 }

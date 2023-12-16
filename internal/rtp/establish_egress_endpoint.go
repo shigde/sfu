@@ -17,6 +17,9 @@ func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID
 	defer span.End()
 
 	endpoint := &Endpoint{}
+	for _, opt := range options {
+		opt(endpoint)
+	}
 	withStatsGetter := withOnStatsGetter(func(getter stats.Getter) {
 		endpoint.statsRegistry = rtpStats.NewRegistry(sessionId.String(), getter)
 	})
@@ -30,9 +33,6 @@ func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID
 		return nil, fmt.Errorf("create sender peer connection: %w ", err)
 	}
 	endpoint.peerConnection = peerConnection
-	for _, opt := range options {
-		opt(endpoint)
-	}
 
 	if endpoint.onICEConnectionStateChange != nil {
 		endpoint.peerConnection.OnICEConnectionStateChange(endpoint.onICEConnectionStateChange)

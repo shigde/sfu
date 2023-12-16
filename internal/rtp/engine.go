@@ -26,10 +26,10 @@ func NewEngine(rtpConfig *RtpConfig) (*Engine, error) {
 	}, nil
 }
 
-func (e *Engine) createApi(options ...engineApiOption) (*engineApi, error) {
+func (e *Engine) createApi(apiOptions ...engineApiOption) (*engineApi, error) {
 	api := &engineApi{}
 
-	for _, o := range options {
+	for _, o := range apiOptions {
 		o(api)
 	}
 

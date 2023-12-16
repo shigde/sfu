@@ -7,6 +7,7 @@ import (
 	"github.com/pion/interceptor/pkg/stats"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/metric"
+	"golang.org/x/exp/slog"
 )
 
 var ErrTrackAlreadyRegistered = errors.New("track source already registered")
@@ -48,6 +49,7 @@ func (r *Registry) StopWorker(ssrc webrtc.SSRC) {
 	r.Lock()
 	defer r.Unlock()
 	if cancel, ok := r.statsList[ssrc]; ok {
+		slog.Debug("stats.worker: stop worker", "ssrc", ssrc)
 		delete(r.statsList, ssrc)
 		close(cancel)
 	}
@@ -56,6 +58,8 @@ func (r *Registry) StopWorker(ssrc webrtc.SSRC) {
 func (r *Registry) StopAllWorker() {
 	r.Lock()
 	defer r.Unlock()
+	slog.Debug("stats.worker: stop all worker")
+
 	for _, cancel := range r.statsList {
 		close(cancel)
 	}

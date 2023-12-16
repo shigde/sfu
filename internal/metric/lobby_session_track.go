@@ -102,9 +102,9 @@ func PacketBytesDel(labels Labels) {
 }
 
 func NackInc(labels Labels, nack uint32) {
-	if nack == 0 {
-		return
-	}
+	//if nack == 0 {
+	//	return
+	//}
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
 		trackMetric.nack.With(toPromLabels(labels)).Add(float64(nack))
 	}
@@ -116,9 +116,9 @@ func NackDel(labels Labels) {
 }
 
 func PliInc(labels Labels, pli uint32) {
-	if pli == 0 {
-		return
-	}
+	//if pli == 0 {
+	//	return
+	//}
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
 		trackMetric.pli.With(toPromLabels(labels)).Add(float64(pli))
 	}
@@ -130,9 +130,9 @@ func PliDel(labels Labels) {
 }
 
 func FirInc(labels Labels, fir uint32) {
-	if fir == 0 {
-		return
-	}
+	//if fir == 0 {
+	//	return
+	//}
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
 		trackMetric.fir.With(toPromLabels(labels)).Add(float64(fir))
 	}
@@ -143,9 +143,9 @@ func FirDel(labels Labels) {
 	}
 }
 func PacketLossTotalInc(labels Labels, pkg int64) {
-	if pkg == 0 {
-		return
-	}
+	//if pkg == 0 {
+	//	return
+	//}
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
 		trackMetric.packetLossTotal.With(toPromLabels(labels)).Add(float64(pkg))
 	}
@@ -169,9 +169,9 @@ func PacketLossDel(labels Labels) {
 	}
 }
 func JitterInc(labels Labels, jitter float64) {
-	if jitter == 0 {
-		return
-	}
+	//if jitter == 0 {
+	//	return
+	//}
 	if trackMetric := chooseDirection(labels); trackMetric != nil {
 		trackMetric.jitter.With(toPromLabels(labels)).Observe(jitter)
 	}

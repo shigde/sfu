@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/pion/dtls/v2"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/rtp/stats"
@@ -87,7 +88,7 @@ func (c *Endpoint) AddTrack(track webrtc.TrackLocal, purpose Purpose) {
 		slog.Debug("rtp.connection: Add Track to connection", "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind(), "signalState", c.peerConnection.SignalingState().String())
 		var sender *webrtc.RTPSender
 		var err error
-		if sender, err = c.peerConnection.AddTrack(track); err == nil {
+		if sender, err = c.peerConnection.AddTrack(track); err != nil {
 			slog.Error("rtp.connection: Add Track to connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind(), "signalState", c.peerConnection.SignalingState().String())
 			return
 		}
@@ -125,12 +126,14 @@ func (c *Endpoint) RemoveTrack(track webrtc.TrackLocal) {
 }
 
 func (c *Endpoint) Close() error {
-	if err := c.peerConnection.Close(); err != nil {
-		return fmt.Errorf("closing peer connection: %w", err)
-	}
 	if c.statsRegistry != nil {
 		c.statsRegistry.StopAllWorker()
 	}
+
+	if err := c.peerConnection.Close(); err != nil && !errors.Is(err, dtls.ErrConnClosed) {
+		return fmt.Errorf("closing peer connection: %w", err)
+	}
+
 	return nil
 }
 
