@@ -8,25 +8,35 @@ import (
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/storage"
+	"golang.org/x/exp/slog"
 )
 
 const tracerName = "github.com/shigde/sfu/internal/lobby"
 
 type LobbyManager struct {
-	lobbies *lobbyRepository
+	lobbies               *lobbyRepository
+	lobbyGarbageCollector chan<- uuid.UUID
 }
 
 type rtpEngine interface {
-	NewReceiverEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, d rtp.TrackDispatcher, stateHandler rtp.StateEventHandler) (*rtp.Endpoint, error)
+	EstablishIngressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
 
-	NewSenderEndpoint(ctx context.Context, sessionId uuid.UUID, localTracks []webrtc.TrackLocal, stateHandler rtp.StateEventHandler) (*rtp.Endpoint, error)
+	EstablishEgressEndpoint(ctx context.Context, sessionId uuid.UUID, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
 
-	NewStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
+	EstablishStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
 }
 
 func NewLobbyManager(storage storage.Storage, e rtpEngine) *LobbyManager {
 	lobbies := newLobbyRepository(storage, e)
-	return &LobbyManager{lobbies}
+	lobbyGarbageCollector := make(chan uuid.UUID)
+	go func() {
+		for id := range lobbyGarbageCollector {
+			if ok := lobbies.delete(context.Background(), id); !ok {
+				slog.Warn("lobby could not delete", "lobby", id)
+			}
+		}
+	}()
+	return &LobbyManager{lobbies, lobbyGarbageCollector}
 }
 
 func (m *LobbyManager) CreateLobbyIngressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
@@ -40,7 +50,7 @@ func (m *LobbyManager) CreateLobbyIngressEndpoint(ctx context.Context, lobbyId u
 		RtpSessionId uuid.UUID
 	}
 
-	lobby, err := m.lobbies.getOrCreateLobby(lobbyId)
+	lobby, err := m.lobbies.getOrCreateLobby(ctx, lobbyId, m.lobbyGarbageCollector)
 	if err != nil {
 		return answerData, fmt.Errorf("getting or creating lobby: %w", err)
 	}

@@ -13,5 +13,5 @@ type Stream interface {
 	getAudioTrack() *webrtc.TrackLocalStaticRTP
 	getLiveVideoTrack() *LiveTrackStaticRTP
 	getLiveAudioTrack() *LiveTrackStaticRTP
-	getKind() TrackInfoKind
+	getPurpose() Purpose
 }

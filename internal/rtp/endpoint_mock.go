@@ -49,6 +49,10 @@ func (m *mockPeerConnector) SignalingState() webrtc.SignalingState {
 	return webrtc.SignalingStateStable
 }
 
+func (m *mockPeerConnector) OnICEConnectionStateChange(f func(webrtc.ICEConnectionState)) {}
+
+func (m *mockPeerConnector) OnNegotiationNeeded(f func()) {}
+
 func (m *mockPeerConnector) Close() error {
 	return nil
 }

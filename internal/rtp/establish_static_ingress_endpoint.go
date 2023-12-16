@@ -8,9 +8,13 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-func NewLocalStaticSenderEndpoint(e *Engine, sendingTracks []webrtc.TrackLocal, options ...EndpointOption) (*Endpoint, error) {
+func EstablishStaticIngressEndpoint(ctx context.Context, e *Engine, sendingTracks []webrtc.TrackLocal, options ...EndpointOption) (*Endpoint, error) {
 	stateHandler := newMediaStateEventHandler()
-	peerConnection, err := e.api.NewPeerConnection(e.config)
+	api, err := e.createApi()
+	if err != nil {
+		return nil, fmt.Errorf("creating api: %w", err)
+	}
+	peerConnection, err := api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
 	}
@@ -19,8 +23,8 @@ func NewLocalStaticSenderEndpoint(e *Engine, sendingTracks []webrtc.TrackLocal, 
 		opt(endpoint)
 	}
 
-	// This makes no sense
-	_, iceConnectedCtxCancel := context.WithCancel(context.Background())
+	// This makes no sense, please find another way to deal with context
+	_, iceConnectedCtxCancel := context.WithCancel(ctx)
 
 	peerConnection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
 		slog.Debug("rtp.engine: connection State has changed", "state", connectionState.String())
@@ -43,7 +47,7 @@ func NewLocalStaticSenderEndpoint(e *Engine, sendingTracks []webrtc.TrackLocal, 
 		}
 	}
 
-	err = creatDC(peerConnection, stateHandler)
+	err = creatDC(peerConnection, stateHandler.OnChannel)
 
 	if err != nil {
 		return nil, fmt.Errorf("creating data channel: %w", err)

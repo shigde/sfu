@@ -30,10 +30,10 @@ func TestSDP(t *testing.T) {
 		assert.Equal(t, 2, len(trackInfo))
 		audio, hasAudio := trackInfo["91275403-889a-4cc3-971f-109e0d5e9bd6 359bc90f-bc4c-47a7-b283-30e88abc2374"]
 		assert.True(t, hasAudio)
-		assert.Equal(t, TrackInfoKindGuest, audio.Kind)
+		assert.Equal(t, PurposeGuest, audio.Purpose)
 		video, hasVideo := trackInfo["91275403-889a-4cc3-971f-109e0d5e9bd6 2e86a7ac-b7e9-470f-9c53-6160e468e658"]
 		assert.True(t, hasVideo)
-		assert.Equal(t, TrackInfoKindGuest, video.Kind)
+		assert.Equal(t, PurposeGuest, video.Purpose)
 	})
 
 	t.Run("Read Firefox not changed offer sdp", func(t *testing.T) {
@@ -45,10 +45,10 @@ func TestSDP(t *testing.T) {
 		assert.Equal(t, 2, len(trackInfo))
 		audio, hasAudio := trackInfo["{2f97a64f-8e54-46c9-8956-e27b202d76cf} {fa595b2c-ba3a-4cd9-93b8-91c20b8af758}"]
 		assert.True(t, hasAudio)
-		assert.Equal(t, TrackInfoKindGuest, audio.Kind)
+		assert.Equal(t, PurposeGuest, audio.Purpose)
 		video, hasVideo := trackInfo["{2f97a64f-8e54-46c9-8956-e27b202d76cf} {397dc6f7-76cc-4044-9a12-15cb433b99fc}"]
 		assert.True(t, hasVideo)
-		assert.Equal(t, TrackInfoKindGuest, video.Kind)
+		assert.Equal(t, PurposeGuest, video.Purpose)
 	})
 
 	t.Run("Read live stream from offer sdp", func(t *testing.T) {
@@ -60,16 +60,16 @@ func TestSDP(t *testing.T) {
 		assert.Equal(t, 4, len(trackInfo))
 		audio, hasAudio := trackInfo["03b32495-2823-49c5-8e80-981a017e5209 57e34f3b-e41d-4dd1-94ef-a5db7d13ca53"]
 		assert.True(t, hasAudio)
-		assert.Equal(t, TrackInfoKindGuest, audio.Kind)
+		assert.Equal(t, PurposeGuest, audio.Purpose)
 		video, hasVideo := trackInfo["03b32495-2823-49c5-8e80-981a017e5209 5dacbd5d-f234-4496-923a-c5c188ee9424"]
 		assert.True(t, hasVideo)
-		assert.Equal(t, TrackInfoKindGuest, video.Kind)
+		assert.Equal(t, PurposeGuest, video.Purpose)
 		liveAudio, hasLiveAudio := trackInfo["45def0ae-d3dd-4a2c-80c8-4aa37d6e2c2d a9345edd-5648-4d78-81be-02e0114adbcd"]
 		assert.True(t, hasLiveAudio)
-		assert.Equal(t, TrackInfoKindMain, liveAudio.Kind)
+		assert.Equal(t, PurposeMain, liveAudio.Purpose)
 		liveVideo, hasLiveVideo := trackInfo["45def0ae-d3dd-4a2c-80c8-4aa37d6e2c2d a0a03556-3aff-4684-b3ab-59c7bf4cb4bc"]
 		assert.True(t, hasLiveVideo)
-		assert.Equal(t, TrackInfoKindMain, liveVideo.Kind)
+		assert.Equal(t, PurposeMain, liveVideo.Purpose)
 	})
 
 	t.Run("set stream as main stream", func(t *testing.T) {

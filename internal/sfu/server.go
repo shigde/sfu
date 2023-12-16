@@ -79,8 +79,8 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 	}
 
 	// monitoring
-	if err := metric.ExtendRouter(router, config.MetricConfig); err != nil {
-		return nil, fmt.Errorf("handling metrics: %w", err)
+	if err := metric.ServeMetrics(ctx, config.MetricConfig); err != nil {
+		return nil, fmt.Errorf("serving metrics: %w", err)
 	}
 
 	tp, err := telemetry.NewTracerProvider(ctx, config.TelemetryConfig)

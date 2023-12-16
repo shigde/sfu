@@ -1,5 +1,11 @@
 # Monitoring
 
+## Run
+
+```shell
+docker-compose up -d
+```
+
 ## Dashboards
 
 - Grafana: http://localhost:3000

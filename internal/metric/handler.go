@@ -21,9 +21,14 @@ func ExtendRouter(router *mux.Router, config *MetricConfig) error {
 		}
 		router.Use(GetPrometheusMiddleware(httpMetric))
 
-		lobbySessions, err = NewLobbySessionMetrics()
-		if err != nil {
+		if _, err = NewLobbyMetrics(); err != nil {
+			return fmt.Errorf("creating lobby metric setup: %w", err)
+		}
+		if _, err = NewLobbySessionMetrics(); err != nil {
 			return fmt.Errorf("creating session metric setup: %w", err)
+		}
+		if _, err = NewLobbySessionTrackMetrics(); err != nil {
+			return fmt.Errorf("creating track metric setup: %w", err)
 		}
 
 		router.Path(endpoint).Handler(promhttp.Handler())
@@ -33,7 +38,8 @@ func ExtendRouter(router *mux.Router, config *MetricConfig) error {
 
 func ServeMetrics(ctx context.Context, config *MetricConfig) error {
 	router := mux.NewRouter()
-	server := &http.Server{Addr: ":8081", Handler: router}
+	addr := fmt.Sprintf(":%d", config.Prometheus.Port)
+	server := &http.Server{Addr: addr, Handler: router}
 	if err := ExtendRouter(router, config); err != nil {
 		slog.Error("creating metrics", "err", err)
 	}

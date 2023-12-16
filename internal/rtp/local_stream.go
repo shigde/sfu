@@ -19,18 +19,18 @@ type localStream struct {
 	sessionId                uuid.UUID
 	audioTrack, videoTrack   *webrtc.TrackLocalStaticRTP
 	audioWriter, videoWriter *localWriter
-	kind                     TrackInfoKind
+	purpose                  Purpose
 	dispatcher               TrackDispatcher
 	globalQuit               <-chan struct{}
 }
 
-func newLocalStream(remoteId string, sessionId uuid.UUID, dispatcher TrackDispatcher, kind TrackInfoKind, globalQuit <-chan struct{}) *localStream {
+func newLocalStream(remoteId string, sessionId uuid.UUID, dispatcher TrackDispatcher, purpose Purpose, globalQuit <-chan struct{}) *localStream {
 	return &localStream{
 		id:         uuid.New(),
 		remoteId:   remoteId,
 		sessionId:  sessionId,
 		dispatcher: dispatcher,
-		kind:       kind,
+		purpose:    purpose,
 		globalQuit: globalQuit,
 	}
 }
@@ -48,7 +48,7 @@ func (s *localStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemo
 
 	// start local audio track
 	go func() {
-		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.sessionId, s.getAudioTrack(), s.getLiveAudioTrack(), s.kind))
+		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.sessionId, s.getAudioTrack(), s.getLiveAudioTrack(), s.purpose))
 
 		if err = s.audioWriter.writeRtp(track, s.audioTrack); err != nil {
 			slog.Error("rtp.local_stream: writing local audio track ", "streamId", s.id, "err", err)
@@ -72,7 +72,7 @@ func (s *localStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemo
 
 	// start local video track
 	go func() {
-		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.sessionId, s.getVideoTrack(), s.getLiveVideoTrack(), s.kind))
+		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.sessionId, s.getVideoTrack(), s.getLiveVideoTrack(), s.purpose))
 
 		if err = s.videoWriter.writeRtp(track, s.videoTrack); err != nil {
 			slog.Error("rtp.local_stream: writing local video track ", "streamId", s.id, "err", err)
@@ -131,6 +131,6 @@ func (s *localStream) getLiveAudioTrack() *LiveTrackStaticRTP {
 	return nil
 }
 
-func (s *localStream) getKind() TrackInfoKind {
-	return s.kind
+func (s *localStream) getPurpose() Purpose {
+	return s.purpose
 }

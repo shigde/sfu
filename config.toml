@@ -25,8 +25,9 @@ key = "SecretValueReplaceThis"
 defaultexpiretime = 604800  # 1 week not implemented et jet
 
 [metric.prometheus]
-enable = false
+enable = true
 endpoint = "/metrics" # Endpoint where the Prometheus metrics are delivered
+port = 8081
 
 [telemetry]
 enable = false
@@ -69,4 +70,4 @@ release = "v0"
 instanceUsername = "shig"
 serverName = "shig"
 private = false
-registerToken ="this-token-must-be-changed-in-public"
+registerToken = "this-token-must-be-changed-in-public"

@@ -7,7 +7,9 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/storage"
+	"golang.org/x/exp/slog"
 	"gorm.io/gorm"
 )
 
@@ -30,24 +32,26 @@ func newLobbyRepository(store storage.Storage, rtpEngine rtpEngine) *lobbyReposi
 	}
 }
 
-func (r *lobbyRepository) getOrCreateLobby(lobbyId uuid.UUID) (*lobby, error) {
+func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUID, lobbyGarbageCollector chan<- uuid.UUID) (*lobby, error) {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	currentLobby, ok := r.lobbies[lobbyId]
 	if !ok {
-		lobby := newLobby(lobbyId, r.rtpEngine)
-		entity, err := r.queryLobbyEntity(context.Background(), lobbyId.String())
+		lobby := newLobby(lobbyId, r.rtpEngine, lobbyGarbageCollector)
+		entity, err := r.queryLobbyEntity(ctx, lobbyId.String())
 		if err != nil {
 			return nil, fmt.Errorf("fetching lobby entity: %w", err)
 		}
 
 		entity.IsRunning = true
-		if entity, err = r.updateLobbyEntity(context.Background(), entity); err != nil {
+		if entity, err = r.updateLobbyEntity(ctx, entity); err != nil {
 			return nil, fmt.Errorf("updating lobby entity as running: %w", err)
 		}
 
 		lobby.entity = entity
 		r.lobbies[lobbyId] = lobby
+
+		metric.RunningLobbyInc(lobby.entity.LiveStreamId.String(), lobbyId.String())
 		return lobby, nil
 	}
 	return currentLobby, nil
@@ -71,13 +75,23 @@ func (r *lobbyRepository) setLobbyLive(ctx context.Context, id uuid.UUID, isLive
 	return false
 }
 
-func (r *lobbyRepository) Delete(id uuid.UUID) bool {
+func (r *lobbyRepository) delete(ctx context.Context, id uuid.UUID) bool {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	if lobby, ok := r.lobbies[id]; ok {
+		// Dealing with races.
+		// If the lobby still in use then we can not delete
+		if lobby.sessions.Len() > 0 {
+			return false
+		}
 		lobby.entity.IsRunning = false
-		_, _ = r.updateLobbyEntity(context.Background(), lobby.entity)
+		if _, err := r.updateLobbyEntity(ctx, lobby.entity); err != nil {
+			slog.Error("can not update lobby entity on delete lobby", "err", err, "lobby", id)
+			return false
+		}
 		delete(r.lobbies, id)
+		lobby.stop()
+		metric.RunningLobbyDec(lobby.entity.LiveStreamId.String(), id.String())
 		return true
 	}
 	return false

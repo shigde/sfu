@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
-	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/rtp"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
@@ -46,7 +45,6 @@ type session struct {
 func newSession(user uuid.UUID, hub *hub, engine rtpEngine, onInternallyQuit chan<- uuid.UUID) *session {
 	quit := make(chan struct{})
 	requests := make(chan *sessionRequest)
-	metric.RunningSessionsInc()
 
 	session := &session{
 		Id:               uuid.New(),
@@ -134,7 +132,12 @@ func (s *session) handleOfferIngressReq(req *sessionRequest) (*webrtc.SessionDes
 		return true
 	})
 
-	endpoint, err := s.rtpEngine.NewReceiverEndpoint(ctx, s.Id, *req.reqSDP, s.hub, s.receiver)
+	option := make([]rtp.EndpointOption, 0)
+	option = append(option, rtp.EndpointWithDataChannel(s.receiver.OnChannel))
+	option = append(option, rtp.EndpointWithConnectionStateListener(s.receiver.OnConnectionStateChange))
+	option = append(option, rtp.EndpointWithTrackDispatcher(s.hub))
+
+	endpoint, err := s.rtpEngine.EstablishIngressEndpoint(ctx, s.Id, *req.reqSDP, option...)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
@@ -183,14 +186,20 @@ func (s *session) handleInitEgressReq(req *sessionRequest) (*webrtc.SessionDescr
 		return nil, errSessionRequestTimeout
 	}
 
-	s.sender = newSenderHandler(s.Id, s.user, s.receiver.messenger)
-
 	trackList, err := s.hub.getTrackList(filterForSession(s.Id))
 	if err != nil {
 		return nil, fmt.Errorf("reading track list by creating rtp connection: %w", err)
 	}
+	option := make([]rtp.EndpointOption, 0)
+	for _, track := range trackList {
+		option = append(option, rtp.EndpointWithTrack(track.GetTrackLocal(), track.GetPurpose()))
+	}
+	s.sender = newSenderHandler(s.Id, s.user, s.receiver.messenger)
+	option = append(option, rtp.EndpointWithDataChannel(s.sender.OnChannel))
+	option = append(option, rtp.EndpointWithNegotiationNeededListener(s.sender.OnNegotiationNeeded))
+	option = append(option, rtp.EndpointWithConnectionStateListener(s.sender.OnConnectionStateChange))
 
-	endpoint, err := s.rtpEngine.NewSenderEndpoint(ctx, s.Id, trackList, s.sender)
+	endpoint, err := s.rtpEngine.EstablishEgressEndpoint(ctx, s.Id, option...)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
@@ -225,10 +234,10 @@ func (s *session) handleOfferStaticEgressReq(req *sessionRequest) (*webrtc.Sessi
 	option := make([]rtp.EndpointOption, len(trackList))
 
 	for _, track := range trackList {
-		option = append(option, rtp.EndpointWithTrack(track))
+		option = append(option, rtp.EndpointWithTrack(track.GetTrackLocal(), track.GetPurpose()))
 	}
 
-	endpoint, err := s.rtpEngine.NewStaticEgressEndpoint(ctx, s.Id, *req.reqSDP, option...)
+	endpoint, err := s.rtpEngine.EstablishStaticEgressEndpoint(ctx, s.Id, *req.reqSDP, option...)
 
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
@@ -250,34 +259,36 @@ func (s *session) stop() error {
 		slog.Error("lobby.sessions: the rtp sessions was already closed", "sessionId", s.Id, "user", s.user)
 		return errSessionAlreadyClosed
 	default:
-		close(s.quit)
-		slog.Info("lobby.sessions: stopped was triggered", "sessionId", s.Id, "user", s.user)
-		<-s.quit
+
 		if s.sender != nil {
 			if err := s.sender.close(); err != nil {
-				slog.Error("lobby.sessions: closing sender", "sessionId", s.Id, "user", s.user)
+				slog.Error("lobby.sessions: closing sender", "err", err, "sessionId", s.Id, "user", s.user)
 			}
 		}
 
 		if s.receiver != nil {
 			if err := s.receiver.close(); err != nil {
-				slog.Error("lobby.sessions: closing receiver", "sessionId", s.Id, "user", s.user)
+				slog.Error("lobby.sessions: closing receiver", "err", err, "sessionId", s.Id, "user", s.user)
 			}
 		}
-		metric.RunningSessionsDec()
+		close(s.quit)
+		slog.Info("lobby.sessions: stopped was triggered", "sessionId", s.Id, "user", s.user)
+		<-s.quit
 	}
 	return nil
 }
 
-func (s *session) addTrack(track webrtc.TrackLocal) {
+func (s *session) addTrack(trackInfo *rtp.TrackInfo) {
+	track := trackInfo.GetTrackLocal()
 	slog.Debug("lobby.sessions: addTrack", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
 	if s.sender != nil && s.sender.endpoint != nil {
 		slog.Debug("lobby.sessions: addTrack - to sender endpoint", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
-		s.sender.endpoint.AddTrack(track)
+		s.sender.endpoint.AddTrack(track, trackInfo.Purpose)
 	}
 }
 
-func (s *session) removeTrack(track webrtc.TrackLocal) {
+func (s *session) removeTrack(trackInfo *rtp.TrackInfo) {
+	track := trackInfo.GetTrackLocal()
 	slog.Debug("lobby.sessions: removeTrack", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
 	if s.sender != nil && s.sender.endpoint != nil {
 		slog.Debug("lobby.sessions: removeTrack - from sender endpoint", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
