@@ -19,7 +19,7 @@ const (
 	PurposeMain
 )
 
-func (p Purpose) toString() string {
+func (p Purpose) ToString() string {
 	switch p {
 	case PurposeGuest:
 		return "guest"

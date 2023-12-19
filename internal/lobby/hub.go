@@ -60,6 +60,7 @@ func (h *hub) run() {
 func (h *hub) DispatchAddTrack(track *rtp.TrackInfo) {
 	select {
 	case h.reqChan <- &hubRequest{kind: addTrack, track: track}:
+		slog.Debug("lobby.hub: dispatch add track", "streamId", track.GetTrackLocal().StreamID(), "track", track.GetTrackLocal().ID(), "kind", track.GetTrackLocal().Kind(), "purpose", track.Purpose.ToString())
 	case <-h.quit:
 		slog.Warn("lobby.hub: dispatch add track even on closed hub")
 	case <-time.After(hubDispatchTimeout):
@@ -70,6 +71,7 @@ func (h *hub) DispatchAddTrack(track *rtp.TrackInfo) {
 func (h *hub) DispatchRemoveTrack(track *rtp.TrackInfo) {
 	select {
 	case h.reqChan <- &hubRequest{kind: removeTrack, track: track}:
+		slog.Debug("lobby.hub: dispatch remove track", "streamId", track.GetTrackLocal().StreamID(), "track", track.GetTrackLocal().ID(), "kind", track.GetTrackLocal().Kind(), "purpose", track.Purpose.ToString())
 	case <-h.quit:
 		slog.Warn("lobby.hub: dispatch remove track even on closed hub")
 	case <-time.After(hubDispatchTimeout):
@@ -104,7 +106,7 @@ func (h *hub) getTrackList(filters ...filterHubTracks) ([]*rtp.TrackInfo, error)
 		}
 
 		for _, f := range filters {
-			if !f(track) {
+			if f(track) {
 				list = append(list, track)
 			}
 		}
@@ -128,12 +130,14 @@ func (h *hub) stop() error {
 
 func (h *hub) onAddTrack(event *hubRequest) {
 	if event.track.GetPurpose() == rtp.PurposeMain {
+		slog.Debug("lobby.hub: add live track ro streamer", "streamId", event.track.GetTrackLocal().StreamID(), "track", event.track.GetTrackLocal().ID(), "kind", event.track.GetTrackLocal().Kind(), "purpose", event.track.Purpose.ToString())
 		h.streamer.AddTrack(event.track.GetLiveTrack())
 	}
 
 	h.tracks[event.track.GetTrackLocal().ID()] = event.track
 	h.sessionRepo.Iter(func(s *session) {
 		if filterForSession(s.Id)(event.track) {
+			slog.Debug("lobby.hub: add egress track to session", "session", s.Id, "trackSession", event.track.SessionId, "streamId", event.track.GetTrackLocal().StreamID(), "track", event.track.GetTrackLocal().ID(), "kind", event.track.GetTrackLocal().Kind(), "purpose", event.track.Purpose.ToString())
 			s.addTrack(event.track)
 		}
 	})
@@ -174,7 +178,7 @@ type filterHubTracks func(*rtp.TrackInfo) bool
 
 func filterForSession(sessionId uuid.UUID) filterHubTracks {
 	return func(track *rtp.TrackInfo) bool {
-		return sessionId != track.GetSessionId()
+		return sessionId.String() != track.GetSessionId().String()
 	}
 }
 func filterForNotMain() filterHubTracks {
