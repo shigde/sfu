@@ -7,12 +7,12 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/shigde/sfu/internal/rtp/stats"
-
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/metric"
+	"github.com/shigde/sfu/internal/rtp/stats"
 	"github.com/shigde/sfu/internal/telemetry"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/exp/slog"
 )
 
@@ -40,11 +40,15 @@ func newReceiver(sessionId uuid.UUID, d TrackDispatcher, trackInfos map[string]*
 }
 
 func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.RTPReceiver) {
-	slog.Debug("rtp.receiver: on track")
-	ctx, span := otel.Tracer(tracerName).Start(context.Background(), "rtp.receiver: on track")
+	ctx, span := otel.Tracer(tracerName).Start(context.Background(), "rtp.receiver: on ingress track")
 	defer span.End()
 
 	stream := r.getStream(r.id, remoteTrack.StreamID(), remoteTrack.ID())
+	span.SetAttributes(attribute.String("streamId", remoteTrack.StreamID()))
+	span.SetAttributes(attribute.String("track", remoteTrack.ID()))
+	span.SetAttributes(attribute.String("kind", remoteTrack.Kind().String()))
+	span.SetAttributes(attribute.String("purpose", stream.getPurpose().ToString()))
+	slog.Debug("rtp.receiver: on ingress track", "streamId", remoteTrack.StreamID(), "track", remoteTrack.ID(), "kind", remoteTrack.Kind(), "purpose", stream.getPurpose().ToString())
 
 	// collect metrics
 	if r.statsRegistry != nil {
@@ -52,7 +56,7 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 			metric.Stream:       remoteTrack.StreamID(),
 			metric.TrackId:      remoteTrack.ID(),
 			metric.TrackKind:    remoteTrack.Kind().String(),
-			metric.TrackPurpose: stream.getPurpose().toString(),
+			metric.TrackPurpose: stream.getPurpose().ToString(),
 			metric.Direction:    "ingress",
 		}
 		if err := r.statsRegistry.StartWorker(labels, remoteTrack.SSRC()); err != nil {
@@ -60,27 +64,31 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 		}
 	}
 
+	var trackInfo *TrackInfo
 	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "audio") {
-		slog.Debug("rtp.receiver: on audio track")
+		slog.Debug("rtp.receiver: on ingress audio track", "streamId", remoteTrack.StreamID(), "track", remoteTrack.ID(), "kind", remoteTrack.Kind(), "purpose", stream.getPurpose().ToString())
 		if err := stream.writeAudioRtp(ctx, remoteTrack, rtpReceiver); err != nil {
-			slog.Error("rtp.receiver: on audio track", "err", err)
+			slog.Error("rtp.receiver: on ingress audio track", "err", err, "streamId", remoteTrack.StreamID(), "track", remoteTrack.ID(), "kind", remoteTrack.Kind(), "purpose", stream.getPurpose().ToString())
 			telemetry.RecordError(span, err)
 			// stop handler goroutine because error
 			return
 		}
-		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, stream.getAudioTrack(), stream.getLiveAudioTrack(), stream.getPurpose()))
+		trackInfo = newTrackInfo(r.id, stream.getAudioTrack(), stream.getLiveAudioTrack(), stream.getPurpose())
 	}
 
 	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "video") {
-		slog.Debug("rtp.receiver: on video track")
+		slog.Debug("rtp.receiver: on ingress video track", "streamId", remoteTrack.StreamID(), "track", remoteTrack.ID(), "kind", remoteTrack.Kind(), "purpose", stream.getPurpose().ToString())
 		if err := stream.writeVideoRtp(ctx, remoteTrack, rtpReceiver); err != nil {
-			slog.Error("rtp.receiver: on video track", "err", err)
+			slog.Error("rtp.receiver: on ingress video track", "err", err, "streamId", remoteTrack.StreamID(), "track", remoteTrack.ID(), "kind", remoteTrack.Kind(), "purpose", stream.getPurpose().ToString())
 			telemetry.RecordError(span, err)
 			// stop handler goroutine because error
 			return
 		}
-		r.dispatcher.DispatchAddTrack(newTrackInfo(r.id, stream.getVideoTrack(), stream.getLiveVideoTrack(), stream.getPurpose()))
+		trackInfo = newTrackInfo(r.id, stream.getVideoTrack(), stream.getLiveVideoTrack(), stream.getPurpose())
 	}
+
+	slog.Debug("rtp.receiver: info track", "streamId", trackInfo.GetTrackLocal().StreamID(), "track", trackInfo.GetTrackLocal().ID(), "kind", trackInfo.GetTrackLocal().Kind(), "purpose", trackInfo.Purpose.ToString())
+	r.dispatcher.DispatchAddTrack(trackInfo)
 }
 func (r *receiver) getTrackInfo(streamID string, trackId string) *TrackInfo {
 	mid := fmt.Sprintf("%s %s", streamID, trackId)

@@ -13,7 +13,7 @@ import (
 )
 
 func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID, options ...EndpointOption) (*Endpoint, error) {
-	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create ingress endpoint")
+	_, span := otel.Tracer(tracerName).Start(ctx, "rtp:establish_egress_endpoint")
 	defer span.End()
 
 	endpoint := &Endpoint{}
@@ -48,6 +48,7 @@ func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID
 	// This creates a race between remove and add track that I still have to think about it.
 	if endpoint.initTracks != nil {
 		go func() {
+			slog.Debug("rtp.establish_egress: add tracks", "sessionId", sessionId)
 			<-initComplete
 			for _, initTrack := range endpoint.initTracks {
 				endpoint.AddTrack(initTrack.track, initTrack.purpose)
@@ -57,10 +58,10 @@ func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID
 	if endpoint.onNegotiationNeeded != nil {
 		peerConnection.OnNegotiationNeeded(func() {
 			<-initComplete
-			slog.Debug("rtp.engine: sender OnNegotiationNeeded was triggered")
+			slog.Debug("rtp.establish_egress: sender OnNegotiationNeeded was triggered")
 			offer, err := peerConnection.CreateOffer(nil)
 			if err != nil {
-				slog.Error("rtp.engine: sender OnNegotiationNeeded", "err", err)
+				slog.Error("rtp.establish_egress:: sender OnNegotiationNeeded", "err", err)
 				return
 			}
 			gg := webrtc.GatheringCompletePromise(peerConnection)

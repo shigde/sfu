@@ -13,7 +13,7 @@ import (
 )
 
 func EstablishIngressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
-	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create egress endpoint")
+	_, span := otel.Tracer(tracerName).Start(ctx, "rtp:establish_ingress_endpoint")
 	defer span.End()
 
 	endpoint := &Endpoint{}
