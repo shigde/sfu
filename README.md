@@ -26,7 +26,7 @@ However, to facilitate development, you could start the SFU with an included SQL
 Run inside the SFU project
 
 ```shell
-move shig-dev.db shig.db
+mv shig-dev.db shig.db
 ```
 
 Now you can start the SFU with some data.
