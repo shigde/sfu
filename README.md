@@ -13,18 +13,29 @@ Shig is constructed based on the WHIP/WHEP approach for both incoming and outgoi
 
 ## Quick Start
 
-### Start SFU
+### Run SFU
 
 ```shell
 make run
 ```
 
+### Run with some Data
+
+Normally, the SFU (Shig instance) listens for data from other Fediverse instances.
+However, to facilitate development, you could start the SFU with an included SQLite database.
+Run inside the SFU project
+
+```shell
+move shig-dev.db shig.db
+```
+
+Now you can start the SFU with some data.
+
 ### Build
 
 ```shell
 make build
-```
-
+``` 
 
 #### If you have Mac M1 / M2 -> Build a linux arm64 with Docker
 
