@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-func EstablishIngressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
+func EstablishIngressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "rtp:establish_ingress_endpoint")
 	defer span.End()
 
@@ -30,7 +30,7 @@ func EstablishIngressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUI
 		return nil, errors.New("no track dispatcher found")
 	}
 
-	receiver := newReceiver(sessionId, endpoint.dispatcher, trackInfos)
+	receiver := newReceiver(sessionId, liveStream, endpoint.dispatcher, trackInfos)
 	withGetter := withOnStatsGetter(func(getter stats.Getter) {
 		statsRegistry := rtpStats.NewRegistry(sessionId.String(), getter)
 		receiver.statsRegistry = statsRegistry

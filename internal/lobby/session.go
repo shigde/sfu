@@ -137,7 +137,7 @@ func (s *session) handleOfferIngressReq(req *sessionRequest) (*webrtc.SessionDes
 	option = append(option, rtp.EndpointWithConnectionStateListener(s.receiver.OnConnectionStateChange))
 	option = append(option, rtp.EndpointWithTrackDispatcher(s.hub))
 
-	endpoint, err := s.rtpEngine.EstablishIngressEndpoint(ctx, s.Id, *req.reqSDP, option...)
+	endpoint, err := s.rtpEngine.EstablishIngressEndpoint(ctx, s.Id, s.hub.LiveStreamId, *req.reqSDP, option...)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
@@ -199,7 +199,7 @@ func (s *session) handleInitEgressReq(req *sessionRequest) (*webrtc.SessionDescr
 	option = append(option, rtp.EndpointWithNegotiationNeededListener(s.sender.OnNegotiationNeeded))
 	option = append(option, rtp.EndpointWithConnectionStateListener(s.sender.OnConnectionStateChange))
 
-	endpoint, err := s.rtpEngine.EstablishEgressEndpoint(ctx, s.Id, option...)
+	endpoint, err := s.rtpEngine.EstablishEgressEndpoint(ctx, s.Id, s.hub.LiveStreamId, option...)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}

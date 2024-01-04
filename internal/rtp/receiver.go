@@ -18,7 +18,8 @@ import (
 
 type receiver struct {
 	sync.RWMutex
-	id            uuid.UUID
+	id            uuid.UUID // session ID
+	liveStream    uuid.UUID
 	streams       map[string]Stream
 	dispatcher    TrackDispatcher
 	trackInfos    map[string]*TrackInfo
@@ -27,12 +28,13 @@ type receiver struct {
 	stats         metric.NodeGraphMetric
 }
 
-func newReceiver(sessionId uuid.UUID, d TrackDispatcher, trackInfos map[string]*TrackInfo) *receiver {
+func newReceiver(sessionId uuid.UUID, liveStream uuid.UUID, d TrackDispatcher, trackInfos map[string]*TrackInfo) *receiver {
 	streams := make(map[string]Stream)
 	quit := make(chan struct{})
 	return &receiver{
 		RWMutex:    sync.RWMutex{},
 		id:         sessionId,
+		liveStream: liveStream,
 		streams:    streams,
 		dispatcher: d,
 		trackInfos: trackInfos,

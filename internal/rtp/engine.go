@@ -77,12 +77,12 @@ func (e *Engine) createApi(apiOptions ...engineApiOption) (*engineApi, error) {
 	return api, nil
 }
 
-func (e *Engine) EstablishIngressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
-	return EstablishIngressEndpoint(ctx, e, sessionId, offer, options...)
+func (e *Engine) EstablishIngressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
+	return EstablishIngressEndpoint(ctx, e, sessionId, liveStream, offer, options...)
 }
 
-func (e *Engine) EstablishEgressEndpoint(ctx context.Context, sessionId uuid.UUID, options ...EndpointOption) (*Endpoint, error) {
-	return EstablishEgressEndpoint(ctx, e, sessionId, options...)
+func (e *Engine) EstablishEgressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, options ...EndpointOption) (*Endpoint, error) {
+	return EstablishEgressEndpoint(ctx, e, sessionId, liveStream, options...)
 }
 func (e *Engine) EstablishStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
 	return EstablishStaticEgressEndpoint(ctx, e, sessionId, offer, options...)
