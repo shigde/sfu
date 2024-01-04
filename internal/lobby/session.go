@@ -237,7 +237,7 @@ func (s *session) handleOfferStaticEgressReq(req *sessionRequest) (*webrtc.Sessi
 		option = append(option, rtp.EndpointWithTrack(track.GetTrackLocal(), track.GetPurpose()))
 	}
 
-	endpoint, err := s.rtpEngine.EstablishStaticEgressEndpoint(ctx, s.Id, *req.reqSDP, option...)
+	endpoint, err := s.rtpEngine.EstablishStaticEgressEndpoint(ctx, s.Id, s.hub.LiveStreamId, *req.reqSDP, option...)
 
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)

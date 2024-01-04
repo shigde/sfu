@@ -8,12 +8,16 @@ import (
 	"github.com/google/uuid"
 	"github.com/pion/interceptor/pkg/stats"
 	"github.com/pion/webrtc/v3"
+	"github.com/shigde/sfu/internal/metric"
 	rtpStats "github.com/shigde/sfu/internal/rtp/stats"
 	"go.opentelemetry.io/otel"
 )
 
 func EstablishIngressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "rtp:establish_ingress_endpoint")
+	// Add node in dashboard
+	metric.GraphNodeUpdate(metric.BuildNode(sessionId.String(), liveStream.String(), "ingress"))
+
 	defer span.End()
 
 	endpoint := &Endpoint{}

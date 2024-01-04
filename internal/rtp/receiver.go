@@ -25,7 +25,6 @@ type receiver struct {
 	trackInfos    map[string]*TrackInfo
 	quit          chan struct{}
 	statsRegistry *stats.Registry
-	stats         metric.NodeGraphMetric
 }
 
 func newReceiver(sessionId uuid.UUID, liveStream uuid.UUID, d TrackDispatcher, trackInfos map[string]*TrackInfo) *receiver {
@@ -91,7 +90,9 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 	}
 
 	slog.Debug("rtp.receiver: info track", "streamId", trackInfo.GetTrackLocal().StreamID(), "track", trackInfo.GetTrackLocal().ID(), "kind", trackInfo.GetTrackLocal().Kind(), "purpose", trackInfo.Purpose.ToString())
+	// send track to Lobby Hub
 	r.dispatcher.DispatchAddTrack(trackInfo)
+
 }
 func (r *receiver) getTrackInfo(streamID string, trackId string) *TrackInfo {
 	mid := fmt.Sprintf("%s %s", streamID, trackId)

@@ -7,16 +7,18 @@ import (
 	"github.com/google/uuid"
 	"github.com/pion/interceptor/pkg/stats"
 	"github.com/pion/webrtc/v3"
+	"github.com/shigde/sfu/internal/metric"
 	rtpStats "github.com/shigde/sfu/internal/rtp/stats"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
 )
 
 func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, options ...EndpointOption) (*Endpoint, error) {
+	metric.GraphNodeUpdate(metric.BuildNode(sessionId.String(), liveStream.String(), "egress"))
 	_, span := otel.Tracer(tracerName).Start(ctx, "rtp:establish_egress_endpoint")
 	defer span.End()
 
-	endpoint := &Endpoint{}
+	endpoint := &Endpoint{sessionId: sessionId.String(), liveStreamId: liveStream.String(), endpointType: EgressEndpoint}
 	for _, opt := range options {
 		opt(endpoint)
 	}

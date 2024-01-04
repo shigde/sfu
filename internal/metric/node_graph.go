@@ -16,26 +16,85 @@ type NodeGraphMetric struct {
 }
 
 type GraphNode struct {
-	Id                string
-	Title             string
-	Subtitle          string
-	Stream            string
-	CurrentTracks     int
-	CurrentMainTracks int
+	Id         string
+	Title      string
+	Subtitle   string
+	Stream     string // live stream
+	Tracks     int
+	MainTracks int
 }
 
-func GraphNodeUpdate(node GraphNode, tacks int, mainTracks int) GraphNode {
+type GraphEdge struct {
+	Id     string
+	Source string
+	Target string
+	Stream string
+}
+
+func BuildNode(sessionId string, liveStreamId string, nodeType string) GraphNode {
+	return GraphNode{
+		Id:         nodeType + "-" + sessionId,
+		Title:      nodeType,
+		Subtitle:   sessionId,
+		Stream:     liveStreamId,
+		Tracks:     0,
+		MainTracks: 0,
+	}
+}
+func buildEdge(sessionId string, liveStreamId string, nodeType string) GraphEdge {
+	endpoint := nodeType + "-" + sessionId
+	edge := GraphEdge{Id: "edge-" + endpoint, Stream: liveStreamId}
+	switch nodeType {
+	case "egress":
+		edge.Source = liveStreamId
+		edge.Target = endpoint
+	case "ingress":
+		edge.Target = endpoint
+		edge.Source = liveStreamId
+	default:
+		edge.Target = "unknown"
+		edge.Source = "unknown"
+	}
+	return edge
+}
+
+func GraphNodeUpdateInc(node GraphNode, purpose string) GraphNode {
 	if nodeGraph != nil {
-		ServiceGraphNodeDelete(node)
-		node.CurrentTracks = tacks
-		node.CurrentMainTracks = mainTracks
+		GraphNodeDelete(node)
+		switch purpose {
+		case "main":
+			node.MainTracks = node.MainTracks + 1
+		default:
+			node.Tracks = node.Tracks + 1
+		}
+		return GraphNodeUpdate(node)
+	}
+	return node
+}
+
+func GraphNodeUpdateDec(node GraphNode, purpose string) GraphNode {
+	if nodeGraph != nil {
+		GraphNodeDelete(node)
+		switch purpose {
+		case "main":
+			node.MainTracks = node.MainTracks - 1
+		default:
+			node.Tracks = node.Tracks - 1
+		}
+		return GraphNodeUpdate(node)
+	}
+	return node
+}
+
+func GraphNodeUpdate(node GraphNode) GraphNode {
+	if nodeGraph != nil {
 		if vec, err := nodeGraph.node.GetMetricWith(prometheus.Labels{
 			"id":            node.Id,
 			"title":         node.Title,
 			"subtitle":      node.Subtitle,
 			"stream":        node.Stream,
-			"mainstat":      strconv.Itoa(node.CurrentTracks),
-			"secondarystat": strconv.Itoa(node.CurrentMainTracks),
+			"mainstat":      strconv.Itoa(node.Tracks),
+			"secondarystat": strconv.Itoa(node.MainTracks),
 		}); err == nil {
 			vec.Inc()
 		}
@@ -43,40 +102,41 @@ func GraphNodeUpdate(node GraphNode, tacks int, mainTracks int) GraphNode {
 	return node
 }
 
-func ServiceGraphNodeDelete(node GraphNode) {
+func GraphNodeDelete(node GraphNode) {
 	if nodeGraph != nil {
 		_ = nodeGraph.node.Delete(prometheus.Labels{
 			"id":            node.Id,
 			"title":         node.Title,
 			"subtitle":      node.Subtitle,
 			"stream":        node.Stream,
-			"mainstat":      strconv.Itoa(node.CurrentTracks),
-			"secondarystat": strconv.Itoa(node.CurrentMainTracks),
+			"mainstat":      strconv.Itoa(node.Tracks),
+			"secondarystat": strconv.Itoa(node.MainTracks),
 		})
 	}
 }
 
-func ServiceGraphAddEdge(id string, stream string, source string, target string) {
-	// inc with bytes received!!
+func GraphAddEdge(sessionId string, liveStreamId string, nodeType string) {
+	edge := buildEdge(sessionId, liveStreamId, nodeType)
 	if nodeGraph != nil {
 		if vec, err := nodeGraph.edge.GetMetricWith(prometheus.Labels{
-			"Id":     id,
-			"source": source,
-			"target": target,
-			"stream": stream,
+			"id":     edge.Id,
+			"source": edge.Source,
+			"target": edge.Target,
+			"stream": edge.Stream,
 		}); err == nil {
 			vec.Inc()
 		}
 	}
 }
 
-func ServiceGraphDeleteEdge(id string, stream string, source string, target string) {
+func GraphDeleteEdge(sessionId string, liveStreamId string, nodeType string) {
+	edge := buildEdge(sessionId, liveStreamId, nodeType)
 	if nodeGraph != nil {
 		_ = nodeGraph.edge.Delete(prometheus.Labels{
-			"Id":     id,
-			"source": source,
-			"target": target,
-			"stream": stream,
+			"id":     edge.Id,
+			"source": edge.Source,
+			"target": edge.Target,
+			"stream": edge.Stream,
 		})
 	}
 }

@@ -16,6 +16,9 @@ import (
 var ErrIceGatheringInterruption = errors.New("getting ice gathering interrupted")
 
 type Endpoint struct {
+	sessionId      string
+	liveStreamId   string
+	endpointType   EndpointType
 	peerConnection peerConnection
 	receiver       *receiver
 	gatherComplete <-chan struct{}
@@ -95,11 +98,12 @@ func (c *Endpoint) AddTrack(track webrtc.TrackLocal, purpose Purpose) {
 		// collect stats
 		if c.statsRegistry != nil {
 			labels := metric.Labels{
-				metric.Stream:       track.StreamID(),
+				metric.Stream:       c.liveStreamId,
+				metric.MediaStream:  track.StreamID(),
 				metric.TrackId:      track.ID(),
 				metric.TrackKind:    track.Kind().String(),
 				metric.TrackPurpose: purpose.ToString(),
-				metric.Direction:    "egress",
+				metric.Direction:    c.endpointType.ToString(),
 			}
 			for _, param := range sender.GetParameters().Encodings {
 				if err = c.statsRegistry.StartWorker(labels, param.SSRC); err != nil {
@@ -134,6 +138,10 @@ func (c *Endpoint) Close() error {
 		return fmt.Errorf("closing peer connection: %w", err)
 	}
 
+	if c.sessionId != "" && c.liveStreamId != "" {
+		metric.GraphNodeDelete(metric.BuildNode(c.sessionId, c.liveStreamId, c.endpointType.ToString()))
+	}
+
 	return nil
 }
 
@@ -154,4 +162,22 @@ type peerConnection interface {
 type initTrack struct {
 	purpose Purpose
 	track   webrtc.TrackLocal
+}
+
+type EndpointType int
+
+const (
+	IngressEndpoint EndpointType = iota + 1
+	EgressEndpoint
+)
+
+func (et EndpointType) ToString() string {
+	switch et {
+	case IngressEndpoint:
+		return "ingress"
+	case EgressEndpoint:
+		return "egress"
+	default:
+		return "unknown"
+	}
 }

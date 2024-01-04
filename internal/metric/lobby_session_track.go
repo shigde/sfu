@@ -14,6 +14,7 @@ type Labels map[LabelType]string
 const (
 	Session      LabelType = "session"
 	Stream       LabelType = "stream"
+	MediaStream  LabelType = "mediastream"
 	TrackId      LabelType = "track"
 	SSRC         LabelType = "ssrc"
 	TrackKind    LabelType = "kind"      // values: video | audio
@@ -22,7 +23,7 @@ const (
 )
 
 var lobbySessionTrackMetric *LobbySessionTrackMetric
-var lobbySessionTrackMetricLabels = []string{string(Session), string(Stream), string(TrackId), string(TrackKind), string(SSRC), string(TrackPurpose), string(Direction)}
+var lobbySessionTrackMetricLabels = []string{string(Session), string(Stream), string(MediaStream), string(TrackId), string(TrackKind), string(SSRC), string(TrackPurpose), string(Direction)}
 
 type TrackMetric struct {
 	packet          *prometheus.CounterVec

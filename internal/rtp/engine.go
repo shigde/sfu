@@ -84,8 +84,8 @@ func (e *Engine) EstablishIngressEndpoint(ctx context.Context, sessionId uuid.UU
 func (e *Engine) EstablishEgressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, options ...EndpointOption) (*Endpoint, error) {
 	return EstablishEgressEndpoint(ctx, e, sessionId, liveStream, options...)
 }
-func (e *Engine) EstablishStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
-	return EstablishStaticEgressEndpoint(ctx, e, sessionId, offer, options...)
+func (e *Engine) EstablishStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
+	return EstablishStaticEgressEndpoint(ctx, e, sessionId, liveStream, offer, options...)
 }
 
 func creatDC(pc *webrtc.PeerConnection, onChannel func(dc *webrtc.DataChannel)) error {
