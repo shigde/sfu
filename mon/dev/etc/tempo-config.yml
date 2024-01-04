@@ -24,6 +24,25 @@ compactor:
     block_retention: 1h                # overall Tempo trace retention. set for demo purposes
 
 metrics_generator:
+  # Specifies which processors to use.
+  processor:
+    # Span metrics create metrics based on span type, duration, name and service.
+    span_metrics:
+      # Configure extra dimensions to add as metric labels.
+      dimensions:
+        - http.method
+        - http.target
+        - http.status_code
+        - service.version
+    # Service graph metrics create node and edge metrics for determinng service interactions.
+    service_graphs:
+      # Configure extra dimensions to add as metric labels.
+      dimensions:
+        - http.method
+        - http.target
+        - http.status_code
+        - service.version
+  # The registry configuration determines how to process metrics.
   registry:
     external_labels:
       source: tempo

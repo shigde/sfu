@@ -30,7 +30,7 @@ endpoint = "/metrics" # Endpoint where the Prometheus metrics are delivered
 port = 8081
 
 [telemetry]
-enable = false
+enable = true
 
 [rtp]
 # Setup ice server for turn and stun

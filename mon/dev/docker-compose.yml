@@ -84,6 +84,9 @@ services:
 
   prometheus:
     image: prom/prometheus:latest
+    command:
+      --web.enable-remote-write-receiver
+      --enable-feature=exemplar-storage
     volumes:
       - ./etc/prometheus-config.yml:/etc/prometheus-config.yml
     entrypoint:

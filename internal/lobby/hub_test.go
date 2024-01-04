@@ -12,7 +12,7 @@ func testHubSetup(t *testing.T) *hub {
 	sessions := newSessionRepository()
 	engine := newRtpEngineMock()
 	forwarder := newMainStreamerMock()
-	hub := newHub(sessions, forwarder, make(chan struct{}))
+	hub := newHub(sessions, uuid.New(), forwarder, make(chan struct{}))
 	s1 := newSession(uuid.New(), hub, engine, nil)
 	s2 := newSession(uuid.New(), hub, engine, nil)
 	sessions.Add(s1)

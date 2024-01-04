@@ -227,7 +227,7 @@ func (s *session) handleOfferStaticEgressReq(req *sessionRequest) (*webrtc.Sessi
 		user:    s.user,
 	}
 
-	trackList, err := s.hub.getTrackList(filterForSession(s.Id), filterForNotMain())
+	trackList, err := s.hub.getTrackList(filterForSession(s.Id))
 	if err != nil {
 		return nil, fmt.Errorf("reading track list by creating rtp connection: %w", err)
 	}

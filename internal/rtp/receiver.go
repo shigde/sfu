@@ -24,6 +24,7 @@ type receiver struct {
 	trackInfos    map[string]*TrackInfo
 	quit          chan struct{}
 	statsRegistry *stats.Registry
+	stats         metric.NodeGraphMetric
 }
 
 func newReceiver(sessionId uuid.UUID, d TrackDispatcher, trackInfos map[string]*TrackInfo) *receiver {

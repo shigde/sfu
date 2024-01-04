@@ -37,7 +37,7 @@ type lobby struct {
 	lobbyGarbageCollector chan<- uuid.UUID
 }
 
-func newLobby(id uuid.UUID, rtpEngine rtpEngine, lobbyGarbageCollector chan<- uuid.UUID) *lobby {
+func newLobby(id uuid.UUID, entity *LobbyEntity, rtpEngine rtpEngine, lobbyGarbageCollector chan<- uuid.UUID) *lobby {
 	sessions := newSessionRepository()
 	quitChan := make(chan struct{})
 	reqChan := make(chan *lobbyRequest)
@@ -48,7 +48,7 @@ func newLobby(id uuid.UUID, rtpEngine rtpEngine, lobbyGarbageCollector chan<- uu
 	}
 
 	streamer := rtmp.NewStreamer(quitChan)
-	hub := newHub(sessions, forwarder, quitChan)
+	hub := newHub(sessions, entity.LiveStreamId, forwarder, quitChan)
 	lobby := &lobby{
 		Id:                    id,
 		resourceId:            uuid.New(),
@@ -57,6 +57,7 @@ func newLobby(id uuid.UUID, rtpEngine rtpEngine, lobbyGarbageCollector chan<- uu
 		forwarder:             forwarder,
 		streamer:              streamer,
 		hub:                   hub,
+		entity:                entity,
 		quit:                  quitChan,
 		reqChan:               reqChan,
 		sessionQuit:           childQuitChan,

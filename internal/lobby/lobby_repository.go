@@ -37,7 +37,6 @@ func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUI
 	defer r.locker.Unlock()
 	currentLobby, ok := r.lobbies[lobbyId]
 	if !ok {
-		lobby := newLobby(lobbyId, r.rtpEngine, lobbyGarbageCollector)
 		entity, err := r.queryLobbyEntity(ctx, lobbyId.String())
 		if err != nil {
 			return nil, fmt.Errorf("fetching lobby entity: %w", err)
@@ -47,10 +46,9 @@ func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUI
 		if entity, err = r.updateLobbyEntity(ctx, entity); err != nil {
 			return nil, fmt.Errorf("updating lobby entity as running: %w", err)
 		}
+		lobby := newLobby(lobbyId, entity, r.rtpEngine, lobbyGarbageCollector)
 
-		lobby.entity = entity
 		r.lobbies[lobbyId] = lobby
-
 		metric.RunningLobbyInc(lobby.entity.LiveStreamId.String(), lobbyId.String())
 		return lobby, nil
 	}

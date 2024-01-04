@@ -16,17 +16,19 @@ var (
 )
 
 type hub struct {
-	sessionRepo *sessionRepository
-	streamer    mainStreamer
-	reqChan     chan *hubRequest
-	tracks      map[string]*rtp.TrackInfo
-	quit        chan struct{}
+	LiveStreamId uuid.UUID
+	sessionRepo  *sessionRepository
+	streamer     mainStreamer
+	reqChan      chan *hubRequest
+	tracks       map[string]*rtp.TrackInfo
+	quit         chan struct{}
 }
 
-func newHub(sessionRepo *sessionRepository, forwarder mainStreamer, quit chan struct{}) *hub {
+func newHub(sessionRepo *sessionRepository, liveStream uuid.UUID, forwarder mainStreamer, quit chan struct{}) *hub {
 	tracks := make(map[string]*rtp.TrackInfo)
 	requests := make(chan *hubRequest)
 	hub := &hub{
+		liveStream,
 		sessionRepo,
 		forwarder,
 		requests,
