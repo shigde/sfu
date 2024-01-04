@@ -48,13 +48,14 @@ func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID
 	// exchange is not finish. A peer connection without tracks where all tracks are added afterwards triggers renegotiation.
 	// Unfortunately, "sendingTracks" could be outdated in the meantime.
 	// This creates a race between remove and add track that I still have to think about it.
-	if endpoint.initTracks != nil {
+	if endpoint.getCurrentTracksCbk != nil {
 		go func() {
 			slog.Debug("rtp.establish_egress: add tracks", "sessionId", sessionId, "liveStream", liveStream)
 			<-initComplete
-			for _, initTrack := range endpoint.initTracks {
-				// liveStream
-				endpoint.AddTrack(initTrack.track, initTrack.purpose)
+			if tracksList, err := endpoint.getCurrentTracksCbk(sessionId); err == nil {
+				for _, trackInfo := range tracksList {
+					endpoint.AddTrack(trackInfo.GetTrackLocal(), trackInfo.Purpose)
+				}
 			}
 		}()
 	}

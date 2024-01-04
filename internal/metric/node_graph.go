@@ -43,14 +43,15 @@ func BuildNode(sessionId string, liveStreamId string, nodeType string) GraphNode
 }
 func buildEdge(sessionId string, liveStreamId string, nodeType string) GraphEdge {
 	endpoint := nodeType + "-" + sessionId
+	hub := "hub-" + liveStreamId
 	edge := GraphEdge{Id: "edge-" + endpoint, Stream: liveStreamId}
 	switch nodeType {
 	case "egress":
-		edge.Source = liveStreamId
+		edge.Source = hub
 		edge.Target = endpoint
 	case "ingress":
-		edge.Target = endpoint
-		edge.Source = liveStreamId
+		edge.Source = endpoint
+		edge.Target = hub
 	default:
 		edge.Target = "unknown"
 		edge.Source = "unknown"

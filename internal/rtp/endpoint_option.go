@@ -1,6 +1,7 @@
 package rtp
 
 import (
+	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 )
 
@@ -18,6 +19,14 @@ func EndpointWithTrack(track webrtc.TrackLocal, purpose Purpose) func(endpoint *
 			endpoint.initTracks = make([]*initTrack, 0)
 		}
 		endpoint.initTracks = append(endpoint.initTracks, &initTrack{purpose: purpose, track: track})
+	}
+}
+
+func EndpointWithGetCurrentTrackCbk(ckk func(sessionId uuid.UUID) ([]*TrackInfo, error)) func(endpoint *Endpoint) {
+	return func(endpoint *Endpoint) {
+		if endpoint.getCurrentTracksCbk == nil {
+			endpoint.getCurrentTracksCbk = ckk
+		}
 	}
 }
 

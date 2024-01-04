@@ -1,6 +1,8 @@
 package lobby
 
-import "github.com/shigde/sfu/internal/rtp"
+import (
+	"github.com/shigde/sfu/internal/rtp"
+)
 
 type hubRequest struct {
 	kind          hubRequestKind

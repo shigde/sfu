@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/pion/dtls/v2"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/metric"
@@ -25,12 +26,13 @@ type Endpoint struct {
 	initComplete   chan struct{}
 	closed         chan struct{}
 	statsRegistry  *stats.Registry
-	// Endpoint Optional
+	// With Endpoint Optionals #######################################
 	onChannel                  func(dc *webrtc.DataChannel)
 	onEstablished              func()
 	onNegotiationNeeded        func(offer webrtc.SessionDescription)
 	onICEConnectionStateChange func(webrtc.ICEConnectionState)
-	initTracks                 []*initTrack
+	getCurrentTracksCbk        func(sessionId uuid.UUID) ([]*TrackInfo, error)
+	initTracks                 []*initTrack // depracted
 	dispatcher                 TrackDispatcher
 }
 

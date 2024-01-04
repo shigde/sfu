@@ -89,7 +89,10 @@ func (h *hub) DispatchRemoveTrack(track *rtp.TrackInfo) {
 	}
 }
 
-func (h *hub) getTrackList(filters ...filterHubTracks) ([]*rtp.TrackInfo, error) {
+// getTrackList Is called from the Egress endpoints when the connection is established.
+// In ths wax the egress endpoints can receive the current tracks of the lobby
+// The session set this methode as callback to the egress endpoint
+func (h *hub) getTrackList(sessionId uuid.UUID, filters ...filterHubTracks) ([]*rtp.TrackInfo, error) {
 	var hubList []*rtp.TrackInfo
 	trackListChan := make(chan []*rtp.TrackInfo)
 	select {
@@ -111,14 +114,26 @@ func (h *hub) getTrackList(filters ...filterHubTracks) ([]*rtp.TrackInfo, error)
 	}
 	list := make([]*rtp.TrackInfo, 0)
 	for _, track := range hubList {
+		// If we have no filter, we can add the track to the list
 		if len(filters) == 0 {
 			list = append(list, track)
+			h.increaseNodeGraphStats(sessionId.String(), rtp.EgressEndpoint, track.Purpose)
+			continue
 		}
 
+		// Check filter
+		canAddTrackToList := true
 		for _, f := range filters {
-			if f(track) {
-				list = append(list, track)
+			// If one filter not be true we will not add the track to the list
+			if !f(track) {
+				canAddTrackToList = false
+				break
 			}
+		}
+
+		if canAddTrackToList {
+			list = append(list, track)
+			h.increaseNodeGraphStats(sessionId.String(), rtp.EgressEndpoint, track.Purpose)
 		}
 	}
 	return list, nil

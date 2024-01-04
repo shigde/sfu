@@ -55,11 +55,12 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 	// collect metrics
 	if r.statsRegistry != nil {
 		labels := metric.Labels{
-			metric.Stream:       remoteTrack.StreamID(),
+			metric.Stream:       r.liveStream.String(),
+			metric.MediaStream:  remoteTrack.StreamID(),
 			metric.TrackId:      remoteTrack.ID(),
 			metric.TrackKind:    remoteTrack.Kind().String(),
 			metric.TrackPurpose: stream.getPurpose().ToString(),
-			metric.Direction:    "ingress",
+			metric.Direction:    IngressEndpoint.ToString(),
 		}
 		if err := r.statsRegistry.StartWorker(labels, remoteTrack.SSRC()); err != nil {
 			slog.Error("rtp.receiver: start stats worker", "err", err)
