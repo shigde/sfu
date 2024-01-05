@@ -149,7 +149,7 @@ func (l *lobby) handleCreateIngressEndpoint(lobbyReq *lobbyRequest) {
 	}
 	session = newSession(lobbyReq.user, l.hub, l.rtpEngine, l.sessionQuit)
 	l.sessions.Add(session)
-	metric.RunningSessionsInc(l.Id.String(), session.Id.String())
+	metric.RunningSessionsInc(l.Id.String())
 	offerReq := newSessionRequest(lobbyReq.ctx, data.offer, offerIngressReq)
 
 	go func() {
@@ -339,7 +339,7 @@ func (l *lobby) deleteSessionByUserId(userId uuid.UUID) (bool, error) {
 		if err := session.stop(); err != nil {
 			return deleted, fmt.Errorf("stopping rtp session (sessionId = %s for userId = %s): %w", session.Id, userId, err)
 		}
-		metric.RunningSessionsDec(l.Id.String(), session.Id.String())
+		metric.RunningSessionsDec(l.Id.String())
 
 		// When Lobby is empty then it is time to close the lobby.
 		// But we have to take care about races, because in the meanwhile a new session request could be made.

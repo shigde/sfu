@@ -26,20 +26,19 @@ var lobbySessionTrackMetric *LobbySessionTrackMetric
 var lobbySessionTrackMetricLabels = []string{string(Session), string(Stream), string(MediaStream), string(TrackId), string(TrackKind), string(SSRC), string(TrackPurpose), string(Direction)}
 
 type TrackMetric struct {
-	packet          *prometheus.CounterVec
-	packetBytes     *prometheus.CounterVec
-	nack            *prometheus.CounterVec
-	pli             *prometheus.CounterVec
-	fir             *prometheus.CounterVec
-	packetLossTotal *prometheus.CounterVec
+	packet          *prometheus.GaugeVec
+	packetBytes     *prometheus.GaugeVec
+	nack            *prometheus.GaugeVec
+	pli             *prometheus.GaugeVec
+	fir             *prometheus.GaugeVec
+	packetLossTotal *prometheus.GaugeVec
 	packetLoss      *prometheus.HistogramVec
 	jitter          *prometheus.HistogramVec
 	rtt             *prometheus.HistogramVec
 }
 
 type LobbySessionTrackMetric struct {
-	ingressTracks *TrackMetric
-	egressTracks  *TrackMetric
+	tracks *TrackMetric
 }
 
 func RecordTrackStats(labels Labels, statsRec *stats.Stats) {
@@ -81,24 +80,24 @@ func CleanTrackStats(labels Labels) {
 }
 
 func PacketInc(labels Labels, pkg uint64) {
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packet.With(toPromLabels(labels)).Add(float64(pkg))
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.packet.With(toPromLabels(labels)).Set(float64(pkg))
 	}
 }
 func PacketDel(labels Labels) {
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packet.Delete(toPromLabels(labels))
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.packet.Delete(toPromLabels(labels))
 	}
 }
 
 func PacketBytesInc(labels Labels, pkg uint64) {
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packetBytes.With(toPromLabels(labels)).Add(float64(pkg))
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.packetBytes.With(toPromLabels(labels)).Set(float64(pkg))
 	}
 }
 func PacketBytesDel(labels Labels) {
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packetBytes.Delete(toPromLabels(labels))
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.packetBytes.Delete(toPromLabels(labels))
 	}
 }
 
@@ -106,13 +105,13 @@ func NackInc(labels Labels, nack uint32) {
 	//if nack == 0 {
 	//	return
 	//}
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.nack.With(toPromLabels(labels)).Add(float64(nack))
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.nack.With(toPromLabels(labels)).Set(float64(nack))
 	}
 }
 func NackDel(labels Labels) {
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.nack.Delete(toPromLabels(labels))
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.nack.Delete(toPromLabels(labels))
 	}
 }
 
@@ -120,13 +119,13 @@ func PliInc(labels Labels, pli uint32) {
 	//if pli == 0 {
 	//	return
 	//}
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.pli.With(toPromLabels(labels)).Add(float64(pli))
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.pli.With(toPromLabels(labels)).Set(float64(pli))
 	}
 }
 func PliDel(labels Labels) {
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.pli.Delete(toPromLabels(labels))
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.pli.Delete(toPromLabels(labels))
 	}
 }
 
@@ -134,52 +133,52 @@ func FirInc(labels Labels, fir uint32) {
 	//if fir == 0 {
 	//	return
 	//}
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.fir.With(toPromLabels(labels)).Add(float64(fir))
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.fir.With(toPromLabels(labels)).Set(float64(fir))
 	}
 }
 func FirDel(labels Labels) {
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.fir.Delete(toPromLabels(labels))
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.fir.Delete(toPromLabels(labels))
 	}
 }
 func PacketLossTotalInc(labels Labels, pkg int64) {
 	//if pkg == 0 {
 	//	return
 	//}
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packetLossTotal.With(toPromLabels(labels)).Add(float64(pkg))
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.packetLossTotal.With(toPromLabels(labels)).Set(float64(pkg))
 	}
 }
 func PacketLossTotalDel(labels Labels) {
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packetLossTotal.Delete(toPromLabels(labels))
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.packetLossTotal.Delete(toPromLabels(labels))
 	}
 }
 func PacketLossInc(labels Labels, pkg int64) {
 	if pkg == 0 {
 		return
 	}
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packetLoss.With(toPromLabels(labels)).Observe(float64(pkg))
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.packetLoss.With(toPromLabels(labels)).Observe(float64(pkg))
 	}
 }
 func PacketLossDel(labels Labels) {
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.packetLoss.Delete(toPromLabels(labels))
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.packetLoss.Delete(toPromLabels(labels))
 	}
 }
 func JitterInc(labels Labels, jitter float64) {
 	//if jitter == 0 {
 	//	return
 	//}
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.jitter.With(toPromLabels(labels)).Observe(jitter)
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.jitter.With(toPromLabels(labels)).Observe(jitter)
 	}
 }
 func JitterDel(labels Labels) {
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.jitter.Delete(toPromLabels(labels))
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.jitter.Delete(toPromLabels(labels))
 	}
 }
 
@@ -187,63 +186,63 @@ func RttInc(labels Labels, rtt uint64) {
 	if rtt == 0 {
 		return
 	}
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.rtt.With(toPromLabels(labels)).Observe(float64(rtt))
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.rtt.With(toPromLabels(labels)).Observe(float64(rtt))
 	}
 }
 func RttDel(labels Labels) {
-	if trackMetric := chooseDirection(labels); trackMetric != nil {
-		trackMetric.rtt.Delete(toPromLabels(labels))
+	if lobbySessionTrackMetric != nil {
+		lobbySessionTrackMetric.tracks.rtt.Delete(toPromLabels(labels))
 	}
 }
 
-func newTrackMetric(direction string) (*TrackMetric, error) {
+func newTrackMetric() (*TrackMetric, error) {
 	m := &TrackMetric{
-		packet: prometheus.NewCounterVec(prometheus.CounterOpts{
+		packet: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: "shig",
-			Subsystem: direction + "_packet",
+			Subsystem: "packet",
 			Name:      "total",
 		}, lobbySessionTrackMetricLabels),
-		packetBytes: prometheus.NewCounterVec(prometheus.CounterOpts{
+		packetBytes: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: "shig",
-			Subsystem: direction + "_packet",
+			Subsystem: "packet",
 			Name:      "bytes",
 		}, lobbySessionTrackMetricLabels),
-		nack: prometheus.NewCounterVec(prometheus.CounterOpts{
+		nack: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: "shig",
-			Subsystem: direction + "_nack",
+			Subsystem: "nack",
 			Name:      "total",
 		}, lobbySessionTrackMetricLabels),
-		pli: prometheus.NewCounterVec(prometheus.CounterOpts{
+		pli: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: "shig",
-			Subsystem: direction + "_pil",
+			Subsystem: "pil",
 			Name:      "total",
 		}, lobbySessionTrackMetricLabels),
-		fir: prometheus.NewCounterVec(prometheus.CounterOpts{
+		fir: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: "shig",
-			Subsystem: direction + "_fir",
+			Subsystem: "fir",
 			Name:      "total",
 		}, lobbySessionTrackMetricLabels),
-		packetLossTotal: prometheus.NewCounterVec(prometheus.CounterOpts{
+		packetLossTotal: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: "shig",
-			Subsystem: direction + "_packet_loss",
+			Subsystem: "packet_loss",
 			Name:      "total",
 		}, lobbySessionTrackMetricLabels),
 		packetLoss: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Namespace: "shig",
-			Subsystem: direction + "_packet_loss",
+			Subsystem: "packet_loss",
 			Name:      "percent",
 			Buckets:   []float64{0.0, 0.1, 0.3, 0.5, 0.7, 1, 5, 10, 40, 100},
 		}, lobbySessionTrackMetricLabels),
 		jitter: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Namespace: "shig",
-			Subsystem: direction + "_jitter",
+			Subsystem: "jitter",
 			Name:      "us",
 			Buckets:   []float64{100, 500, 1500, 3000, 6000, 12000, 24000, 48000, 96000, 192000},
 		}, lobbySessionTrackMetricLabels),
 		rtt: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Namespace: "shig",
-			Subsystem: direction + "_rtt",
+			Subsystem: "rtt",
 			Name:      "ms",
 			Buckets:   []float64{50, 100, 150, 200, 250, 500, 750, 1000, 5000, 10000},
 		}, lobbySessionTrackMetricLabels),
@@ -285,32 +284,16 @@ func NewLobbySessionTrackMetrics() (*LobbySessionTrackMetric, error) {
 		return nil, errors.New("lobby session track metric already exists")
 	}
 
-	ingress, err := newTrackMetric("ingress")
+	tracks, err := newTrackMetric()
 	if err != nil {
 		return nil, errors.New("create ingress metric")
 	}
-	egress, err := newTrackMetric("egress")
-	if err != nil {
-		return nil, errors.New("create egress metric")
-	}
 
 	lobbySessionTrackMetric = &LobbySessionTrackMetric{
-		ingressTracks: ingress,
-		egressTracks:  egress,
+		tracks: tracks,
 	}
 
 	return lobbySessionTrackMetric, nil
-}
-
-func chooseDirection(labels Labels) *TrackMetric {
-	if lobbySessionTrackMetric == nil {
-		return nil
-	}
-	if labels[Direction] == "ingress" {
-		return lobbySessionTrackMetric.ingressTracks
-	}
-
-	return lobbySessionTrackMetric.egressTracks
 }
 
 func toPromLabels(labels Labels) prometheus.Labels {

@@ -90,6 +90,7 @@ func (r *lobbyRepository) delete(ctx context.Context, id uuid.UUID) bool {
 		delete(r.lobbies, id)
 		lobby.stop()
 		metric.RunningLobbyDec(lobby.entity.LiveStreamId.String(), id.String())
+		metric.RunningSessionsDelete(id.String())
 		return true
 	}
 	return false
