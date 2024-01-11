@@ -19,7 +19,7 @@ var (
 type hub struct {
 	LiveStreamId  uuid.UUID
 	sessionRepo   *sessionRepository
-	streamer      mainStreamer
+	sender        liveStreamSender
 	reqChan       chan *hubRequest
 	tracks        map[string]*rtp.TrackInfo   // trackID --> TrackInfo
 	metricNodes   map[string]metric.GraphNode // sessionId --> metric Node
@@ -27,7 +27,7 @@ type hub struct {
 	quit          chan struct{}
 }
 
-func newHub(sessionRepo *sessionRepository, liveStream uuid.UUID, forwarder mainStreamer, quit chan struct{}) *hub {
+func newHub(sessionRepo *sessionRepository, liveStream uuid.UUID, sender liveStreamSender, quit chan struct{}) *hub {
 	tracks := make(map[string]*rtp.TrackInfo)
 	metricNodes := make(map[string]metric.GraphNode)
 	requests := make(chan *hubRequest)
@@ -35,7 +35,7 @@ func newHub(sessionRepo *sessionRepository, liveStream uuid.UUID, forwarder main
 	hub := &hub{
 		liveStream,
 		sessionRepo,
-		forwarder,
+		sender,
 		requests,
 		tracks,
 		metricNodes,
@@ -159,8 +159,8 @@ func (h *hub) onAddTrack(event *hubRequest) {
 	h.increaseNodeGraphStats(event.track.SessionId.String(), rtp.IngressEndpoint, event.track.Purpose)
 	h.hubMetricNode = metric.GraphNodeUpdateInc(h.hubMetricNode, event.track.Purpose.ToString())
 	if event.track.GetPurpose() == rtp.PurposeMain {
-		slog.Debug("lobby.hub: add live track ro streamer", "streamId", event.track.GetTrackLocal().StreamID(), "track", event.track.GetTrackLocal().ID(), "kind", event.track.GetTrackLocal().Kind(), "purpose", event.track.Purpose.ToString())
-		h.streamer.AddTrack(event.track.GetLiveTrack())
+		slog.Debug("lobby.hub: add live track ro sender", "streamId", event.track.GetTrackLocal().StreamID(), "track", event.track.GetTrackLocal().ID(), "kind", event.track.GetTrackLocal().Kind(), "purpose", event.track.Purpose.ToString())
+		h.sender.AddTrack(event.track.GetTrackLocal())
 	}
 
 	h.tracks[event.track.GetTrackLocal().ID()] = event.track
@@ -178,7 +178,7 @@ func (h *hub) onRemoveTrack(event *hubRequest) {
 	h.decreaseNodeGraphStats(event.track.SessionId.String(), rtp.IngressEndpoint, event.track.Purpose)
 
 	if event.track.GetPurpose() == rtp.PurposeMain {
-		h.streamer.RemoveTrack(event.track.GetLiveTrack())
+		h.sender.RemoveTrack(event.track.GetTrackLocal())
 	}
 
 	if _, ok := h.tracks[event.track.GetTrackLocal().ID()]; ok {

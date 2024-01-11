@@ -11,7 +11,7 @@ func testHubSetup(t *testing.T) *hub {
 	t.Helper()
 	sessions := newSessionRepository()
 	engine := newRtpEngineMock()
-	forwarder := newMainStreamerMock()
+	forwarder := newLiveStreamSenderMock()
 	hub := newHub(sessions, uuid.New(), forwarder, make(chan struct{}))
 	s1 := newSession(uuid.New(), hub, engine, nil)
 	s2 := newSession(uuid.New(), hub, engine, nil)

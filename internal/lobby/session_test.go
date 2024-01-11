@@ -15,7 +15,7 @@ func testRtpSessionSetup(t *testing.T) (*session, *rtpEngineMock) {
 	t.Helper()
 	logging.SetupDebugLogger()
 	engine := mockRtpEngineForOffer(mockedAnswer)
-	forwarder := newMainStreamerMock()
+	forwarder := newLiveStreamSenderMock()
 	hub := newHub(newSessionRepository(), uuid.New(), forwarder, nil)
 	session := newSession(uuid.New(), hub, engine, nil)
 	return session, engine

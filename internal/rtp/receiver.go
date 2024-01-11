@@ -20,7 +20,7 @@ type receiver struct {
 	sync.RWMutex
 	id            uuid.UUID // session ID
 	liveStream    uuid.UUID
-	streams       map[string]Stream
+	streams       map[string]*mediaStream
 	dispatcher    TrackDispatcher
 	trackInfos    map[string]*TrackInfo
 	quit          chan struct{}
@@ -28,7 +28,7 @@ type receiver struct {
 }
 
 func newReceiver(sessionId uuid.UUID, liveStream uuid.UUID, d TrackDispatcher, trackInfos map[string]*TrackInfo) *receiver {
-	streams := make(map[string]Stream)
+	streams := make(map[string]*mediaStream)
 	quit := make(chan struct{})
 	return &receiver{
 		RWMutex:    sync.RWMutex{},
@@ -76,7 +76,7 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 			// stop handler goroutine because error
 			return
 		}
-		trackInfo = newTrackInfo(r.id, stream.getAudioTrack(), stream.getLiveAudioTrack(), stream.getPurpose())
+		trackInfo = newTrackInfo(r.id, stream.getAudioTrack(), stream.getPurpose())
 	}
 
 	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "video") {
@@ -87,7 +87,7 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 			// stop handler goroutine because error
 			return
 		}
-		trackInfo = newTrackInfo(r.id, stream.getVideoTrack(), stream.getLiveVideoTrack(), stream.getPurpose())
+		trackInfo = newTrackInfo(r.id, stream.getVideoTrack(), stream.getPurpose())
 	}
 
 	slog.Debug("rtp.receiver: info track", "streamId", trackInfo.GetTrackLocal().StreamID(), "track", trackInfo.GetTrackLocal().ID(), "kind", trackInfo.GetTrackLocal().Kind(), "purpose", trackInfo.Purpose.ToString())
@@ -105,20 +105,13 @@ func (r *receiver) getTrackInfo(streamID string, trackId string) *TrackInfo {
 	return info
 }
 
-func (r *receiver) getStream(sessionId uuid.UUID, streamId string, trackId string) Stream {
+func (r *receiver) getStream(sessionId uuid.UUID, streamId string, trackId string) *mediaStream {
 	r.Lock()
 	defer r.Unlock()
 	info := r.getTrackInfo(streamId, trackId)
 	stream, ok := r.streams[streamId]
 	if !ok {
-		switch info.Purpose {
-		case PurposeGuest:
-			stream = newLocalStream(streamId, sessionId, r.dispatcher, info.Purpose, r.quit)
-		case PurposeMain:
-			stream = newLiveStream(streamId, sessionId, r.dispatcher, info.Purpose, r.quit)
-		default:
-			stream = newLocalStream(streamId, sessionId, r.dispatcher, info.Purpose, r.quit)
-		}
+		stream = newMediaStream(streamId, sessionId, r.dispatcher, info.Purpose, r.quit)
 		r.streams[streamId] = stream
 	}
 	return stream

@@ -2,6 +2,7 @@ package rtp
 
 import "github.com/pion/webrtc/v3"
 
+// @depracted
 type mediaStateEventHandler struct {
 }
 

@@ -9,7 +9,6 @@ type TrackInfo struct {
 	Purpose   Purpose
 	SessionId uuid.UUID
 	Track     *webrtc.TrackLocalStaticRTP
-	LiveTrack *LiveTrackStaticRTP
 }
 
 type Purpose int
@@ -30,11 +29,10 @@ func (p Purpose) ToString() string {
 	}
 }
 
-func newTrackInfo(id uuid.UUID, track *webrtc.TrackLocalStaticRTP, liveTrack *LiveTrackStaticRTP, purpose Purpose) *TrackInfo {
+func newTrackInfo(id uuid.UUID, track *webrtc.TrackLocalStaticRTP, purpose Purpose) *TrackInfo {
 	return &TrackInfo{
 		SessionId: id,
 		Track:     track,
-		LiveTrack: liveTrack,
 		Purpose:   purpose,
 	}
 }
@@ -51,13 +49,6 @@ func (t *TrackInfo) GetTrack() *webrtc.TrackLocalStaticRTP {
 	return t.Track
 }
 
-func (t *TrackInfo) GetLiveTrack() *LiveTrackStaticRTP {
-	return t.LiveTrack
-}
-
 func (t *TrackInfo) GetTrackLocal() webrtc.TrackLocal {
-	if t.Purpose == PurposeMain {
-		return t.LiveTrack
-	}
 	return t.Track
 }
