@@ -7,16 +7,18 @@ import (
 	"github.com/google/uuid"
 	"github.com/pion/interceptor/pkg/stats"
 	"github.com/pion/webrtc/v3"
+	"github.com/shigde/sfu/internal/metric"
 	rtpStats "github.com/shigde/sfu/internal/rtp/stats"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
 )
 
-func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID, options ...EndpointOption) (*Endpoint, error) {
+func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, options ...EndpointOption) (*Endpoint, error) {
+	metric.GraphNodeUpdate(metric.BuildNode(sessionId.String(), liveStream.String(), "egress"))
 	_, span := otel.Tracer(tracerName).Start(ctx, "rtp:establish_egress_endpoint")
 	defer span.End()
 
-	endpoint := &Endpoint{}
+	endpoint := &Endpoint{sessionId: sessionId.String(), liveStreamId: liveStream.String(), endpointType: EgressEndpoint}
 	for _, opt := range options {
 		opt(endpoint)
 	}
@@ -41,17 +43,19 @@ func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID
 	initComplete := make(chan struct{})
 
 	// @TODO: Fix the race
-	// First we create the sender endpoint and after this we add the individual tracks.
+	// First we create the egress endpoint and after this we add the individual tracks.
 	// I don't know why, but Pion doesn't trigger renegotiation when creating a peer connection with tracks and the sdp
 	// exchange is not finish. A peer connection without tracks where all tracks are added afterwards triggers renegotiation.
 	// Unfortunately, "sendingTracks" could be outdated in the meantime.
 	// This creates a race between remove and add track that I still have to think about it.
-	if endpoint.initTracks != nil {
+	if endpoint.getCurrentTracksCbk != nil {
 		go func() {
-			slog.Debug("rtp.establish_egress: add tracks", "sessionId", sessionId)
+			slog.Debug("rtp.establish_egress: add tracks", "sessionId", sessionId, "liveStream", liveStream)
 			<-initComplete
-			for _, initTrack := range endpoint.initTracks {
-				endpoint.AddTrack(initTrack.track, initTrack.purpose)
+			if tracksList, err := endpoint.getCurrentTracksCbk(sessionId); err == nil {
+				for _, trackInfo := range tracksList {
+					endpoint.AddTrack(trackInfo.GetTrackLocal(), trackInfo.Purpose)
+				}
 			}
 		}()
 	}

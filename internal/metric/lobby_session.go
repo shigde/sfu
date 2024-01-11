@@ -13,14 +13,24 @@ type LobbySessionMetric struct {
 	runningSessions *prometheus.GaugeVec
 }
 
-func RunningSessionsInc(lobby string, session string) {
+func RunningSessionsInc(lobby string) {
 	if lobbySessions != nil {
-		lobbySessions.runningSessions.With(prometheus.Labels{"lobby": lobby, "session": session}).Inc()
+		if vec, err := lobbySessions.runningSessions.GetMetricWith(prometheus.Labels{"lobby": lobby}); err != nil {
+			vec.Inc()
+		}
 	}
 }
-func RunningSessionsDec(lobby string, session string) {
+func RunningSessionsDec(lobby string) {
 	if lobbySessions != nil {
-		lobbySessions.runningSessions.Delete(prometheus.Labels{"lobby": lobby, "session": session})
+		if vec, err := lobbySessions.runningSessions.GetMetricWith(prometheus.Labels{"lobby": lobby}); err != nil {
+			vec.Dec()
+		}
+	}
+}
+
+func RunningSessionsDelete(lobby string) {
+	if lobbySessions != nil {
+		lobbySessions.runningSessions.Delete(prometheus.Labels{"lobby": lobby})
 	}
 }
 
@@ -33,7 +43,7 @@ func NewLobbySessionMetrics() (*LobbySessionMetric, error) {
 			Namespace: "shig",
 			Name:      "lobby_session",
 			Help:      "running lobby sessions",
-		}, []string{"lobby", "session"}),
+		}, []string{"lobby"}),
 	}
 	if err := prometheus.Register(lobbySessions.runningSessions); err != nil {
 		return nil, fmt.Errorf("register runningSessions metric: %w", err)

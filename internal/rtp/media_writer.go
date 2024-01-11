@@ -9,29 +9,29 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-type localWriter struct {
+type mediaWriter struct {
 	id         string
 	quit       chan struct{}
 	globalQuit <-chan struct{}
 }
 
-func newLocalWriter(id string, globalQuit <-chan struct{}) *localWriter {
-	return &localWriter{
+func newMediaWriter(id string, globalQuit <-chan struct{}) *mediaWriter {
+	return &mediaWriter{
 		id:         id,
 		quit:       make(chan struct{}),
 		globalQuit: globalQuit,
 	}
 }
 
-func (w *localWriter) writeRtp(remoteTrack *webrtc.TrackRemote, localTrack trackWriter) error {
+func (w *mediaWriter) writeRtp(remoteTrack *webrtc.TrackRemote, localTrack *webrtc.TrackLocalStaticRTP) error {
 	rtpBuf := make([]byte, rtpBufferSize)
 	for {
 		select {
 		case <-w.globalQuit:
-			slog.Info("rtp.localWriter closed globally", "track id", w.id)
+			slog.Info("rtp.mediaWriter closed globally", "track id", w.id)
 			return nil
 		case <-w.quit:
-			slog.Info("rtp.localWriter closed locally", "track id", w.id)
+			slog.Info("rtp.mediaWriter closed locally", "track id", w.id)
 			return nil
 		default:
 			i, _, err := remoteTrack.Read(rtpBuf)
@@ -53,20 +53,20 @@ func (w *localWriter) writeRtp(remoteTrack *webrtc.TrackRemote, localTrack track
 	}
 }
 
-func (w *localWriter) close() {
-	slog.Info("rtp.localWriter: close", "track id", w.id)
+func (w *mediaWriter) close() {
+	slog.Info("rtp.mediaWriter: close", "track id", w.id)
 	select {
 	case <-w.globalQuit:
-		slog.Warn("rtp.localWriter the localWriter was already closed, con not close by global again", "track id", w.id)
+		slog.Warn("rtp.mediaWriter the mediaWriter was already closed, con not close by global again", "track id", w.id)
 	case <-w.quit:
-		slog.Warn("rtp.localWriter the localWriter was already closed, con not close by local again", "track id", w.id)
+		slog.Warn("rtp.mediaWriter the mediaWriter was already closed, con not close by local again", "track id", w.id)
 	default:
 		close(w.quit)
-		slog.Info("rtp.localWriter close was triggered", "track id", w.id)
+		slog.Info("rtp.mediaWriter close was triggered", "track id", w.id)
 	}
 }
 
-func (w *localWriter) isRunning() bool {
+func (w *mediaWriter) isRunning() bool {
 	select {
 	case <-w.globalQuit:
 		return false

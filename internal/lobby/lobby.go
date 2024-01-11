@@ -25,7 +25,7 @@ var (
 type lobby struct {
 	Id                    uuid.UUID
 	sessions              *sessionRepository
-	forwarder             *rtp.UdpForwarder
+	liveStreamSender      liveStreamSender
 	streamer              *rtmp.Streamer
 	hub                   *hub
 	rtpEngine             rtpEngine
@@ -37,26 +37,27 @@ type lobby struct {
 	lobbyGarbageCollector chan<- uuid.UUID
 }
 
-func newLobby(id uuid.UUID, rtpEngine rtpEngine, lobbyGarbageCollector chan<- uuid.UUID) *lobby {
+func newLobby(id uuid.UUID, entity *LobbyEntity, rtpEngine rtpEngine, lobbyGarbageCollector chan<- uuid.UUID) *lobby {
 	sessions := newSessionRepository()
 	quitChan := make(chan struct{})
 	reqChan := make(chan *lobbyRequest)
 	childQuitChan := make(chan uuid.UUID)
-	forwarder, err := rtp.NewUdpForwarder(id, quitChan)
+	liveStreamSender, err := rtp.NewLiveStreamSender(id, quitChan)
 	if err != nil {
-		slog.Error("create udp streamer", "err", err)
+		slog.Error("create live stream sender", "err", err)
 	}
 
 	streamer := rtmp.NewStreamer(quitChan)
-	hub := newHub(sessions, forwarder, quitChan)
+	hub := newHub(sessions, entity.LiveStreamId, liveStreamSender, quitChan)
 	lobby := &lobby{
 		Id:                    id,
 		resourceId:            uuid.New(),
 		rtpEngine:             rtpEngine,
 		sessions:              sessions,
-		forwarder:             forwarder,
+		liveStreamSender:      liveStreamSender,
 		streamer:              streamer,
 		hub:                   hub,
+		entity:                entity,
 		quit:                  quitChan,
 		reqChan:               reqChan,
 		sessionQuit:           childQuitChan,
@@ -148,7 +149,7 @@ func (l *lobby) handleCreateIngressEndpoint(lobbyReq *lobbyRequest) {
 	}
 	session = newSession(lobbyReq.user, l.hub, l.rtpEngine, l.sessionQuit)
 	l.sessions.Add(session)
-	metric.RunningSessionsInc(l.Id.String(), session.Id.String())
+	metric.RunningSessionsInc(l.Id.String())
 	offerReq := newSessionRequest(lobbyReq.ctx, data.offer, offerIngressReq)
 
 	go func() {
@@ -245,7 +246,7 @@ func (l *lobby) handleFinalCreateEgressEndpointData(req *lobbyRequest) {
 }
 
 func (l *lobby) handleCreateMainEgressEndpointData(lobbyReq *lobbyRequest) {
-	slog.Info("lobby.lobby: handle join", "lobbyId", l.Id, "user", lobbyReq.user)
+	slog.Info("lobby.lobby: handle main egress", "lobbyId", l.Id, "user", lobbyReq.user)
 	ctx, span := otel.Tracer(tracerName).Start(lobbyReq.ctx, "lobby:handleCreateMainEgressEndpointData")
 	lobbyReq.ctx = ctx
 	defer span.End()
@@ -300,7 +301,7 @@ func (l *lobby) handleLiveStreamReq(req *lobbyRequest) {
 	slog.Info("lobby.lobby: handleLiveStreamReq", "lobbyId", l.Id, "user", req.user)
 	data, _ := req.data.(*liveStreamData)
 	if data.cmd == "start" {
-		slog.Debug("lobby.lobby: start ffmpeg streamer", "lobbyId", l.Id, "user", req.user)
+		slog.Debug("lobby.lobby: start ffmpeg sender", "lobbyId", l.Id, "user", req.user)
 		streamUrl := fmt.Sprintf("%s/%s", data.rtmpUrl, data.key)
 		if err := l.streamer.StartFFmpeg(context.Background(), streamUrl); err != nil {
 			req.err <- fmt.Errorf("starting ffmeg: %w", err)
@@ -308,7 +309,7 @@ func (l *lobby) handleLiveStreamReq(req *lobbyRequest) {
 		}
 	}
 	if data.cmd == "stop" {
-		slog.Debug("lobby.lobby: stop ffmpeg streamer", "lobbyId", l.Id, "user", req.user)
+		slog.Debug("lobby.lobby: stop ffmpeg sender", "lobbyId", l.Id, "user", req.user)
 		oldStreamer := l.streamer
 		l.streamer = rtmp.NewStreamer(l.quit)
 		oldStreamer.Stop()
@@ -338,7 +339,7 @@ func (l *lobby) deleteSessionByUserId(userId uuid.UUID) (bool, error) {
 		if err := session.stop(); err != nil {
 			return deleted, fmt.Errorf("stopping rtp session (sessionId = %s for userId = %s): %w", session.Id, userId, err)
 		}
-		metric.RunningSessionsDec(l.Id.String(), session.Id.String())
+		metric.RunningSessionsDec(l.Id.String())
 
 		// When Lobby is empty then it is time to close the lobby.
 		// But we have to take care about races, because in the meanwhile a new session request could be made.

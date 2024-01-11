@@ -15,7 +15,11 @@ func testStreamLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 	logging.SetupDebugLogger()
 	// set one session in lobby
 	engine := mockRtpEngineForOffer(mockedAnswer)
-	lobby := newLobby(uuid.New(), engine, make(chan uuid.UUID))
+	entity := &LobbyEntity{
+		UUID:         uuid.New(),
+		LiveStreamId: uuid.New(),
+	}
+	lobby := newLobby(entity.UUID, entity, engine, make(chan uuid.UUID))
 	user := uuid.New()
 	session := newSession(user, lobby.hub, engine, lobby.sessionQuit)
 	session.sender = newSenderHandler(session.Id, user, newMockedMessenger(t))

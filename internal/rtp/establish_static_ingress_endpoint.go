@@ -8,6 +8,8 @@ import (
 	"golang.org/x/exp/slog"
 )
 
+// EstablishStaticIngressEndpoint
+// This is used from cmd line toll to start a webrtc connection in a running lobby
 func EstablishStaticIngressEndpoint(ctx context.Context, e *Engine, sendingTracks []webrtc.TrackLocal, options ...EndpointOption) (*Endpoint, error) {
 	stateHandler := newMediaStateEventHandler()
 	api, err := e.createApi()
@@ -18,7 +20,10 @@ func EstablishStaticIngressEndpoint(ctx context.Context, e *Engine, sendingTrack
 	if err != nil {
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
 	}
-	endpoint := &Endpoint{peerConnection: peerConnection}
+	endpoint := &Endpoint{
+		endpointType:   IngressEndpoint,
+		peerConnection: peerConnection,
+	}
 	for _, opt := range options {
 		opt(endpoint)
 	}

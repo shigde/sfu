@@ -137,7 +137,7 @@ func (s *session) handleOfferIngressReq(req *sessionRequest) (*webrtc.SessionDes
 	option = append(option, rtp.EndpointWithConnectionStateListener(s.receiver.OnConnectionStateChange))
 	option = append(option, rtp.EndpointWithTrackDispatcher(s.hub))
 
-	endpoint, err := s.rtpEngine.EstablishIngressEndpoint(ctx, s.Id, *req.reqSDP, option...)
+	endpoint, err := s.rtpEngine.EstablishIngressEndpoint(ctx, s.Id, s.hub.LiveStreamId, *req.reqSDP, option...)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
@@ -186,20 +186,19 @@ func (s *session) handleInitEgressReq(req *sessionRequest) (*webrtc.SessionDescr
 		return nil, errSessionRequestTimeout
 	}
 
-	trackList, err := s.hub.getTrackList(filterForSession(s.Id))
-	if err != nil {
-		return nil, fmt.Errorf("reading track list by creating rtp connection: %w", err)
-	}
-	option := make([]rtp.EndpointOption, 0)
-	for _, track := range trackList {
-		option = append(option, rtp.EndpointWithTrack(track.GetTrackLocal(), track.GetPurpose()))
-	}
+	hub := s.hub
+	withTrackCbk := rtp.EndpointWithGetCurrentTrackCbk(func(sessionId uuid.UUID) ([]*rtp.TrackInfo, error) {
+		return hub.getTrackList(sessionId, filterForSession(sessionId))
+	})
 	s.sender = newSenderHandler(s.Id, s.user, s.receiver.messenger)
+
+	option := make([]rtp.EndpointOption, 0)
+	option = append(option, withTrackCbk)
 	option = append(option, rtp.EndpointWithDataChannel(s.sender.OnChannel))
 	option = append(option, rtp.EndpointWithNegotiationNeededListener(s.sender.OnNegotiationNeeded))
 	option = append(option, rtp.EndpointWithConnectionStateListener(s.sender.OnConnectionStateChange))
 
-	endpoint, err := s.rtpEngine.EstablishEgressEndpoint(ctx, s.Id, option...)
+	endpoint, err := s.rtpEngine.EstablishEgressEndpoint(ctx, s.Id, s.hub.LiveStreamId, option...)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
@@ -227,17 +226,14 @@ func (s *session) handleOfferStaticEgressReq(req *sessionRequest) (*webrtc.Sessi
 		user:    s.user,
 	}
 
-	trackList, err := s.hub.getTrackList(filterForSession(s.Id), filterForNotMain())
-	if err != nil {
-		return nil, fmt.Errorf("reading track list by creating rtp connection: %w", err)
-	}
-	option := make([]rtp.EndpointOption, len(trackList))
+	hub := s.hub
+	withTrackCbk := rtp.EndpointWithGetCurrentTrackCbk(func(sessionId uuid.UUID) ([]*rtp.TrackInfo, error) {
+		return hub.getTrackList(sessionId, filterForSession(sessionId))
+	})
 
-	for _, track := range trackList {
-		option = append(option, rtp.EndpointWithTrack(track.GetTrackLocal(), track.GetPurpose()))
-	}
-
-	endpoint, err := s.rtpEngine.EstablishStaticEgressEndpoint(ctx, s.Id, *req.reqSDP, option...)
+	option := make([]rtp.EndpointOption, 0)
+	option = append(option, withTrackCbk)
+	endpoint, err := s.rtpEngine.EstablishStaticEgressEndpoint(ctx, s.Id, s.hub.LiveStreamId, *req.reqSDP, option...)
 
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)

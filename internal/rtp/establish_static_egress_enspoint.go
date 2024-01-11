@@ -9,7 +9,7 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-func EstablishStaticEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
+func EstablishStaticEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create static egress endpoint")
 	defer span.End()
 	api, err := e.createApi()
@@ -22,6 +22,9 @@ func EstablishStaticEgressEndpoint(ctx context.Context, e *Engine, sessionId uui
 		return nil, fmt.Errorf("create receiver peer connection: %w ", err)
 	}
 	endpoint := &Endpoint{
+		endpointType:   EgressEndpoint,
+		sessionId:      sessionId.String(),
+		liveStreamId:   liveStream.String(),
 		peerConnection: peerConnection,
 	}
 	for _, opt := range options {

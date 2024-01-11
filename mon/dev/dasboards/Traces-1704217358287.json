@@ -1,4 +1,41 @@
 {
+  "__inputs": [
+    {
+      "name": "DS_TEMPO",
+      "label": "Tempo",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "tempo",
+      "pluginName": "Tempo"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "9.5.2"
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "datasource",
+      "id": "tempo",
+      "name": "Tempo",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "traces",
+      "name": "Traces",
+      "version": ""
+    }
+  ],
   "annotations": {
     "list": [
       {
@@ -18,14 +55,14 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 13,
+  "id": null,
   "links": [],
   "liveNow": false,
   "panels": [
     {
       "datasource": {
         "type": "tempo",
-        "uid": "tempo"
+        "uid": "${DS_TEMPO}"
       },
       "fieldConfig": {
         "defaults": {
@@ -42,7 +79,7 @@
           "links": [
             {
               "title": "Trace ID Link",
-              "url": "http://localhost:3000/d/b7b5f5e3-9f43-40cd-929a-c5ada22b034b/traces?orgId=1&var-traceId=${__data.fields[traceID]}"
+              "url": "http://localhost:3011/d/b7b5f5e3-9f43-40cd-929a-c5ada22b034b/traces?orgId=1&var-traceId=${__data.fields[traceID]}"
             }
           ],
           "mappings": [],
@@ -86,7 +123,7 @@
         {
           "datasource": {
             "type": "tempo",
-            "uid": "tempo"
+            "uid": "${DS_TEMPO}"
           },
           "limit": 20,
           "query": "{}",
@@ -100,7 +137,7 @@
     {
       "datasource": {
         "type": "tempo",
-        "uid": "tempo"
+        "uid": "${DS_TEMPO}"
       },
       "gridPos": {
         "h": 10,
@@ -113,7 +150,7 @@
         {
           "datasource": {
             "type": "tempo",
-            "uid": "tempo"
+            "uid": "${DS_TEMPO}"
           },
           "limit": 20,
           "query": "${traceId} ",
@@ -134,8 +171,8 @@
       {
         "current": {
           "selected": false,
-          "text": "a67b5c52f51b54967f4686ca889b6066",
-          "value": "a67b5c52f51b54967f4686ca889b6066"
+          "text": "367fcf428f0af1e306bd8891e7b2b214",
+          "value": "367fcf428f0af1e306bd8891e7b2b214"
         },
         "hide": 0,
         "includeAll": false,
@@ -158,6 +195,6 @@
   "timezone": "",
   "title": "Traces",
   "uid": "b7b5f5e3-9f43-40cd-929a-c5ada22b034b",
-  "version": 8,
+  "version": 1,
   "weekStart": ""
 }

@@ -15,7 +15,9 @@ type LobbyMetric struct {
 
 func RunningLobbyInc(stream string, lobby string) {
 	if lobbyMetric != nil {
-		lobbyMetric.runningLobby.With(prometheus.Labels{"stream": stream, "lobby": lobby}).Inc()
+		if vec, err := lobbyMetric.runningLobby.GetMetricWith(prometheus.Labels{"stream": stream, "lobby": lobby}); err != nil {
+			vec.Dec()
+		}
 	}
 }
 func RunningLobbyDec(stream string, lobby string) {

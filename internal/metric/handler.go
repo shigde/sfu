@@ -30,6 +30,9 @@ func ExtendRouter(router *mux.Router, config *MetricConfig) error {
 		if _, err = NewLobbySessionTrackMetrics(); err != nil {
 			return fmt.Errorf("creating track metric setup: %w", err)
 		}
+		if _, err = NewServiceGraphMetrics(); err != nil {
+			return fmt.Errorf("creating service graph metric setup: %w", err)
+		}
 
 		router.Path(endpoint).Handler(promhttp.Handler())
 	}

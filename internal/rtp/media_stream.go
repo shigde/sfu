@@ -13,19 +13,19 @@ import (
 
 const rtpBufferSize = 1500
 
-type localStream struct {
+type mediaStream struct {
 	id                       uuid.UUID
 	remoteId                 string
 	sessionId                uuid.UUID
 	audioTrack, videoTrack   *webrtc.TrackLocalStaticRTP
-	audioWriter, videoWriter *localWriter
+	audioWriter, videoWriter *mediaWriter
 	purpose                  Purpose
 	dispatcher               TrackDispatcher
 	globalQuit               <-chan struct{}
 }
 
-func newLocalStream(remoteId string, sessionId uuid.UUID, dispatcher TrackDispatcher, purpose Purpose, globalQuit <-chan struct{}) *localStream {
-	return &localStream{
+func newMediaStream(remoteId string, sessionId uuid.UUID, dispatcher TrackDispatcher, purpose Purpose, globalQuit <-chan struct{}) *mediaStream {
+	return &mediaStream{
 		id:         uuid.New(),
 		remoteId:   remoteId,
 		sessionId:  sessionId,
@@ -35,20 +35,20 @@ func newLocalStream(remoteId string, sessionId uuid.UUID, dispatcher TrackDispat
 	}
 }
 
-func (s *localStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) error {
+func (s *mediaStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) error {
 	slog.Debug("rtp.receiver: on track")
-	ctx, span := otel.Tracer(tracerName).Start(ctx, "localStream:writeAudioRtp")
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "mediaStream:writeAudioRtp")
 	defer span.End()
 	audio, err := s.createNewAudioLocalTrack(track)
 	if err != nil {
 		return fmt.Errorf("adding audio remote track (%s:%s) to local stream: %w", track.ID(), track.StreamID(), err)
 	}
 	s.audioTrack = audio
-	s.audioWriter = newLocalWriter(s.audioTrack.ID(), s.globalQuit)
+	s.audioWriter = newMediaWriter(s.audioTrack.ID(), s.globalQuit)
 
 	// start local audio track
 	go func() {
-		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.sessionId, s.getAudioTrack(), s.getLiveAudioTrack(), s.purpose))
+		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.sessionId, s.getAudioTrack(), s.purpose))
 
 		if err = s.audioWriter.writeRtp(track, s.audioTrack); err != nil {
 			slog.Error("rtp.local_stream: writing local audio track ", "streamId", s.id, "err", err)
@@ -58,8 +58,8 @@ func (s *localStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemo
 	return nil
 }
 
-func (s *localStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) error {
-	_, span := otel.Tracer(tracerName).Start(ctx, "localStream:writeVideoRtp")
+func (s *mediaStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) error {
+	_, span := otel.Tracer(tracerName).Start(ctx, "mediaStream:writeVideoRtp")
 	defer span.End()
 
 	video, err := s.createNewVideoLocalTrack(track)
@@ -68,11 +68,11 @@ func (s *localStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemo
 	}
 
 	s.videoTrack = video
-	s.videoWriter = newLocalWriter(s.videoTrack.ID(), s.globalQuit)
+	s.videoWriter = newMediaWriter(s.videoTrack.ID(), s.globalQuit)
 
 	// start local video track
 	go func() {
-		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.sessionId, s.getVideoTrack(), s.getLiveVideoTrack(), s.purpose))
+		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.sessionId, s.getVideoTrack(), s.purpose))
 
 		if err = s.videoWriter.writeRtp(track, s.videoTrack); err != nil {
 			slog.Error("rtp.local_stream: writing local video track ", "streamId", s.id, "err", err)
@@ -83,7 +83,7 @@ func (s *localStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemo
 	return nil
 }
 
-func (s *localStream) createNewAudioLocalTrack(remoteTrack *webrtc.TrackRemote) (*webrtc.TrackLocalStaticRTP, error) {
+func (s *mediaStream) createNewAudioLocalTrack(remoteTrack *webrtc.TrackRemote) (*webrtc.TrackLocalStaticRTP, error) {
 	if s.audioTrack != nil {
 		return nil, errors.New("has already audio track")
 	}
@@ -94,7 +94,7 @@ func (s *localStream) createNewAudioLocalTrack(remoteTrack *webrtc.TrackRemote) 
 	return audio, nil
 }
 
-func (s *localStream) createNewVideoLocalTrack(remoteTrack *webrtc.TrackRemote) (*webrtc.TrackLocalStaticRTP, error) {
+func (s *mediaStream) createNewVideoLocalTrack(remoteTrack *webrtc.TrackRemote) (*webrtc.TrackLocalStaticRTP, error) {
 	if s.videoTrack != nil {
 		return nil, errors.New("has already video track")
 	}
@@ -105,7 +105,7 @@ func (s *localStream) createNewVideoLocalTrack(remoteTrack *webrtc.TrackRemote) 
 	return video, nil
 }
 
-func (s *localStream) close() {
+func (s *mediaStream) close() {
 	slog.Debug("rtp.local_stream: the stream shutdown", "streamId", s.id)
 	if s.audioWriter != nil && s.audioWriter.isRunning() {
 		s.audioWriter.close()
@@ -115,22 +115,14 @@ func (s *localStream) close() {
 	}
 }
 
-func (s *localStream) getVideoTrack() *webrtc.TrackLocalStaticRTP {
+func (s *mediaStream) getVideoTrack() *webrtc.TrackLocalStaticRTP {
 	return s.videoTrack
 }
 
-func (s *localStream) getAudioTrack() *webrtc.TrackLocalStaticRTP {
+func (s *mediaStream) getAudioTrack() *webrtc.TrackLocalStaticRTP {
 	return s.audioTrack
 }
 
-func (s *localStream) getLiveVideoTrack() *LiveTrackStaticRTP {
-	return nil
-}
-
-func (s *localStream) getLiveAudioTrack() *LiveTrackStaticRTP {
-	return nil
-}
-
-func (s *localStream) getPurpose() Purpose {
+func (s *mediaStream) getPurpose() Purpose {
 	return s.purpose
 }
