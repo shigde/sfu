@@ -1,6 +1,8 @@
 package rtp
 
 import (
+	"context"
+
 	"github.com/pion/webrtc/v3"
 )
 
@@ -10,7 +12,9 @@ type MockConnectionOps struct {
 }
 
 func NewMockConnection(ops MockConnectionOps) *Endpoint {
-	conn := &Endpoint{}
+	conn := &Endpoint{
+		sessionCxt: context.Background(),
+	}
 	if ops.Answer != nil {
 		conn.peerConnection = &mockPeerConnector{SDP: ops.Answer}
 	}
