@@ -22,8 +22,10 @@ func testLobbyManagerSetup(t *testing.T) (*LobbyManager, *lobby, uuid.UUID) {
 	lobby, _ := manager.lobbies.getOrCreateLobby(context.Background(), uuid.New(), make(chan uuid.UUID))
 	user := uuid.New()
 	session := newSession(user, lobby.hub, engine, nil)
-	session.sender = newSenderHandler(session.Id, user, newMockedMessenger(t))
-	session.sender.endpoint = mockConnection(mockedAnswer)
+	session.signal.messenger = newMockedMessenger(t)
+	session.egress = mockConnection(mockedAnswer)
+	session.signal.egressEndpoint = session.egress
+
 	lobby.sessions.Add(session)
 
 	return manager, lobby, user
@@ -77,7 +79,8 @@ func TestLobbyManager(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 		user := uuid.New()
 		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), nil)
-		session.receiver = newReceiverHandler(session.Id, session.user, nil)
+		session.ingress = mockConnection(nil)
+		session.signal.messenger = newMockedMessenger(t)
 		lobby.sessions.Add(session)
 
 		oldTimeOut := waitingTimeOut
@@ -98,9 +101,9 @@ func TestLobbyManager(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 		user := uuid.New()
 		session := newSession(user, lobby.hub, mockRtpEngineForOffer(mockedAnswer), nil)
-		session.receiver = newReceiverHandler(session.Id, session.user, nil)
-		session.receiver.messenger = newMockedMessenger(t)
-		session.receiver.stopWaitingForMessenger()
+		session.ingress = mockConnection(nil)
+		session.signal.messenger = newMockedMessenger(t)
+		session.signal.stopWaitingForMessenger()
 		lobby.sessions.Add(session)
 
 		data, err := manager.InitLobbyEgressEndpoint(context.Background(), lobby.Id, user)

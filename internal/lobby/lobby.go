@@ -156,6 +156,7 @@ func (l *lobby) handleCreateIngressEndpoint(lobbyReq *lobbyRequest) {
 		slog.Info("lobby.lobby: create offerIngressReq request", "lobbyId", l.Id, "user", lobbyReq.user)
 		session.runRequest(offerReq)
 	}()
+
 	select {
 	case answer := <-offerReq.respSDPChan:
 		data.response <- &createIngressEndpointResponse{
@@ -336,9 +337,7 @@ func (l *lobby) deleteSessionByUserId(userId uuid.UUID) (bool, error) {
 	if session, ok := l.sessions.FindByUserId(userId); ok {
 		deleted := l.sessions.Delete(session.Id)
 		slog.Debug("lobby.lobby: deleteSessionByUserId", "lobbyId", l.Id, "sessionId", session.Id, "userId", userId, "deleted", deleted)
-		if err := session.stop(); err != nil {
-			return deleted, fmt.Errorf("stopping rtp session (sessionId = %s for userId = %s): %w", session.Id, userId, err)
-		}
+		session.stop()
 		metric.RunningSessionsDec(l.Id.String())
 
 		// When Lobby is empty then it is time to close the lobby.

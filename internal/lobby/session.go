@@ -31,29 +31,35 @@ var (
 )
 
 type session struct {
-	Id               uuid.UUID
-	user             uuid.UUID
-	rtpEngine        rtpEngine
-	hub              *hub
-	receiver         *receiverHandler
-	sender           *senderHandler
-	reqChan          chan *sessionRequest
-	quit             chan struct{}
-	onInternallyQuit chan<- uuid.UUID
+	Id        uuid.UUID
+	ctx       context.Context
+	user      uuid.UUID
+	rtpEngine rtpEngine
+	hub       *hub
+	ingress   *rtp.Endpoint
+	egress    *rtp.Endpoint
+	signal    *signal
+	reqChan   chan *sessionRequest
+	doStop    chan<- uuid.UUID
+	stop      context.CancelFunc
 }
 
-func newSession(user uuid.UUID, hub *hub, engine rtpEngine, onInternallyQuit chan<- uuid.UUID) *session {
-	quit := make(chan struct{})
+func newSession(user uuid.UUID, hub *hub, engine rtpEngine, doStop chan<- uuid.UUID) *session {
+	ctx, cancel := context.WithCancel(context.Background())
 	requests := make(chan *sessionRequest)
+	sessionId := uuid.New()
+	signal := newSignal(ctx, sessionId, user)
 
 	session := &session{
-		Id:               uuid.New(),
-		user:             user,
-		rtpEngine:        engine,
-		hub:              hub,
-		reqChan:          requests,
-		quit:             quit,
-		onInternallyQuit: onInternallyQuit,
+		Id:        uuid.New(),
+		ctx:       ctx,
+		user:      user,
+		rtpEngine: engine,
+		hub:       hub,
+		signal:    signal,
+		reqChan:   requests,
+		doStop:    doStop,
+		stop:      cancel,
 	}
 
 	go session.run()
@@ -66,9 +72,9 @@ func (s *session) run() {
 		select {
 		case req := <-s.reqChan:
 			s.handleSessionReq(req)
-		case <-s.quit:
+		case <-s.ctx.Done():
 			// @TODO Take care that's every stream is closed!
-			slog.Info("lobby.sessions: stop running", "id", s.Id, "user", s.user)
+			slog.Info("lobby.sessions: stop running", "session id", s.Id, "user", s.user)
 			return
 		}
 	}
@@ -79,7 +85,7 @@ func (s *session) runRequest(req *sessionRequest) {
 	select {
 	case s.reqChan <- req:
 		slog.Debug("lobby.sessions: runRequest - return response", "id", s.Id, "user", s.user)
-	case <-s.quit:
+	case <-s.ctx.Done():
 		req.err <- errSessionAlreadyClosed
 		slog.Debug("lobby.sessions: runRequest - interrupted because sessions closed", "id", s.Id, "user", s.user)
 	case <-time.After(sessionReqTimeout):
@@ -117,34 +123,23 @@ func (s *session) handleOfferIngressReq(req *sessionRequest) (*webrtc.SessionDes
 	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleOfferIngressReq")
 	defer span.End()
 
-	if s.receiver != nil {
+	if s.ingress != nil {
 		return nil, errReceiverInSessionAlreadyExists
 	}
-	s.receiver = newReceiverHandler(s.Id, s.user, func(ctx context.Context, user uuid.UUID) bool {
-		go func() {
-			select {
-			case s.onInternallyQuit <- user:
-				slog.Debug("lobby.sessions: internally quit of session", "session id", s.Id, "user", s.user)
-			case <-s.quit:
-				slog.Debug("lobby.sessions: internally quit interrupted because session already closed", "session id", s.Id, "user", s.user)
-			}
-		}()
-		return true
-	})
 
 	option := make([]rtp.EndpointOption, 0)
-	option = append(option, rtp.EndpointWithDataChannel(s.receiver.OnChannel))
-	option = append(option, rtp.EndpointWithConnectionStateListener(s.receiver.OnConnectionStateChange))
+	option = append(option, rtp.EndpointWithDataChannel(s.signal.OnIngressChannel))
+	option = append(option, rtp.EndpointWithConnectionStateListener(s.OnConnectionStateChange))
 	option = append(option, rtp.EndpointWithTrackDispatcher(s.hub))
 
 	endpoint, err := s.rtpEngine.EstablishIngressEndpoint(ctx, s.Id, s.hub.LiveStreamId, *req.reqSDP, option...)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
-	s.receiver.endpoint = endpoint
+	s.ingress = endpoint
 	ctxTimeout, cancel := context.WithTimeout(ctx, iceGatheringTimeout)
 	defer cancel()
-	answer, err := s.receiver.endpoint.GetLocalDescription(ctxTimeout)
+	answer, err := s.ingress.GetLocalDescription(ctxTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp answerEgressReq: %w", err)
 	}
@@ -155,11 +150,11 @@ func (s *session) handleAnswerEgressReq(req *sessionRequest) (*webrtc.SessionDes
 	_, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleAnswerEgressReq")
 	defer span.End()
 
-	if s.sender == nil || s.sender.endpoint == nil {
+	if s.egress == nil || s.signal.egressEndpoint == nil {
 		return nil, errNoSenderInSession
 	}
 
-	s.sender.onAnswer(req.reqSDP, 0)
+	s.signal.onAnswer(req.reqSDP, 0)
 	return nil, nil
 }
 
@@ -167,20 +162,20 @@ func (s *session) handleInitEgressReq(req *sessionRequest) (*webrtc.SessionDescr
 	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleInitEgressReq")
 	defer span.End()
 
-	if s.sender != nil {
+	if s.egress != nil {
 		return nil, errSenderInSessionAlreadyExists
 	}
 
-	if s.receiver == nil {
+	if s.ingress == nil {
 		return nil, errNoReceiverInSession
 	}
 
 	select {
-	case err := <-s.receiver.waitForMessenger():
+	case err := <-s.signal.waitForIngressDataChannel():
 		if err != nil {
 			return nil, fmt.Errorf("waiting for messenger: %w", err)
 		}
-	case <-s.quit:
+	case <-s.ctx.Done():
 		return nil, errSessionAlreadyClosed
 	case <-time.After(sessionReqTimeout):
 		return nil, errSessionRequestTimeout
@@ -190,23 +185,22 @@ func (s *session) handleInitEgressReq(req *sessionRequest) (*webrtc.SessionDescr
 	withTrackCbk := rtp.EndpointWithGetCurrentTrackCbk(func(sessionId uuid.UUID) ([]*rtp.TrackInfo, error) {
 		return hub.getTrackList(sessionId, filterForSession(sessionId))
 	})
-	s.sender = newSenderHandler(s.Id, s.user, s.receiver.messenger)
 
 	option := make([]rtp.EndpointOption, 0)
 	option = append(option, withTrackCbk)
-	option = append(option, rtp.EndpointWithDataChannel(s.sender.OnChannel))
-	option = append(option, rtp.EndpointWithNegotiationNeededListener(s.sender.OnNegotiationNeeded))
-	option = append(option, rtp.EndpointWithConnectionStateListener(s.sender.OnConnectionStateChange))
+	option = append(option, rtp.EndpointWithNegotiationNeededListener(s.signal.OnNegotiationNeeded))
+	option = append(option, rtp.EndpointWithConnectionStateListener(s.OnConnectionStateChange))
 
 	endpoint, err := s.rtpEngine.EstablishEgressEndpoint(ctx, s.Id, s.hub.LiveStreamId, option...)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
-	s.sender.endpoint = endpoint
+	s.signal.egressEndpoint = endpoint
+	s.egress = endpoint
 
 	ctxTimeout, cancel := context.WithTimeout(ctx, iceGatheringTimeout)
 	defer cancel()
-	offer, err := s.sender.endpoint.GetLocalDescription(ctxTimeout)
+	offer, err := s.egress.GetLocalDescription(ctxTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp answerEgressReq: %w", err)
 	}
@@ -220,11 +214,6 @@ func (s *session) handleOfferStaticEgressReq(req *sessionRequest) (*webrtc.Sessi
 
 	// This sender Handler has no message handler.
 	// Without a message handler this sender is only a placeholder for the endpoint
-	s.sender = &senderHandler{
-		id:      uuid.New(),
-		session: s.Id,
-		user:    s.user,
-	}
 
 	hub := s.hub
 	withTrackCbk := rtp.EndpointWithGetCurrentTrackCbk(func(sessionId uuid.UUID) ([]*rtp.TrackInfo, error) {
@@ -238,58 +227,53 @@ func (s *session) handleOfferStaticEgressReq(req *sessionRequest) (*webrtc.Sessi
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
-	s.sender.endpoint = endpoint
+	s.egress = endpoint
 	ctxTimeout, cancel := context.WithTimeout(ctx, iceGatheringTimeout)
 	defer cancel()
-	answer, err := s.sender.endpoint.GetLocalDescription(ctxTimeout)
+	answer, err := s.egress.GetLocalDescription(ctxTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp answerEgressReq: %w", err)
 	}
 	return answer, nil
 }
 
-func (s *session) stop() error {
-	slog.Info("lobby.sessions: stop", "id", s.Id, "user", s.user)
-	select {
-	case <-s.quit:
-		slog.Error("lobby.sessions: the rtp sessions was already closed", "sessionId", s.Id, "user", s.user)
-		return errSessionAlreadyClosed
-	default:
-
-		if s.sender != nil {
-			if err := s.sender.close(); err != nil {
-				slog.Error("lobby.sessions: closing sender", "err", err, "sessionId", s.Id, "user", s.user)
-			}
-		}
-
-		if s.receiver != nil {
-			if err := s.receiver.close(); err != nil {
-				slog.Error("lobby.sessions: closing receiver", "err", err, "sessionId", s.Id, "user", s.user)
-			}
-		}
-		close(s.quit)
-		slog.Info("lobby.sessions: stopped was triggered", "sessionId", s.Id, "user", s.user)
-		<-s.quit
-	}
-	return nil
-}
-
 func (s *session) addTrack(trackInfo *rtp.TrackInfo) {
 	track := trackInfo.GetTrackLocal()
 	slog.Debug("lobby.sessions: add track", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
-	if s.sender != nil && s.sender.endpoint != nil {
+	if s.egress != nil {
 		slog.Debug("lobby.sessions: add track - to egress endpoint", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
-		s.sender.endpoint.AddTrack(track, trackInfo.Purpose)
+		s.egress.AddTrack(track, trackInfo.Purpose)
 	}
 }
 
 func (s *session) removeTrack(trackInfo *rtp.TrackInfo) {
 	track := trackInfo.GetTrackLocal()
 	slog.Debug("lobby.sessions: remove track", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
-	if s.sender != nil && s.sender.endpoint != nil {
+	if s.egress != nil {
 		slog.Debug("lobby.sessions: removeTrack - from egress endpoint", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
-		s.sender.endpoint.RemoveTrack(track)
+		s.egress.RemoveTrack(track)
 	}
 }
+func (s *session) OnConnectionStateChange(state webrtc.ICEConnectionState) {
+	if state == webrtc.ICEConnectionStateFailed {
+		slog.Warn("lobby.session: endpoint become idle", "sessionId", s.Id, "user", s.user)
+		return
+	}
 
-type onInternallyQuit = func(ctx context.Context, user uuid.UUID) bool
+	if state == webrtc.ICEConnectionStateDisconnected || state == webrtc.ICEConnectionStateClosed {
+		slog.Warn("lobby.session: endpoint lost connection", "sessionId", s.Id, "user", s.user)
+		go func() {
+			select {
+			case <-s.ctx.Done():
+				slog.Debug("lobby.sessions: internally quit interrupted because session already closed", "session id", s.Id, "user", s.user)
+			default:
+				select {
+				case s.doStop <- s.user:
+					slog.Debug("lobby.sessions: internally quit of session", "session id", s.Id, "user", s.user)
+				case <-s.ctx.Done():
+					slog.Debug("lobby.sessions: internally quit interrupted because session already closed", "session id", s.Id, "user", s.user)
+				}
+			}
+		}()
+	}
+}
