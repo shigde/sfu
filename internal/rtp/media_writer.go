@@ -1,6 +1,7 @@
 package rtp
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -11,15 +12,15 @@ import (
 
 type mediaWriter struct {
 	id         string
+	sessionCxt context.Context
 	quit       chan struct{}
-	globalQuit <-chan struct{}
 }
 
-func newMediaWriter(id string, globalQuit <-chan struct{}) *mediaWriter {
+func newMediaWriter(sessionCxt context.Context, id string) *mediaWriter {
 	return &mediaWriter{
 		id:         id,
+		sessionCxt: sessionCxt,
 		quit:       make(chan struct{}),
-		globalQuit: globalQuit,
 	}
 }
 
@@ -27,8 +28,8 @@ func (w *mediaWriter) writeRtp(remoteTrack *webrtc.TrackRemote, localTrack *webr
 	rtpBuf := make([]byte, rtpBufferSize)
 	for {
 		select {
-		case <-w.globalQuit:
-			slog.Info("rtp.mediaWriter closed globally", "track id", w.id)
+		case <-w.sessionCxt.Done():
+			slog.Info("rtp.mediaWriter closed by session closed", "track id", w.id)
 			return nil
 		case <-w.quit:
 			slog.Info("rtp.mediaWriter closed locally", "track id", w.id)
@@ -56,8 +57,8 @@ func (w *mediaWriter) writeRtp(remoteTrack *webrtc.TrackRemote, localTrack *webr
 func (w *mediaWriter) close() {
 	slog.Info("rtp.mediaWriter: close", "track id", w.id)
 	select {
-	case <-w.globalQuit:
-		slog.Warn("rtp.mediaWriter the mediaWriter was already closed, con not close by global again", "track id", w.id)
+	case <-w.sessionCxt.Done():
+		slog.Warn("rtp.mediaWriter the mediaWriter was already closed, con not close again", "track id", w.id)
 	case <-w.quit:
 		slog.Warn("rtp.mediaWriter the mediaWriter was already closed, con not close by local again", "track id", w.id)
 	default:
@@ -68,7 +69,7 @@ func (w *mediaWriter) close() {
 
 func (w *mediaWriter) isRunning() bool {
 	select {
-	case <-w.globalQuit:
+	case <-w.sessionCxt.Done():
 		return false
 	case <-w.quit:
 		return false

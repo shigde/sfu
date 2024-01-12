@@ -53,7 +53,7 @@ func (mr *StaticSender) Run(ctx context.Context, onEstablished chan<- struct{}) 
 		return fmt.Errorf("setup webrtc engine: %w", err)
 	}
 
-	withOnEstablished := rtp.EndpointWithOnEstablished(func() {
+	withOnEstablished := rtp.EndpointWithOnEstablishedListener(func() {
 		select {
 		case <-ctx.Done():
 		default:

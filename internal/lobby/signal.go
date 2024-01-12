@@ -44,6 +44,10 @@ func (s *signal) OnIngressChannel(ingressDC *webrtc.DataChannel) {
 	s.stopWaitingForMessenger()
 }
 
+func (s *signal) OnEgressChannel(_ *webrtc.DataChannel) {
+	// we crete an egress data channel because we do not want munging the sdp in case of not added tracks to egress endpoint
+}
+
 func (s *signal) stopWaitingForMessenger() {
 	select {
 	case <-s.receivedMessenger:

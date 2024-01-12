@@ -13,15 +13,12 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, options ...EndpointOption) (*Endpoint, error) {
+func EstablishEgressEndpoint(sessionCxt context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, options ...EndpointOption) (*Endpoint, error) {
 	metric.GraphNodeUpdate(metric.BuildNode(sessionId.String(), liveStream.String(), "egress"))
-	_, span := otel.Tracer(tracerName).Start(ctx, "rtp:establish_egress_endpoint")
+	_, span := otel.Tracer(tracerName).Start(sessionCxt, "rtp:establish_egress_endpoint")
 	defer span.End()
 
-	endpoint := &Endpoint{sessionId: sessionId.String(), liveStreamId: liveStream.String(), endpointType: EgressEndpoint}
-	for _, opt := range options {
-		opt(endpoint)
-	}
+	endpoint := newEndpoint(sessionCxt, sessionId.String(), liveStream.String(), EgressEndpoint, options...)
 	withStatsGetter := withOnStatsGetter(func(getter stats.Getter) {
 		endpoint.statsRegistry = rtpStats.NewRegistry(sessionId.String(), getter)
 	})
@@ -30,15 +27,13 @@ func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID
 	if err != nil {
 		return nil, fmt.Errorf("creating api: %w", err)
 	}
+
 	peerConnection, err := api.NewPeerConnection(e.config)
 	if err != nil {
 		return nil, fmt.Errorf("create sender peer connection: %w ", err)
 	}
 	endpoint.peerConnection = peerConnection
-
-	if endpoint.onICEConnectionStateChange != nil {
-		endpoint.peerConnection.OnICEConnectionStateChange(endpoint.onICEConnectionStateChange)
-	}
+	endpoint.peerConnection.OnICEConnectionStateChange(endpoint.onICEConnectionStateChange)
 
 	initComplete := make(chan struct{})
 
@@ -51,17 +46,25 @@ func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID
 	if endpoint.getCurrentTracksCbk != nil {
 		go func() {
 			slog.Debug("rtp.establish_egress: add tracks", "sessionId", sessionId, "liveStream", liveStream)
-			<-initComplete
-			if tracksList, err := endpoint.getCurrentTracksCbk(sessionId); err == nil {
-				for _, trackInfo := range tracksList {
-					endpoint.AddTrack(trackInfo.GetTrackLocal(), trackInfo.Purpose)
+			select {
+			case <-sessionCxt.Done():
+				return
+			case <-initComplete:
+				if tracksList, err := endpoint.getCurrentTracksCbk(sessionId); err == nil {
+					for _, trackInfo := range tracksList {
+						endpoint.AddTrack(trackInfo.GetTrackLocal(), trackInfo.Purpose)
+					}
 				}
 			}
 		}()
 	}
 	if endpoint.onNegotiationNeeded != nil {
 		peerConnection.OnNegotiationNeeded(func() {
-			<-initComplete
+			select {
+			case <-sessionCxt.Done():
+				return
+			case <-initComplete:
+			}
 			slog.Debug("rtp.establish_egress: sender OnNegotiationNeeded was triggered")
 			offer, err := peerConnection.CreateOffer(nil)
 			if err != nil {
@@ -70,7 +73,11 @@ func EstablishEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID
 			}
 			gg := webrtc.GatheringCompletePromise(peerConnection)
 			_ = peerConnection.SetLocalDescription(offer)
-			<-gg
+			select {
+			case <-sessionCxt.Done():
+				return
+			case <-gg:
+			}
 			endpoint.onNegotiationNeeded(*peerConnection.LocalDescription())
 		})
 		slog.Debug("rtp.engine: sender: OnNegotiationNeeded setup finish")

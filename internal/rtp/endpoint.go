@@ -15,8 +15,10 @@ import (
 )
 
 var ErrIceGatheringInterruption = errors.New("getting ice gathering interrupted")
+var ErrSessionClosed = errors.New("process interrupted because session closed")
 
 type Endpoint struct {
+	sessionCxt     context.Context
 	sessionId      string
 	liveStreamId   string
 	endpointType   EndpointType
@@ -26,14 +28,37 @@ type Endpoint struct {
 	initComplete   chan struct{}
 	closed         chan struct{}
 	statsRegistry  *stats.Registry
+	iceState       webrtc.ICEConnectionState
 	// With Endpoint Optionals #######################################
-	onChannel                  func(dc *webrtc.DataChannel)
-	onEstablished              func()
-	onNegotiationNeeded        func(offer webrtc.SessionDescription)
-	onICEConnectionStateChange func(webrtc.ICEConnectionState)
-	getCurrentTracksCbk        func(sessionId uuid.UUID) ([]*TrackInfo, error)
-	initTracks                 []*initTrack // depracted
-	dispatcher                 TrackDispatcher
+	onChannel           func(dc *webrtc.DataChannel)
+	onEstablished       func()
+	onNegotiationNeeded func(offer webrtc.SessionDescription)
+	onLostConnection    func()
+	getCurrentTracksCbk func(sessionId uuid.UUID) ([]*TrackInfo, error)
+	initTracks          []*initTrack // deprecated
+	dispatcher          TrackDispatcher
+}
+
+func newEndpoint(sessionCxt context.Context, sessionId string, liveStreamId string, endpointType EndpointType, options ...EndpointOption) *Endpoint {
+	endpoint := &Endpoint{
+		sessionCxt:   sessionCxt,
+		sessionId:    sessionId,
+		liveStreamId: liveStreamId,
+		endpointType: endpointType,
+	}
+	for _, opt := range options {
+		opt(endpoint)
+	}
+
+	go func(ep *Endpoint) {
+		select {
+		case <-sessionCxt.Done():
+			if err := ep.Destruct(); err != nil {
+				slog.Error("rtp.endpoint: destruct endpoint", "err", err)
+			}
+		}
+	}(endpoint)
+	return endpoint
 }
 
 func (c *Endpoint) GetLocalDescription(ctx context.Context) (*webrtc.SessionDescription, error) {
@@ -44,6 +69,8 @@ func (c *Endpoint) GetLocalDescription(ctx context.Context) (*webrtc.SessionDesc
 	select {
 	case <-c.gatherComplete:
 		return c.peerConnection.LocalDescription(), nil
+	case <-c.sessionCxt.Done():
+		return nil, ErrSessionClosed
 	case <-ctx.Done():
 		return nil, ErrIceGatheringInterruption
 	}
@@ -55,6 +82,7 @@ func (c *Endpoint) SetAnswer(sdp *webrtc.SessionDescription) error {
 func (c *Endpoint) SetInitComplete() {
 	select {
 	case <-c.initComplete:
+	case <-c.sessionCxt.Done():
 	default:
 		close(c.initComplete)
 		<-c.initComplete
@@ -131,17 +159,41 @@ func (c *Endpoint) RemoveTrack(track webrtc.TrackLocal) {
 	}
 }
 
-func (c *Endpoint) Close() error {
+func (c *Endpoint) onICEConnectionStateChange(state webrtc.ICEConnectionState) {
+	slog.Debug("rtp.endpoint: ice state:", "state", state, "sessionId", c.sessionId, "type", c.endpointType)
+
+	if state == webrtc.ICEConnectionStateFailed {
+		slog.Warn("rtp.endpoint: endpoint become idle", "sessionId", c.sessionId, "type", c.endpointType)
+		return
+	}
+
+	if state == webrtc.ICEConnectionStateDisconnected || state == webrtc.ICEConnectionStateClosed {
+		slog.Warn("rtp.endpoint: lost connection:", "state", state, "sessionId", c.sessionId, "type", c.endpointType)
+		if c.onLostConnection != nil {
+			c.onLostConnection()
+		}
+	}
+}
+
+func (c *Endpoint) Destruct() error {
 	if c.statsRegistry != nil {
 		c.statsRegistry.StopAllWorker()
 	}
 
-	if err := c.peerConnection.Close(); err != nil && !errors.Is(err, dtls.ErrConnClosed) {
-		return fmt.Errorf("closing peer connection: %w", err)
-	}
-
 	if c.sessionId != "" && c.liveStreamId != "" {
 		metric.GraphNodeDelete(metric.BuildNode(c.sessionId, c.liveStreamId, c.endpointType.ToString()))
+	}
+
+	if c.peerConnection == nil {
+		return nil
+	}
+
+	for _, rtpSender := range c.peerConnection.GetSenders() {
+		_ = rtpSender.Stop()
+	}
+
+	if err := c.peerConnection.Close(); err != nil && !errors.Is(err, dtls.ErrConnClosed) {
+		return fmt.Errorf("closing peer connection: %w", err)
 	}
 
 	return nil

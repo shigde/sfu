@@ -15,23 +15,23 @@ const rtpBufferSize = 1500
 
 type mediaStream struct {
 	id                       uuid.UUID
+	sessionCxt               context.Context
 	remoteId                 string
 	sessionId                uuid.UUID
 	audioTrack, videoTrack   *webrtc.TrackLocalStaticRTP
 	audioWriter, videoWriter *mediaWriter
 	purpose                  Purpose
 	dispatcher               TrackDispatcher
-	globalQuit               <-chan struct{}
 }
 
-func newMediaStream(remoteId string, sessionId uuid.UUID, dispatcher TrackDispatcher, purpose Purpose, globalQuit <-chan struct{}) *mediaStream {
+func newMediaStream(sessionCxt context.Context, remoteId string, sessionId uuid.UUID, dispatcher TrackDispatcher, purpose Purpose) *mediaStream {
 	return &mediaStream{
 		id:         uuid.New(),
+		sessionCxt: sessionCxt,
 		remoteId:   remoteId,
 		sessionId:  sessionId,
 		dispatcher: dispatcher,
 		purpose:    purpose,
-		globalQuit: globalQuit,
 	}
 }
 
@@ -44,7 +44,7 @@ func (s *mediaStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemo
 		return fmt.Errorf("adding audio remote track (%s:%s) to local stream: %w", track.ID(), track.StreamID(), err)
 	}
 	s.audioTrack = audio
-	s.audioWriter = newMediaWriter(s.audioTrack.ID(), s.globalQuit)
+	s.audioWriter = newMediaWriter(s.sessionCxt, s.audioTrack.ID())
 
 	// start local audio track
 	go func() {
@@ -68,7 +68,7 @@ func (s *mediaStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemo
 	}
 
 	s.videoTrack = video
-	s.videoWriter = newMediaWriter(s.videoTrack.ID(), s.globalQuit)
+	s.videoWriter = newMediaWriter(s.sessionCxt, s.videoTrack.ID())
 
 	// start local video track
 	go func() {
@@ -103,16 +103,6 @@ func (s *mediaStream) createNewVideoLocalTrack(remoteTrack *webrtc.TrackRemote) 
 		return nil, fmt.Errorf("creating new local video track for local stream %s: %w", s.id, err)
 	}
 	return video, nil
-}
-
-func (s *mediaStream) close() {
-	slog.Debug("rtp.local_stream: the stream shutdown", "streamId", s.id)
-	if s.audioWriter != nil && s.audioWriter.isRunning() {
-		s.audioWriter.close()
-	}
-	if s.videoWriter != nil && s.videoWriter.isRunning() {
-		s.videoWriter.close()
-	}
 }
 
 func (s *mediaStream) getVideoTrack() *webrtc.TrackLocalStaticRTP {

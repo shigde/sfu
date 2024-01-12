@@ -7,12 +7,6 @@ import (
 
 type EndpointOption func(*Endpoint)
 
-func EndpointWithOnEstablished(onEstablished func()) func(endpoint *Endpoint) {
-	return func(endpoint *Endpoint) {
-		endpoint.onEstablished = onEstablished
-	}
-}
-
 func EndpointWithTrack(track webrtc.TrackLocal, purpose Purpose) func(endpoint *Endpoint) {
 	return func(endpoint *Endpoint) {
 		if endpoint.initTracks == nil {
@@ -30,15 +24,21 @@ func EndpointWithGetCurrentTrackCbk(ckk func(sessionId uuid.UUID) ([]*TrackInfo,
 	}
 }
 
-func EndpointWithConnectionStateListener(f func(webrtc.ICEConnectionState)) func(endpoint *Endpoint) {
+func EndpointWithOnEstablishedListener(onEstablished func()) func(endpoint *Endpoint) {
 	return func(endpoint *Endpoint) {
-		endpoint.onICEConnectionStateChange = f
+		endpoint.onEstablished = onEstablished
 	}
 }
 
 func EndpointWithNegotiationNeededListener(f func(sdp webrtc.SessionDescription)) func(endpoint *Endpoint) {
 	return func(endpoint *Endpoint) {
 		endpoint.onNegotiationNeeded = f
+	}
+}
+
+func EndpointWithLostConnectionListener(f func()) func(endpoint *Endpoint) {
+	return func(endpoint *Endpoint) {
+		endpoint.onLostConnection = f
 	}
 }
 

@@ -129,10 +129,10 @@ func (s *session) handleOfferIngressReq(req *sessionRequest) (*webrtc.SessionDes
 
 	option := make([]rtp.EndpointOption, 0)
 	option = append(option, rtp.EndpointWithDataChannel(s.signal.OnIngressChannel))
-	option = append(option, rtp.EndpointWithConnectionStateListener(s.OnConnectionStateChange))
+	option = append(option, rtp.EndpointWithLostConnectionListener(s.onLostConnectionListener))
 	option = append(option, rtp.EndpointWithTrackDispatcher(s.hub))
 
-	endpoint, err := s.rtpEngine.EstablishIngressEndpoint(ctx, s.Id, s.hub.LiveStreamId, *req.reqSDP, option...)
+	endpoint, err := s.rtpEngine.EstablishIngressEndpoint(s.ctx, s.Id, s.hub.LiveStreamId, *req.reqSDP, option...)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
@@ -188,15 +188,16 @@ func (s *session) handleInitEgressReq(req *sessionRequest) (*webrtc.SessionDescr
 
 	option := make([]rtp.EndpointOption, 0)
 	option = append(option, withTrackCbk)
+	option = append(option, rtp.EndpointWithDataChannel(s.signal.OnEgressChannel))
 	option = append(option, rtp.EndpointWithNegotiationNeededListener(s.signal.OnNegotiationNeeded))
-	option = append(option, rtp.EndpointWithConnectionStateListener(s.OnConnectionStateChange))
+	option = append(option, rtp.EndpointWithLostConnectionListener(s.onLostConnectionListener))
 
-	endpoint, err := s.rtpEngine.EstablishEgressEndpoint(ctx, s.Id, s.hub.LiveStreamId, option...)
+	endpoint, err := s.rtpEngine.EstablishEgressEndpoint(s.ctx, s.Id, s.hub.LiveStreamId, option...)
 	if err != nil {
 		return nil, fmt.Errorf("create rtp connection: %w", err)
 	}
-	s.signal.egressEndpoint = endpoint
 	s.egress = endpoint
+	s.signal.addEgressEndpoint(s.egress)
 
 	ctxTimeout, cancel := context.WithTimeout(ctx, iceGatheringTimeout)
 	defer cancel()
@@ -254,26 +255,20 @@ func (s *session) removeTrack(trackInfo *rtp.TrackInfo) {
 		s.egress.RemoveTrack(track)
 	}
 }
-func (s *session) OnConnectionStateChange(state webrtc.ICEConnectionState) {
-	if state == webrtc.ICEConnectionStateFailed {
-		slog.Warn("lobby.session: endpoint become idle", "sessionId", s.Id, "user", s.user)
-		return
-	}
-
-	if state == webrtc.ICEConnectionStateDisconnected || state == webrtc.ICEConnectionStateClosed {
-		slog.Warn("lobby.session: endpoint lost connection", "sessionId", s.Id, "user", s.user)
-		go func() {
+func (s *session) onLostConnectionListener() {
+	slog.Warn("lobby.session: endpoint lost connection", "sessionId", s.Id, "user", s.user)
+	go func() {
+		select {
+		case <-s.ctx.Done():
+			slog.Debug("lobby.sessions: internally quit interrupted because session already closed", "session id", s.Id, "user", s.user)
+		default:
 			select {
+			case s.doStop <- s.user:
+				slog.Debug("lobby.sessions: internally stop of session", "session id", s.Id, "user", s.user)
 			case <-s.ctx.Done():
-				slog.Debug("lobby.sessions: internally quit interrupted because session already closed", "session id", s.Id, "user", s.user)
-			default:
-				select {
-				case s.doStop <- s.user:
-					slog.Debug("lobby.sessions: internally quit of session", "session id", s.Id, "user", s.user)
-				case <-s.ctx.Done():
-					slog.Debug("lobby.sessions: internally quit interrupted because session already closed", "session id", s.Id, "user", s.user)
-				}
+				slog.Debug("lobby.sessions: internally stop interrupted because session already closed", "session id", s.Id, "user", s.user)
 			}
-		}()
-	}
+		}
+	}()
+
 }
