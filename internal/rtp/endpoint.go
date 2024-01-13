@@ -151,6 +151,7 @@ func (c *Endpoint) RemoveTrack(track webrtc.TrackLocal) {
 		if err := c.peerConnection.RemoveTrack(sender); err != nil {
 			slog.Error("rtp.endpoint: remove track from connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind())
 		}
+
 		if c.statsRegistry != nil {
 			for _, param := range sender.GetParameters().Encodings {
 				c.statsRegistry.StopWorker(param.SSRC)

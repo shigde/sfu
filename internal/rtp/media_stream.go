@@ -36,7 +36,7 @@ func newMediaStream(sessionCxt context.Context, remoteId string, sessionId uuid.
 }
 
 func (s *mediaStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) error {
-	slog.Debug("rtp.receiver: on track")
+	slog.Debug("rtp.mediaStream: write audio track", "streamId", s.id, "remoteTrackId", track.ID(), "purpose", s.purpose.ToString())
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "mediaStream:writeAudioRtp")
 	defer span.End()
 	audio, err := s.createNewAudioLocalTrack(track)
@@ -51,14 +51,15 @@ func (s *mediaStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemo
 		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.sessionId, s.getAudioTrack(), s.purpose))
 
 		if err = s.audioWriter.writeRtp(track, s.audioTrack); err != nil {
-			slog.Error("rtp.local_stream: writing local audio track ", "streamId", s.id, "err", err)
+			slog.Error("rtp.mediaStream: writing local audio track", "streamId", s.id, "err", err)
 		}
-		slog.Debug("rtp.local_stream: stop writing local audio track ", "streamId", s.id, "trackId", s.audioTrack.ID())
+		slog.Debug("rtp.mediaStream: stop writing local audio track", "streamId", s.id, "trackId", s.audioTrack.ID(), "purpose", s.purpose.ToString())
 	}()
 	return nil
 }
 
 func (s *mediaStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) error {
+	slog.Debug("rtp.mediaStream: write video track", "streamId", s.id, "remoteTrackId", track.ID(), "purpose", s.purpose.ToString())
 	_, span := otel.Tracer(tracerName).Start(ctx, "mediaStream:writeVideoRtp")
 	defer span.End()
 
@@ -75,9 +76,9 @@ func (s *mediaStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemo
 		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.sessionId, s.getVideoTrack(), s.purpose))
 
 		if err = s.videoWriter.writeRtp(track, s.videoTrack); err != nil {
-			slog.Error("rtp.local_stream: writing local video track ", "streamId", s.id, "err", err)
+			slog.Error("rtp.mediaStream: writing local video track ", "streamId", s.id, "err", err)
 		}
-		slog.Debug("rtp.local_stream: stop writing local video track ", "streamId", s.id, "trackId", s.videoTrack.ID())
+		slog.Debug("rtp.mediaStream: stop writing local video track", "streamId", s.id, "trackId", s.videoTrack.ID(), "purpose", s.purpose.ToString())
 	}()
 
 	return nil
