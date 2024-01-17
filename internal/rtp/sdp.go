@@ -70,3 +70,34 @@ func MarkStreamAsMain(sdpOrigin *webrtc.SessionDescription, streamID string) (*w
 	}
 	return sdpNew, nil
 }
+
+func setTrackInfo(sdpOrigin *webrtc.SessionDescription, sdpInfos map[trackId]TrackSdpInfo) (*webrtc.SessionDescription, error) {
+	sdpObj, err := sdpOrigin.Unmarshal()
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal sdp: %w", err)
+	}
+
+	for _, desc := range sdpObj.MediaDescriptions {
+		if desc.MediaName.Media != "video" && desc.MediaName.Media != "audio" {
+			continue
+		}
+		if msid, fund := desc.Attribute("msid"); fund {
+			if idList := strings.SplitAfter(msid, " "); len(idList) == 2 {
+				trackId := idList[1]
+				if sdpInfo, ok := sdpInfos[trackId]; ok {
+					info := sdp.Information(fmt.Sprintf("%d", sdpInfo.Purpose))
+					desc.MediaTitle = &info
+				}
+			}
+		}
+	}
+	sdpByt, err := sdpObj.Marshal()
+	if err != nil {
+		return nil, fmt.Errorf("marshal new sdp: %w", err)
+	}
+	sdpNew := &webrtc.SessionDescription{
+		Type: sdpOrigin.Type,
+		SDP:  string(sdpByt),
+	}
+	return sdpNew, nil
+}

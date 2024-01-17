@@ -243,7 +243,7 @@ func (s *session) addTrack(trackInfo *rtp.TrackInfo) {
 	slog.Debug("lobby.sessions: add track", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
 	if s.egress != nil {
 		slog.Debug("lobby.sessions: add track - to egress endpoint", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
-		s.egress.AddTrack(track, trackInfo.Purpose)
+		s.egress.AddTrack(trackInfo)
 	}
 }
 
@@ -252,7 +252,7 @@ func (s *session) removeTrack(trackInfo *rtp.TrackInfo) {
 	slog.Debug("lobby.sessions: remove track", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
 	if s.egress != nil {
 		slog.Debug("lobby.sessions: removeTrack - from egress endpoint", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
-		s.egress.RemoveTrack(track)
+		s.egress.RemoveTrack(trackInfo)
 	}
 }
 func (s *session) onLostConnectionListener() {

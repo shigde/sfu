@@ -52,34 +52,15 @@ func EstablishEgressEndpoint(sessionCxt context.Context, e *Engine, sessionId uu
 			case <-initComplete:
 				if tracksList, err := endpoint.getCurrentTracksCbk(sessionId); err == nil {
 					for _, trackInfo := range tracksList {
-						endpoint.AddTrack(trackInfo.GetTrackLocal(), trackInfo.Purpose)
+						endpoint.AddTrack(trackInfo)
 					}
 				}
 			}
 		}()
 	}
+	endpoint.initComplete = initComplete
 	if endpoint.onNegotiationNeeded != nil {
-		peerConnection.OnNegotiationNeeded(func() {
-			select {
-			case <-sessionCxt.Done():
-				return
-			case <-initComplete:
-			}
-			slog.Debug("rtp.establish_egress: sender OnNegotiationNeeded was triggered")
-			offer, err := peerConnection.CreateOffer(nil)
-			if err != nil {
-				slog.Error("rtp.establish_egress:: sender OnNegotiationNeeded", "err", err)
-				return
-			}
-			gg := webrtc.GatheringCompletePromise(peerConnection)
-			_ = peerConnection.SetLocalDescription(offer)
-			select {
-			case <-sessionCxt.Done():
-				return
-			case <-gg:
-			}
-			endpoint.onNegotiationNeeded(*peerConnection.LocalDescription())
-		})
+		peerConnection.OnNegotiationNeeded(endpoint.doRenegotiation)
 		slog.Debug("rtp.engine: sender: OnNegotiationNeeded setup finish")
 	}
 
@@ -95,12 +76,9 @@ func EstablishEgressEndpoint(sessionCxt context.Context, e *Engine, sessionId uu
 		return nil, fmt.Errorf("creating offer: %w", err)
 	}
 
-	gatherComplete := webrtc.GatheringCompletePromise(peerConnection)
-
+	endpoint.gatherComplete = webrtc.GatheringCompletePromise(peerConnection)
 	if err = peerConnection.SetLocalDescription(offer); err != nil {
 		return nil, err
 	}
-	endpoint.gatherComplete = gatherComplete
-	endpoint.initComplete = initComplete
 	return endpoint, nil
 }

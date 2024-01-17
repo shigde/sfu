@@ -95,11 +95,11 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 
 }
 func (r *receiver) getTrackInfo(streamID string, trackId string) *TrackInfo {
-	mid := fmt.Sprintf("%s %s", streamID, trackId)
-	info, found := r.trackInfos[mid]
+	msid := fmt.Sprintf("%s %s", streamID, trackId)
+	info, found := r.trackInfos[msid]
 	if !found {
-		info = &TrackInfo{SessionId: r.id, Purpose: PurposeGuest}
-		r.trackInfos[mid] = info
+		info = &TrackInfo{SessionId: r.id, TrackSdpInfo: TrackSdpInfo{Purpose: PurposeGuest}}
+		r.trackInfos[msid] = info
 	}
 	return info
 }

@@ -18,17 +18,18 @@ var ErrIceGatheringInterruption = errors.New("getting ice gathering interrupted"
 var ErrSessionClosed = errors.New("process interrupted because session closed")
 
 type Endpoint struct {
-	sessionCxt     context.Context
-	sessionId      string
-	liveStreamId   string
-	endpointType   EndpointType
-	peerConnection peerConnection
-	receiver       *receiver
-	gatherComplete <-chan struct{}
-	initComplete   chan struct{}
-	closed         chan struct{}
-	statsRegistry  *stats.Registry
-	iceState       webrtc.ICEConnectionState
+	sessionCxt          context.Context
+	sessionId           string
+	liveStreamId        string
+	endpointType        EndpointType
+	peerConnection      peerConnection
+	receiver            *receiver
+	trackInfoRepository *trackInfoRepository
+	gatherComplete      <-chan struct{}
+	initComplete        chan struct{}
+	closed              chan struct{}
+	statsRegistry       *stats.Registry
+	iceState            webrtc.ICEConnectionState
 	// With Endpoint Optionals #######################################
 	onChannel           func(dc *webrtc.DataChannel)
 	onEstablished       func()
@@ -41,10 +42,11 @@ type Endpoint struct {
 
 func newEndpoint(sessionCxt context.Context, sessionId string, liveStreamId string, endpointType EndpointType, options ...EndpointOption) *Endpoint {
 	endpoint := &Endpoint{
-		sessionCxt:   sessionCxt,
-		sessionId:    sessionId,
-		liveStreamId: liveStreamId,
-		endpointType: endpointType,
+		sessionCxt:          sessionCxt,
+		sessionId:           sessionId,
+		liveStreamId:        liveStreamId,
+		endpointType:        endpointType,
+		trackInfoRepository: newTrackInfoRepository(),
 	}
 	for _, opt := range options {
 		opt(endpoint)
@@ -68,7 +70,16 @@ func (c *Endpoint) GetLocalDescription(ctx context.Context) (*webrtc.SessionDesc
 	defer span.End()
 	select {
 	case <-c.gatherComplete:
-		return c.peerConnection.LocalDescription(), nil
+		var err error
+		offer := c.peerConnection.LocalDescription()
+		if c.endpointType == EgressEndpoint {
+			offer, err = setTrackInfo(c.peerConnection.LocalDescription(), c.trackInfoRepository.getTrackSdpInfos())
+			if err != nil {
+				slog.Error("rtp.establish_egress:: sender doRenegotiation dc", "err", err)
+			}
+			slog.Debug("#### GetLocalDescription", "offer", offer.SDP)
+		}
+		return offer, nil
 	case <-c.sessionCxt.Done():
 		return nil, ErrSessionClosed
 	case <-ctx.Done():
@@ -115,7 +126,9 @@ func (c *Endpoint) getSender(track webrtc.TrackLocal) (*webrtc.RTPSender, bool) 
 	return nil, false
 }
 
-func (c *Endpoint) AddTrack(track webrtc.TrackLocal, purpose Purpose) {
+func (c *Endpoint) AddTrack(info *TrackInfo) {
+	track := info.GetTrackLocal()
+	purpose := info.Purpose
 	slog.Debug("rtp.endpoint: add track", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind(), "purpose", purpose)
 	if has := c.hasTrack(track); !has {
 		slog.Debug("rtp.endpoint: add track to connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind(), "purpose", purpose, "signalState", c.peerConnection.SignalingState().String())
@@ -125,6 +138,8 @@ func (c *Endpoint) AddTrack(track webrtc.TrackLocal, purpose Purpose) {
 			slog.Error("rtp.endpoint: add track to connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind(), "purpose", purpose, "signalState", c.peerConnection.SignalingState().String())
 			return
 		}
+		c.trackInfoRepository.Set(sender.Track().ID(), info)
+
 		// collect stats
 		if c.statsRegistry != nil {
 			labels := metric.Labels{
@@ -144,9 +159,12 @@ func (c *Endpoint) AddTrack(track webrtc.TrackLocal, purpose Purpose) {
 	}
 }
 
-func (c *Endpoint) RemoveTrack(track webrtc.TrackLocal) {
+func (c *Endpoint) RemoveTrack(info *TrackInfo) {
+	track := info.GetTrackLocal()
 	slog.Debug("rtp.endpoint: remove track", "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind())
 	if sender, has := c.getSender(track); has {
+		c.trackInfoRepository.Delete(sender.Track().ID())
+
 		slog.Debug("rtp.endpoint: remove track from connection", "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind())
 		if err := c.peerConnection.RemoveTrack(sender); err != nil {
 			slog.Error("rtp.endpoint: remove track from connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind())
@@ -158,6 +176,48 @@ func (c *Endpoint) RemoveTrack(track webrtc.TrackLocal) {
 			}
 		}
 	}
+}
+
+func (c *Endpoint) getTransceiverMidFromSender(sender *webrtc.RTPSender) (string, bool) {
+	tcList := c.peerConnection.GetTransceivers()
+	for _, transceiver := range tcList {
+		if transceiver.Sender() == sender {
+			return transceiver.Mid(), true
+		}
+	}
+	return "", false
+}
+
+func (c *Endpoint) doRenegotiation() {
+	if c.onNegotiationNeeded == nil {
+		return
+	}
+	select {
+	case <-c.sessionCxt.Done():
+		return
+	case <-c.initComplete:
+	}
+	slog.Debug("rtp.establish_egress: sender OnNegotiationNeeded was triggered")
+	offer, err := c.peerConnection.CreateOffer(nil)
+	if err != nil {
+		slog.Error("rtp.establish_egress:: sender doRenegotiation", "err", err)
+		return
+	}
+	gg := webrtc.GatheringCompletePromise(c.peerConnection.(*webrtc.PeerConnection))
+	_ = c.peerConnection.SetLocalDescription(offer)
+	select {
+	case <-c.sessionCxt.Done():
+		return
+	case <-gg:
+	}
+
+	// munge sdp
+	mungedOffer, err := setTrackInfo(c.peerConnection.LocalDescription(), c.trackInfoRepository.getTrackSdpInfos())
+	if err != nil {
+		slog.Error("rtp.establish_egress:: sender doRenegotiation dc", "err", err)
+	}
+	slog.Debug("#### NegotiationNeeded", "offer", mungedOffer.SDP)
+	c.onNegotiationNeeded(*mungedOffer)
 }
 
 func (c *Endpoint) onICEConnectionStateChange(state webrtc.ICEConnectionState) {
@@ -202,14 +262,15 @@ func (c *Endpoint) Destruct() error {
 
 type peerConnection interface {
 	LocalDescription() *webrtc.SessionDescription
+	SetLocalDescription(desc webrtc.SessionDescription) error
 	SetRemoteDescription(desc webrtc.SessionDescription) error
 	GetSenders() (result []*webrtc.RTPSender)
+	GetTransceivers() []*webrtc.RTPTransceiver
 	AddTrack(track webrtc.TrackLocal) (*webrtc.RTPSender, error)
 	RemoveTrack(sender *webrtc.RTPSender) error
 	SignalingState() webrtc.SignalingState
-
+	CreateOffer(options *webrtc.OfferOptions) (webrtc.SessionDescription, error)
 	OnICEConnectionStateChange(f func(webrtc.ICEConnectionState))
-
 	OnNegotiationNeeded(f func())
 	Close() error
 }
