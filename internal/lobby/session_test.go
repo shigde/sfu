@@ -27,7 +27,7 @@ func TestRtpSessionOffer(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
 		req := newSessionRequest(ctx, offer, offerIngressReq)
-		_ = session.stop()
+		session.stop()
 		go session.runRequest(req)
 
 		select {
@@ -43,9 +43,7 @@ func TestRtpSessionOffer(t *testing.T) {
 	t.Run("offerIngressReq to session but receiver already exists", func(t *testing.T) {
 		var offer *webrtc.SessionDescription
 		session, _ := testRtpSessionSetup(t)
-
-		session.receiver = newReceiverHandler(session.Id, uuid.New(), nil)
-		session.receiver.endpoint = mockConnection(nil)
+		session.ingress = mockConnection(nil)
 
 		req := newSessionRequest(context.Background(), offer, offerIngressReq)
 		go session.runRequest(req)
@@ -103,7 +101,7 @@ func TestRtpSessionStartListen(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
 		req := newSessionRequest(ctx, nil, initEgressReq)
-		_ = session.stop()
+		session.stop()
 		go session.runRequest(req)
 
 		select {
@@ -118,8 +116,7 @@ func TestRtpSessionStartListen(t *testing.T) {
 
 	t.Run("initEgressReq to session but sender already exists", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		session.sender = newSenderHandler(session.Id, uuid.New(), newMockedMessenger(t))
-		session.sender.endpoint = mockConnection(nil)
+		session.egress = mockConnection(nil)
 
 		req := newSessionRequest(context.Background(), nil, initEgressReq)
 		go func() {
@@ -152,9 +149,9 @@ func TestRtpSessionStartListen(t *testing.T) {
 		}
 	})
 
-	t.Run("initEgressReq to session and receive an offer but the receiver has no messenger", func(t *testing.T) {
+	t.Run("initEgressReq to session and receive an offer but the signal has no messenger", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		session.receiver = newReceiverHandler(session.Id, session.user, nil)
+		session.ingress = mockConnection(nil)
 		req := newSessionRequest(context.Background(), nil, initEgressReq)
 
 		oldTimeOut := waitingTimeOut
@@ -176,9 +173,9 @@ func TestRtpSessionStartListen(t *testing.T) {
 	t.Run("initEgressReq to session and receive an offer", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		req := newSessionRequest(context.Background(), nil, initEgressReq)
-		session.receiver = newReceiverHandler(session.Id, session.user, nil)
-		session.receiver.messenger = newMockedMessenger(t)
-		session.receiver.stopWaitingForMessenger()
+		session.ingress = mockConnection(nil)
+		session.signal.messenger = newMockedMessenger(t)
+		session.signal.stopWaitingForMessenger()
 
 		go func() {
 			session.runRequest(req)
@@ -198,9 +195,9 @@ func TestRtpSessionStartListen(t *testing.T) {
 		engine.conn = mockIdelConnection()
 
 		req := newSessionRequest(context.Background(), nil, initEgressReq)
-		session.receiver = newReceiverHandler(session.Id, session.user, nil)
-		session.receiver.messenger = newMockedMessenger(t)
-		session.receiver.stopWaitingForMessenger()
+		session.ingress = mockConnection(nil)
+		session.signal.messenger = newMockedMessenger(t)
+		session.signal.stopWaitingForMessenger()
 
 		before := iceGatheringTimeout
 		iceGatheringTimeout = 0
@@ -224,7 +221,7 @@ func TestRtpSessionListen(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
 		req := newSessionRequest(ctx, mockedAnswer, answerEgressReq)
-		_ = session.stop()
+		session.stop()
 		go session.runRequest(req)
 
 		select {
@@ -255,8 +252,10 @@ func TestRtpSessionListen(t *testing.T) {
 
 	t.Run("answerEgressReq to session", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		session.sender = newSenderHandler(session.Id, uuid.New(), newMockedMessenger(t))
-		session.sender.endpoint = mockConnection(mockedOffer)
+		session.ingress = mockConnection(nil)
+		session.signal.messenger = newMockedMessenger(t)
+		session.egress = mockConnection(mockedOffer)
+		session.signal.egressEndpoint = session.egress
 
 		req := newSessionRequest(context.Background(), mockedAnswer, answerEgressReq)
 		go func() {
@@ -276,8 +275,8 @@ func TestRtpSessionListen(t *testing.T) {
 func TestRtpSessionStop(t *testing.T) {
 	t.Run("stop sessions right after start sessions", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		err := session.stop()
-		assert.NoError(t, err)
+		session.stop()
+		assert.Equal(t, <-session.ctx.Done(), struct{}{})
 	})
 
 	//t.Run("stop sessions twice time not possible", func(t *testing.T) {
@@ -295,7 +294,7 @@ func TestRtpSessionOfferStaticEndpoint(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
 		req := newSessionRequest(ctx, offer, offerStaticEgressReq)
-		_ = session.stop()
+		session.stop()
 		go session.runRequest(req)
 
 		select {

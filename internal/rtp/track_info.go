@@ -5,8 +5,12 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
+type TrackSdpInfo struct {
+	Purpose Purpose
+}
+
 type TrackInfo struct {
-	Purpose   Purpose
+	TrackSdpInfo
 	SessionId uuid.UUID
 	Track     *webrtc.TrackLocalStaticRTP
 }
@@ -31,9 +35,9 @@ func (p Purpose) ToString() string {
 
 func newTrackInfo(id uuid.UUID, track *webrtc.TrackLocalStaticRTP, purpose Purpose) *TrackInfo {
 	return &TrackInfo{
-		SessionId: id,
-		Track:     track,
-		Purpose:   purpose,
+		SessionId:    id,
+		Track:        track,
+		TrackSdpInfo: TrackSdpInfo{Purpose: purpose},
 	}
 }
 

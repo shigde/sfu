@@ -13,28 +13,26 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-func EstablishIngressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
-	_, span := otel.Tracer(tracerName).Start(ctx, "rtp:establish_ingress_endpoint")
+func EstablishIngressEndpoint(sessionCxt context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
+	_, span := otel.Tracer(tracerName).Start(sessionCxt, "rtp:establish_ingress_endpoint")
 	// Add node in dashboard
 	metric.GraphNodeUpdate(metric.BuildNode(sessionId.String(), liveStream.String(), "ingress"))
 
 	defer span.End()
 
-	endpoint := &Endpoint{}
-	for _, opt := range options {
-		opt(endpoint)
-	}
+	endpoint := newEndpoint(sessionCxt, sessionId.String(), liveStream.String(), IngressEndpoint, options...)
 
 	trackInfos, err := getTrackInfo(offer, sessionId)
 	if err != nil {
 		return nil, fmt.Errorf("parsing track info: %w ", err)
 	}
 
+	// check in the options was a dispatcher
 	if endpoint.dispatcher == nil {
 		return nil, errors.New("no track dispatcher found")
 	}
 
-	receiver := newReceiver(sessionId, liveStream, endpoint.dispatcher, trackInfos)
+	receiver := newReceiver(sessionCxt, sessionId, liveStream, endpoint.dispatcher, trackInfos)
 	withGetter := withOnStatsGetter(func(getter stats.Getter) {
 		statsRegistry := rtpStats.NewRegistry(sessionId.String(), getter)
 		receiver.statsRegistry = statsRegistry
@@ -52,9 +50,8 @@ func EstablishIngressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUI
 	}
 	peerConnection.OnTrack(receiver.onTrack)
 
-	if endpoint.onICEConnectionStateChange != nil {
-		peerConnection.OnICEConnectionStateChange(endpoint.onICEConnectionStateChange)
-	}
+	peerConnection.OnICEConnectionStateChange(endpoint.onICEConnectionStateChange)
+
 	if endpoint.onChannel != nil {
 		peerConnection.OnDataChannel(endpoint.onChannel)
 	}

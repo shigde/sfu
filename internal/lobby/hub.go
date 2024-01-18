@@ -155,6 +155,7 @@ func (h *hub) stop() error {
 }
 
 func (h *hub) onAddTrack(event *hubRequest) {
+	slog.Debug("lobby.hub: add track", "sourceSessionId", event.track.SessionId, "streamId", event.track.GetTrackLocal().StreamID(), "track", event.track.GetTrackLocal().ID(), "kind", event.track.GetTrackLocal().Kind(), "purpose", event.track.Purpose.ToString())
 
 	h.increaseNodeGraphStats(event.track.SessionId.String(), rtp.IngressEndpoint, event.track.Purpose)
 	h.hubMetricNode = metric.GraphNodeUpdateInc(h.hubMetricNode, event.track.Purpose.ToString())
@@ -166,7 +167,7 @@ func (h *hub) onAddTrack(event *hubRequest) {
 	h.tracks[event.track.GetTrackLocal().ID()] = event.track
 	h.sessionRepo.Iter(func(s *session) {
 		if filterForSession(s.Id)(event.track) {
-			slog.Debug("lobby.hub: add egress track to session", "session", s.Id, "trackSession", event.track.SessionId, "streamId", event.track.GetTrackLocal().StreamID(), "track", event.track.GetTrackLocal().ID(), "kind", event.track.GetTrackLocal().Kind(), "purpose", event.track.Purpose.ToString())
+			slog.Debug("lobby.hub: add egress track to session", "sessionId", s.Id, "sourceSessionId", event.track.SessionId, "streamId", event.track.GetTrackLocal().StreamID(), "track", event.track.GetTrackLocal().ID(), "kind", event.track.GetTrackLocal().Kind(), "purpose", event.track.Purpose.ToString())
 			s.addTrack(event.track)
 			h.increaseNodeGraphStats(s.Id.String(), rtp.EgressEndpoint, event.track.Purpose)
 		}
@@ -174,6 +175,8 @@ func (h *hub) onAddTrack(event *hubRequest) {
 }
 
 func (h *hub) onRemoveTrack(event *hubRequest) {
+	slog.Debug("lobby.hub: remove track", "sourceSessionId", event.track.SessionId, "streamId", event.track.GetTrackLocal().StreamID(), "track", event.track.GetTrackLocal().ID(), "kind", event.track.GetTrackLocal().Kind(), "purpose", event.track.Purpose.ToString())
+
 	h.hubMetricNode = metric.GraphNodeUpdateDec(h.hubMetricNode, event.track.Purpose.ToString())
 	h.decreaseNodeGraphStats(event.track.SessionId.String(), rtp.IngressEndpoint, event.track.Purpose)
 
@@ -184,8 +187,10 @@ func (h *hub) onRemoveTrack(event *hubRequest) {
 	if _, ok := h.tracks[event.track.GetTrackLocal().ID()]; ok {
 		delete(h.tracks, event.track.GetTrackLocal().ID())
 	}
+
 	h.sessionRepo.Iter(func(s *session) {
 		if filterForSession(s.Id)(event.track) {
+			slog.Debug("lobby.hub: remove egress track from session", "sessionId", s.Id, "sourceSessionId", event.track.SessionId, "streamId", event.track.GetTrackLocal().StreamID(), "track", event.track.GetTrackLocal().ID(), "kind", event.track.GetTrackLocal().Kind(), "purpose", event.track.Purpose.ToString())
 			s.removeTrack(event.track)
 			h.decreaseNodeGraphStats(s.Id.String(), rtp.EgressEndpoint, event.track.Purpose)
 		}
