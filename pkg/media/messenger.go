@@ -44,21 +44,11 @@ func (m *Messenger) notifyAll(msg *message.ChannelMsg) {
 		m.handleAnswerMsg(msg)
 	case message.OfferMsg:
 		m.handleOfferMsg(msg)
+	case message.MuteMsg:
+		m.handleMuteMsg(msg)
 	default:
 		slog.Error("messenger: unknown msg type", "err", fmt.Sprintf("unknown msg type: %d", msg.Type))
 	}
-}
-
-func (m *Messenger) unmarshalSdp(msg *message.ChannelMsg) (*message.Sdp, error) {
-	jsonStr, err := json.Marshal(msg.Data)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal message: %w", err)
-	}
-	sdp, err := message.SdpUnmarshal(jsonStr)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal sdp of mesge: %w", err)
-	}
-	return sdp, nil
 }
 
 func (m *Messenger) handleAnswerMsg(msg *message.ChannelMsg) {
@@ -82,6 +72,18 @@ func (m *Messenger) handleOfferMsg(msg *message.ChannelMsg) {
 	defer m.locker.RUnlock()
 	for _, observer := range m.observerList {
 		observer.OnOffer(offer.SDP, msg.Id, offer.Number)
+	}
+}
+
+func (m *Messenger) handleMuteMsg(msg *message.ChannelMsg) {
+	mute, err := m.unmarshalMute(msg)
+	if err != nil {
+		slog.Error("messenger: handleMuteMsg", "err", err)
+	}
+	m.locker.RLock()
+	defer m.locker.RUnlock()
+	for _, observer := range m.observerList {
+		observer.OnMute(mute)
 	}
 }
 
@@ -123,6 +125,32 @@ func (m *Messenger) SendSDP(sdp *webrtc.SessionDescription, id uint32, number ui
 	return id, nil
 }
 
+func (m *Messenger) SendMute(mute *message.Mute) error {
+
+	channelMsg := &message.ChannelMsg{
+		Id:   123,
+		Type: message.MuteMsg,
+		Data: mute,
+	}
+
+	byteMsg, err := message.Marshal(channelMsg)
+	if err != nil {
+		return fmt.Errorf("marshaling offer message (msgId %d offer %d): %w", err)
+	}
+
+	select {
+	case <-m.quit:
+	default:
+		select {
+		case m.QueueChan <- byteMsg:
+			slog.Debug("lobby.messenger: mute is send")
+		case <-m.quit:
+		}
+	}
+
+	return nil
+}
+
 func (m *Messenger) Register(o msgObserver) {
 	m.locker.Lock()
 	defer m.locker.Unlock()
@@ -137,4 +165,28 @@ func (m *Messenger) Deregister(o msgObserver) {
 	if _, ok := m.observerList[o.GetId()]; ok {
 		delete(m.observerList, o.GetId())
 	}
+}
+
+func (m *Messenger) unmarshalSdp(msg *message.ChannelMsg) (*message.Sdp, error) {
+	jsonStr, err := json.Marshal(msg.Data)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal message: %w", err)
+	}
+	sdp, err := message.SdpUnmarshal(jsonStr)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal sdp of mesge: %w", err)
+	}
+	return sdp, nil
+}
+
+func (m *Messenger) unmarshalMute(msg *message.ChannelMsg) (*message.Mute, error) {
+	jsonStr, err := json.Marshal(msg.Data)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal message: %w", err)
+	}
+	mute, err := message.MuteUnmarshal(jsonStr)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal mute of message: %w", err)
+	}
+	return mute, nil
 }

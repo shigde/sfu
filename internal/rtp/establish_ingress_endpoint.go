@@ -22,7 +22,7 @@ func EstablishIngressEndpoint(sessionCxt context.Context, e *Engine, sessionId u
 
 	endpoint := newEndpoint(sessionCxt, sessionId.String(), liveStream.String(), IngressEndpoint, options...)
 
-	trackInfos, err := getTrackInfo(offer, sessionId)
+	err := getIngressTrackSdpInfo(offer, sessionId, endpoint.trackSdpInfoRepository)
 	if err != nil {
 		return nil, fmt.Errorf("parsing track info: %w ", err)
 	}
@@ -32,7 +32,7 @@ func EstablishIngressEndpoint(sessionCxt context.Context, e *Engine, sessionId u
 		return nil, errors.New("no track dispatcher found")
 	}
 
-	receiver := newReceiver(sessionCxt, sessionId, liveStream, endpoint.dispatcher, trackInfos)
+	receiver := newReceiver(sessionCxt, sessionId, liveStream, endpoint.dispatcher, endpoint.trackSdpInfoRepository)
 	withGetter := withOnStatsGetter(func(getter stats.Getter) {
 		statsRegistry := rtpStats.NewRegistry(sessionId.String(), getter)
 		receiver.statsRegistry = statsRegistry

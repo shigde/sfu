@@ -9,20 +9,17 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
-func getTrackInfo(sdp webrtc.SessionDescription, session uuid.UUID) (map[string]*TrackInfo, error) {
-	trackInfoMap := make(map[string]*TrackInfo)
+func getIngressTrackSdpInfo(sdp webrtc.SessionDescription, sessionId uuid.UUID, rep *trackSdpInfoRepository) error {
 	sdpObj, err := sdp.Unmarshal()
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal sdp: %w", err)
+		return fmt.Errorf("unmarshal sdp: %w", err)
 	}
 	for _, desc := range sdpObj.MediaDescriptions {
 		if desc.MediaName.Media != "video" && desc.MediaName.Media != "audio" {
 			continue
 		}
 
-		trackInfo := &TrackInfo{
-			SessionId: session,
-		}
+		trackSdpInfo := newTrackSdpInfo(sessionId)
 		infoString := ""
 		if desc.MediaTitle != nil {
 			infoString = desc.MediaTitle.String()
@@ -30,18 +27,22 @@ func getTrackInfo(sdp webrtc.SessionDescription, session uuid.UUID) (map[string]
 
 		switch strings.TrimSpace(infoString) {
 		case "1":
-			trackInfo.Purpose = PurposeGuest
+			trackSdpInfo.Purpose = PurposeGuest
 		case "2":
-			trackInfo.Purpose = PurposeMain
+			trackSdpInfo.Purpose = PurposeMain
 		default:
-			trackInfo.Purpose = PurposeGuest
+			trackSdpInfo.Purpose = PurposeGuest
 		}
-		msid, fund := desc.Attribute("msid")
-		if fund {
-			trackInfoMap[msid] = trackInfo
+
+		if msid, fund := desc.Attribute("msid"); fund {
+			if idList := strings.SplitAfter(msid, " "); len(idList) == 2 {
+				ingressTrackId := idList[1]
+				trackSdpInfo.IngressTrackId = ingressTrackId
+				rep.Set(trackSdpInfo.Id, trackSdpInfo)
+			}
 		}
 	}
-	return trackInfoMap, nil
+	return nil
 }
 
 func MarkStreamAsMain(sdpOrigin *webrtc.SessionDescription, streamID string) (*webrtc.SessionDescription, error) {
@@ -71,7 +72,7 @@ func MarkStreamAsMain(sdpOrigin *webrtc.SessionDescription, streamID string) (*w
 	return sdpNew, nil
 }
 
-func setTrackInfo(sdpOrigin *webrtc.SessionDescription, sdpInfos map[trackId]TrackSdpInfo) (*webrtc.SessionDescription, error) {
+func setEgressTrackInfo(sdpOrigin *webrtc.SessionDescription, repo *trackSdpInfoRepository) (*webrtc.SessionDescription, error) {
 	sdpObj, err := sdpOrigin.Unmarshal()
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal sdp: %w", err)
@@ -81,12 +82,17 @@ func setTrackInfo(sdpOrigin *webrtc.SessionDescription, sdpInfos map[trackId]Tra
 		if desc.MediaName.Media != "video" && desc.MediaName.Media != "audio" {
 			continue
 		}
+
 		if msid, fund := desc.Attribute("msid"); fund {
 			if idList := strings.SplitAfter(msid, " "); len(idList) == 2 {
-				trackId := idList[1]
-				if sdpInfo, ok := sdpInfos[trackId]; ok {
+				egressTrackId := idList[1]
+				if sdpInfo, ok := repo.getSdpInfoByEgressTrackId(egressTrackId); ok {
 					info := sdp.Information(fmt.Sprintf("%d", sdpInfo.Purpose))
 					desc.MediaTitle = &info
+					if mid, fundMid := desc.Attribute("mid"); fundMid {
+						sdpInfo.EgressMid = mid
+					}
+
 				}
 			}
 		}

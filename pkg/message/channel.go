@@ -14,6 +14,7 @@ type MsgType int
 const (
 	OfferMsg MsgType = iota + 1
 	AnswerMsg
+	MuteMsg
 )
 
 func Unmarshal(rawChannelMsg []byte) (*ChannelMsg, error) {

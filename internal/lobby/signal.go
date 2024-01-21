@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/rtp"
+	"github.com/shigde/sfu/pkg/message"
 	"golang.org/x/exp/slog"
 )
 
@@ -17,12 +18,12 @@ var errSessionClosedByWaitingForMessenger = errors.New("session closed by waitin
 var waitingTimeOut = 3 * time.Second
 
 type signal struct {
-	id         uuid.UUID
-	sessionCtx context.Context
-	session    uuid.UUID
-	user       uuid.UUID
-
+	id                uuid.UUID
+	sessionCtx        context.Context
+	session           uuid.UUID
+	user              uuid.UUID
 	egressEndpoint    *rtp.Endpoint
+	onMuteCbk         func(_ *message.Mute)
 	messenger         *messenger
 	offerNumber       atomic.Uint32
 	receivedMessenger chan struct{}
@@ -83,6 +84,12 @@ func (s *signal) onAnswer(sdp *webrtc.SessionDescription, number uint32) {
 		slog.Error("lobby.signal: on answer was trigger with error", "err", err, "sessionId", s.session, "userId", s.user)
 	}
 	s.egressEndpoint.SetInitComplete()
+}
+
+func (s *signal) onMute(mute *message.Mute) {
+	if s.onMuteCbk != nil {
+		s.onMuteCbk(mute)
+	}
 }
 
 func (s *signal) nextOffer() uint32 {
