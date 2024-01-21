@@ -59,6 +59,8 @@ func (h *hub) run() {
 				h.onRemoveTrack(trackEvent)
 			case getTrackList:
 				h.onGetTrackList(trackEvent)
+			case muteTrack:
+				h.onMuteTrack(trackEvent)
 			}
 		case <-h.quit:
 			slog.Info("lobby.hub: closed hub")
@@ -86,6 +88,17 @@ func (h *hub) DispatchRemoveTrack(track *rtp.TrackInfo) {
 		slog.Warn("lobby.hub: dispatch remove track even on closed hub")
 	case <-time.After(hubDispatchTimeout):
 		slog.Error("lobby.hub: dispatch remove track - interrupted because dispatch timeout")
+	}
+}
+
+func (h *hub) DispatchMuteTrack(track *rtp.TrackInfo) {
+	select {
+	case h.reqChan <- &hubRequest{kind: muteTrack, track: track}:
+		slog.Debug("lobby.hub: dispatch mute track", "id", track.GetId(), "purpose", track.Purpose.ToString())
+	case <-h.quit:
+		slog.Warn("lobby.hub: dispatch mute track even on closed hub")
+	case <-time.After(hubDispatchTimeout):
+		slog.Error("lobby.hub: dispatch mute track - interrupted because dispatch timeout")
 	}
 }
 
@@ -210,6 +223,16 @@ func (h *hub) onGetTrackList(event *hubRequest) {
 	case <-time.After(hubDispatchTimeout):
 		slog.Error("lobby.hub: onGetTrackList - interrupted because dispatch timeout")
 	}
+}
+
+func (h *hub) onMuteTrack(event *hubRequest) {
+	slog.Debug("lobby.hub: mute track", "sourceSessionId", event.track.SessionId, "streamId", "purpose", event.track.Purpose.ToString())
+	h.sessionRepo.Iter(func(s *session) {
+		if filterForSession(s.Id)(event.track) {
+			slog.Debug("lobby.hub: mute egress track from session", "sessionId", s.Id, "sourceSessionId", event.track.SessionId, event.track.Purpose.ToString())
+			s.sendMuteTrack(event.track)
+		}
+	})
 }
 
 func (h *hub) increaseNodeGraphStats(sessionId string, endpointType rtp.EndpointType, purpose rtp.Purpose) {

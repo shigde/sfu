@@ -16,4 +16,5 @@ const (
 	addTrack hubRequestKind = iota + 1
 	removeTrack
 	getTrackList
+	muteTrack
 )

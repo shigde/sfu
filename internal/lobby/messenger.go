@@ -83,6 +83,31 @@ func (m *messenger) sendOffer(offer *webrtc.SessionDescription, number uint32) (
 	return id, nil
 }
 
+func (m *messenger) sendMute(mute *message.Mute) error {
+	channelMsg := &message.ChannelMsg{
+		Id:   0,
+		Type: message.MuteMsg,
+		Data: mute,
+	}
+
+	byteMsg, err := message.Marshal(channelMsg)
+	if err != nil {
+		return fmt.Errorf("marshaling mute message: %w", err)
+	}
+
+	select {
+	case <-m.quit:
+	default:
+		select {
+		case m.queueChan <- byteMsg:
+			slog.Debug("lobby.messenger: mute is send")
+		case <-m.quit:
+		}
+	}
+
+	return nil
+}
+
 func (m *messenger) onMessages(dcMsg webrtc.DataChannelMessage) {
 	if dcMsg.IsString {
 		slog.Debug("lobby.messenger: message (string)", "dataChannel", m.sender.Label(), "msg", string(dcMsg.Data))
@@ -116,6 +141,8 @@ func (m *messenger) notifyAll(msg *message.ChannelMsg) {
 	switch msg.Type {
 	case message.AnswerMsg:
 		m.handleAnswerMsg(msg)
+	case message.MuteMsg:
+		m.handleMuteMsg(msg)
 	default:
 		slog.Error("lobby.messenger: unknown msg type", "err", fmt.Sprintf("unknown msg type: %d", msg.Type), "dataChannel", m.sender.Label())
 	}
@@ -136,6 +163,24 @@ func (m *messenger) handleAnswerMsg(msg *message.ChannelMsg) {
 	defer m.locker.RUnlock()
 	for _, observer := range m.observerList {
 		observer.onAnswer(answer.SDP, answer.Number)
+	}
+}
+
+func (m *messenger) handleMuteMsg(msg *message.ChannelMsg) {
+	jsonStr, err := json.Marshal(msg.Data)
+	if err != nil {
+		slog.Error("lobby.messenger: unmarshal mute", "err", err, "dataChannel", m.sender.Label())
+	}
+	mute, err := message.MuteUnmarshal(jsonStr)
+	if err != nil {
+		slog.Error("lobby.messenger: unmarshal mute", "err", err, "dataChannel", m.sender.Label())
+	}
+	slog.Debug("lobby.messenger: handle incoming mute Msg")
+
+	m.locker.RLock()
+	defer m.locker.RUnlock()
+	for _, observer := range m.observerList {
+		observer.onMute(mute)
 	}
 }
 
@@ -161,5 +206,6 @@ type msgSender interface {
 
 type msgObserver interface {
 	onAnswer(sdp *webrtc.SessionDescription, number uint32)
+	onMute(mute *message.Mute)
 	getId() uuid.UUID
 }

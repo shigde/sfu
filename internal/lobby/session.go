@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/rtp"
+	"github.com/shigde/sfu/pkg/message"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/slog"
 )
@@ -62,6 +63,7 @@ func newSession(user uuid.UUID, hub *hub, engine rtpEngine, doStop chan<- uuid.U
 		stop:      cancel,
 	}
 
+	signal.onMuteCbk = session.onMuteTrack
 	go session.run()
 	return session
 }
@@ -271,4 +273,24 @@ func (s *session) onLostConnectionListener() {
 		}
 	}()
 
+}
+
+// handle mute
+func (s *session) onMuteTrack(mute *message.Mute) {
+	if trackInfo, ok := s.ingress.SetIngressMute(mute.Mid, mute.Mute); ok {
+		go s.hub.DispatchMuteTrack(trackInfo)
+	}
+}
+
+func (s *session) sendMuteTrack(info *rtp.TrackInfo) {
+	if s.egress == nil {
+		return
+	}
+
+	if egressInfo, ok := s.egress.SetEgressMute(info.GetId(), info.GetMute()); ok {
+		_ = s.signal.messenger.sendMute(&message.Mute{
+			Mid:  egressInfo.GetEgressMid(),
+			Mute: egressInfo.GetMute(),
+		})
+	}
 }

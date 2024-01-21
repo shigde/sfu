@@ -18,6 +18,7 @@ type mediaStream struct {
 	sessionCxt               context.Context
 	remoteId                 string
 	sessionId                uuid.UUID
+	audioInfo, videoInfo     TrackSdpInfo
 	audioTrack, videoTrack   *webrtc.TrackLocalStaticRTP
 	audioWriter, videoWriter *mediaWriter
 	purpose                  Purpose
@@ -48,7 +49,7 @@ func (s *mediaStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemo
 
 	// start local audio track
 	go func() {
-		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.sessionId, s.getAudioTrack(), s.purpose))
+		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.audioTrack, s.audioInfo))
 
 		if err = s.audioWriter.writeRtp(track, s.audioTrack); err != nil {
 			slog.Error("rtp.mediaStream: writing local audio track", "streamId", s.id, "err", err)
@@ -73,7 +74,7 @@ func (s *mediaStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemo
 
 	// start local video track
 	go func() {
-		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.sessionId, s.getVideoTrack(), s.purpose))
+		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.videoTrack, s.videoInfo))
 
 		if err = s.videoWriter.writeRtp(track, s.videoTrack); err != nil {
 			slog.Error("rtp.mediaStream: writing local video track ", "streamId", s.id, "err", err)
@@ -116,4 +117,12 @@ func (s *mediaStream) getAudioTrack() *webrtc.TrackLocalStaticRTP {
 
 func (s *mediaStream) getPurpose() Purpose {
 	return s.purpose
+}
+
+func (s *mediaStream) setVideoSdpInfo(info TrackSdpInfo) {
+	s.videoInfo = info
+}
+
+func (s *mediaStream) setAudioSdpInfo(info TrackSdpInfo) {
+	s.audioInfo = info
 }

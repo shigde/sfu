@@ -5,40 +5,20 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
-type TrackSdpInfo struct {
-	Purpose Purpose
-}
-
 type TrackInfo struct {
 	TrackSdpInfo
-	SessionId uuid.UUID
-	Track     *webrtc.TrackLocalStaticRTP
+	Track *webrtc.TrackLocalStaticRTP
 }
 
-type Purpose int
-
-const (
-	PurposeGuest Purpose = iota + 1
-	PurposeMain
-)
-
-func (p Purpose) ToString() string {
-	switch p {
-	case PurposeGuest:
-		return "guest"
-	case PurposeMain:
-		return "main"
-	default:
-		return "guest"
-	}
-}
-
-func newTrackInfo(id uuid.UUID, track *webrtc.TrackLocalStaticRTP, purpose Purpose) *TrackInfo {
+func newTrackInfo(track *webrtc.TrackLocalStaticRTP, sdpInfo TrackSdpInfo) *TrackInfo {
 	return &TrackInfo{
-		SessionId:    id,
 		Track:        track,
-		TrackSdpInfo: TrackSdpInfo{Purpose: purpose},
+		TrackSdpInfo: sdpInfo,
 	}
+}
+
+func (t *TrackInfo) GetId() uuid.UUID {
+	return t.Id
 }
 
 func (t *TrackInfo) GetPurpose() Purpose {
@@ -55,4 +35,18 @@ func (t *TrackInfo) GetTrack() *webrtc.TrackLocalStaticRTP {
 
 func (t *TrackInfo) GetTrackLocal() webrtc.TrackLocal {
 	return t.Track
+}
+
+func (t *TrackInfo) GetMute() bool {
+	return t.Mute
+}
+func (t *TrackInfo) GetIngressMid() string {
+	return t.IngressMid
+}
+func (t *TrackInfo) GetEgressMid() string {
+	return t.EgressMid
+}
+
+func (t *TrackInfo) SetMute(mute bool) {
+	t.Mute = mute
 }

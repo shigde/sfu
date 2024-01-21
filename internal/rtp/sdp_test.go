@@ -17,13 +17,13 @@ const pionOfferWithSecsMedia = "v=0\no=- 1832867179684322390 1705496349 IN IP4 0
 
 func TestSDP(t *testing.T) {
 	t.Run("Read empty sdp", func(t *testing.T) {
-		trackInfo, err := getTrackInfo(webrtc.SessionDescription{}, uuid.New())
+		trackInfo, err := getTrackSdpInfo(webrtc.SessionDescription{}, uuid.New())
 		assert.NoError(t, err)
 		assert.Equal(t, 0, len(trackInfo))
 	})
 
 	t.Run("Read not changed offer sdp", func(t *testing.T) {
-		trackInfo, err := getTrackInfo(webrtc.SessionDescription{
+		trackInfo, err := getTrackSdpInfo(webrtc.SessionDescription{
 			Type: webrtc.SDPTypeOffer,
 			SDP:  sdpOfferString,
 		}, uuid.New())
@@ -38,7 +38,7 @@ func TestSDP(t *testing.T) {
 	})
 
 	t.Run("Read Firefox not changed offer sdp", func(t *testing.T) {
-		trackInfo, err := getTrackInfo(webrtc.SessionDescription{
+		trackInfo, err := getTrackSdpInfo(webrtc.SessionDescription{
 			Type: webrtc.SDPTypeOffer,
 			SDP:  sdpFirefoxOfferString,
 		}, uuid.New())
@@ -47,13 +47,15 @@ func TestSDP(t *testing.T) {
 		audio, hasAudio := trackInfo["{2f97a64f-8e54-46c9-8956-e27b202d76cf} {fa595b2c-ba3a-4cd9-93b8-91c20b8af758}"]
 		assert.True(t, hasAudio)
 		assert.Equal(t, PurposeGuest, audio.Purpose)
+		assert.Equal(t, "{2f97a64f-8e54-46c9-8956-e27b202d76cf} {fa595b2c-ba3a-4cd9-93b8-91c20b8af758}", audio.Msid)
 		video, hasVideo := trackInfo["{2f97a64f-8e54-46c9-8956-e27b202d76cf} {397dc6f7-76cc-4044-9a12-15cb433b99fc}"]
 		assert.True(t, hasVideo)
 		assert.Equal(t, PurposeGuest, video.Purpose)
+		assert.Equal(t, "{2f97a64f-8e54-46c9-8956-e27b202d76cf} {397dc6f7-76cc-4044-9a12-15cb433b99fc}", video.Msid)
 	})
 
 	t.Run("Read live stream from offer sdp", func(t *testing.T) {
-		trackInfo, err := getTrackInfo(webrtc.SessionDescription{
+		trackInfo, err := getTrackSdpInfo(webrtc.SessionDescription{
 			Type: webrtc.SDPTypeOffer,
 			SDP:  sdpOfferWithLiveStream,
 		}, uuid.New())
@@ -62,15 +64,19 @@ func TestSDP(t *testing.T) {
 		audio, hasAudio := trackInfo["03b32495-2823-49c5-8e80-981a017e5209 57e34f3b-e41d-4dd1-94ef-a5db7d13ca53"]
 		assert.True(t, hasAudio)
 		assert.Equal(t, PurposeGuest, audio.Purpose)
+		assert.Equal(t, "03b32495-2823-49c5-8e80-981a017e5209 57e34f3b-e41d-4dd1-94ef-a5db7d13ca53", audio.Msid)
 		video, hasVideo := trackInfo["03b32495-2823-49c5-8e80-981a017e5209 5dacbd5d-f234-4496-923a-c5c188ee9424"]
 		assert.True(t, hasVideo)
 		assert.Equal(t, PurposeGuest, video.Purpose)
+		assert.Equal(t, "03b32495-2823-49c5-8e80-981a017e5209 5dacbd5d-f234-4496-923a-c5c188ee9424", video.Msid)
 		liveAudio, hasLiveAudio := trackInfo["45def0ae-d3dd-4a2c-80c8-4aa37d6e2c2d a9345edd-5648-4d78-81be-02e0114adbcd"]
 		assert.True(t, hasLiveAudio)
 		assert.Equal(t, PurposeMain, liveAudio.Purpose)
+		assert.Equal(t, "45def0ae-d3dd-4a2c-80c8-4aa37d6e2c2d a9345edd-5648-4d78-81be-02e0114adbcd", liveAudio.Msid)
 		liveVideo, hasLiveVideo := trackInfo["45def0ae-d3dd-4a2c-80c8-4aa37d6e2c2d a0a03556-3aff-4684-b3ab-59c7bf4cb4bc"]
 		assert.True(t, hasLiveVideo)
 		assert.Equal(t, PurposeMain, liveVideo.Purpose)
+		assert.Equal(t, "45def0ae-d3dd-4a2c-80c8-4aa37d6e2c2d a0a03556-3aff-4684-b3ab-59c7bf4cb4bc", liveVideo.Msid)
 	})
 
 	t.Run("set stream as main stream", func(t *testing.T) {
@@ -91,23 +97,23 @@ func TestSDP(t *testing.T) {
 			Type: webrtc.SDPTypeOffer,
 			SDP:  pionOfferWithSecsMedia,
 		}
-		newOffer, err := setTrackInfo(offer, repo.getTrackSdpInfos())
+		newOffer, err := setEgressTrackInfo(offer, repo.getTrackSdpInfos())
 		assert.NoError(t, err)
 		cupaloy.SnapshotT(t, newOffer.SDP)
 	})
 }
 
-func testTrackInfoRepositorySetup(t *testing.T) *trackInfoRepository {
+func testTrackInfoRepositorySetup(t *testing.T) *trackSdpInfoRepository {
 	t.Helper()
-	repo := newTrackInfoRepository()
+	repo := newTrackSdpInfoRepository()
 	session := uuid.UUID{}
 	// mid: 1, sudio msid:a02a38f9-0978-4d39-ae4c-e42f8671037e 1f02c330-c5c6-4607-b584-dfd68bbe90b1
-	repo.Set("1f02c330-c5c6-4607-b584-dfd68bbe90b1", &TrackInfo{SessionId: session, TrackSdpInfo: TrackSdpInfo{Purpose: PurposeGuest}})
+	repo.Set("1f02c330-c5c6-4607-b584-dfd68bbe90b1", &TrackInfo{TrackSdpInfo: TrackSdpInfo{SessionId: session, Purpose: PurposeGuest}})
 	// mid: 2, audio msid:915649cc-3d54-44f5-b7c0-ca2e388cc358 c8337113-3c48-43c2-9ecd-ce2b2b109154
-	repo.Set("c8337113-3c48-43c2-9ecd-ce2b2b109154", &TrackInfo{SessionId: session, TrackSdpInfo: TrackSdpInfo{Purpose: PurposeMain}})
+	repo.Set("c8337113-3c48-43c2-9ecd-ce2b2b109154", &TrackInfo{TrackSdpInfo: TrackSdpInfo{SessionId: session, Purpose: PurposeMain}})
 	// mid: 3, video msid:a02a38f9-0978-4d39-ae4c-e42f8671037e 18a0caea-6b8f-4cb7-ac74-71aaf535a9d4
-	repo.Set("18a0caea-6b8f-4cb7-ac74-71aaf535a9d4", &TrackInfo{SessionId: session, TrackSdpInfo: TrackSdpInfo{Purpose: PurposeGuest}})
+	repo.Set("18a0caea-6b8f-4cb7-ac74-71aaf535a9d4", &TrackInfo{TrackSdpInfo: TrackSdpInfo{SessionId: session, Purpose: PurposeGuest}})
 	// mid: 4, video msid:915649cc-3d54-44f5-b7c0-ca2e388cc358 abdc694c-b237-4c96-8fcc-d9ad8ba6643f
-	repo.Set("abdc694c-b237-4c96-8fcc-d9ad8ba6643f", &TrackInfo{SessionId: session, TrackSdpInfo: TrackSdpInfo{Purpose: PurposeMain}})
+	repo.Set("abdc694c-b237-4c96-8fcc-d9ad8ba6643f", &TrackInfo{TrackSdpInfo: TrackSdpInfo{SessionId: session, Purpose: PurposeMain}})
 	return repo
 }

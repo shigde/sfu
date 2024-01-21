@@ -2,7 +2,6 @@ package rtp
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 
@@ -23,20 +22,20 @@ type receiver struct {
 	liveStream    uuid.UUID
 	streams       map[string]*mediaStream
 	dispatcher    TrackDispatcher
-	trackInfos    map[string]*TrackInfo
+	trackSdpInfos *trackSdpInfoRepository
 	statsRegistry *stats.Registry
 }
 
-func newReceiver(sessionCxt context.Context, sessionId uuid.UUID, liveStream uuid.UUID, d TrackDispatcher, trackInfos map[string]*TrackInfo) *receiver {
+func newReceiver(sessionCxt context.Context, sessionId uuid.UUID, liveStream uuid.UUID, d TrackDispatcher, trackSdpInfos *trackSdpInfoRepository) *receiver {
 	streams := make(map[string]*mediaStream)
 	return &receiver{
-		RWMutex:    sync.RWMutex{},
-		id:         sessionId,
-		sessionCxt: sessionCxt,
-		liveStream: liveStream,
-		streams:    streams,
-		dispatcher: d,
-		trackInfos: trackInfos,
+		RWMutex:       sync.RWMutex{},
+		id:            sessionId,
+		sessionCxt:    sessionCxt,
+		liveStream:    liveStream,
+		streams:       streams,
+		dispatcher:    d,
+		trackSdpInfos: trackSdpInfos,
 	}
 }
 
@@ -44,7 +43,10 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 	ctx, span := otel.Tracer(tracerName).Start(context.Background(), "rtp.receiver: on ingress track")
 	defer span.End()
 
-	stream := r.getStream(r.sessionCxt, r.id, remoteTrack.StreamID(), remoteTrack.ID())
+	trackSdpInfo := r.getIngressTrackSdpInfo(remoteTrack.ID())
+	trackSdpInfo.IngressMid = rtpReceiver.RTPTransceiver().Mid()
+
+	stream := r.getStream(r.sessionCxt, r.id, remoteTrack.StreamID(), *trackSdpInfo, remoteTrack.Kind().String())
 	span.SetAttributes(attribute.String("streamId", remoteTrack.StreamID()))
 	span.SetAttributes(attribute.String("track", remoteTrack.ID()))
 	span.SetAttributes(attribute.String("kind", remoteTrack.Kind().String()))
@@ -75,7 +77,7 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 			// stop handler goroutine because error
 			return
 		}
-		trackInfo = newTrackInfo(r.id, stream.getAudioTrack(), stream.getPurpose())
+		trackInfo = newTrackInfo(stream.getAudioTrack(), *trackSdpInfo)
 	}
 
 	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "video") {
@@ -86,7 +88,8 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 			// stop handler goroutine because error
 			return
 		}
-		trackInfo = newTrackInfo(r.id, stream.getVideoTrack(), stream.getPurpose())
+
+		trackInfo = newTrackInfo(stream.getVideoTrack(), *trackSdpInfo)
 	}
 
 	slog.Debug("rtp.receiver: info track", "streamId", trackInfo.GetTrackLocal().StreamID(), "track", trackInfo.GetTrackLocal().ID(), "kind", trackInfo.GetTrackLocal().Kind(), "purpose", trackInfo.Purpose.ToString())
@@ -94,24 +97,31 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 	r.dispatcher.DispatchAddTrack(trackInfo)
 
 }
-func (r *receiver) getTrackInfo(streamID string, trackId string) *TrackInfo {
-	msid := fmt.Sprintf("%s %s", streamID, trackId)
-	info, found := r.trackInfos[msid]
+func (r *receiver) getIngressTrackSdpInfo(ingressTrackId string) *TrackSdpInfo {
+	info, found := r.trackSdpInfos.getSdpInfoByIngressTrackId(ingressTrackId)
 	if !found {
-		info = &TrackInfo{SessionId: r.id, TrackSdpInfo: TrackSdpInfo{Purpose: PurposeGuest}}
-		r.trackInfos[msid] = info
+		info = newTrackSdpInfo(r.id)
+		info.Purpose = PurposeGuest
+		r.trackSdpInfos.Set(info.Id, info)
 	}
 	return info
 }
 
-func (r *receiver) getStream(sessionCxt context.Context, sessionId uuid.UUID, streamId string, trackId string) *mediaStream {
+func (r *receiver) getStream(sessionCxt context.Context, sessionId uuid.UUID, streamId string, sdpInfo TrackSdpInfo, kind string) *mediaStream {
 	r.Lock()
 	defer r.Unlock()
-	info := r.getTrackInfo(streamId, trackId)
 	stream, ok := r.streams[streamId]
 	if !ok {
-		stream = newMediaStream(sessionCxt, streamId, sessionId, r.dispatcher, info.Purpose)
+		stream = newMediaStream(sessionCxt, streamId, sessionId, r.dispatcher, sdpInfo.Purpose)
 		r.streams[streamId] = stream
 	}
+
+	if kind == "video" {
+		stream.setVideoSdpInfo(sdpInfo)
+	}
+	if kind == "audio" {
+		stream.setAudioSdpInfo(sdpInfo)
+	}
+
 	return stream
 }

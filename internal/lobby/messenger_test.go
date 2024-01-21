@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
+	"github.com/shigde/sfu/pkg/message"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -82,6 +83,7 @@ func (s *senderMock) Label() string {
 type msgObserverMock struct {
 	id               uuid.UUID
 	onAnswerCallback func(sdp *webrtc.SessionDescription, number uint32)
+	onMuteCallback   func(mute *message.Mute)
 }
 
 func newMsgObserverMock(t *testing.T) *msgObserverMock {
@@ -94,6 +96,12 @@ func newMsgObserverMock(t *testing.T) *msgObserverMock {
 func (o *msgObserverMock) onAnswer(sdp *webrtc.SessionDescription, number uint32) {
 	if o.onAnswerCallback != nil {
 		o.onAnswerCallback(sdp, number)
+	}
+}
+
+func (o *msgObserverMock) onMute(mute *message.Mute) {
+	if o.onMuteCallback != nil {
+		o.onMuteCallback(mute)
 	}
 }
 
