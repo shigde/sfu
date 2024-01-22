@@ -25,14 +25,7 @@ func getIngressTrackSdpInfo(sdp webrtc.SessionDescription, sessionId uuid.UUID, 
 			infoString = desc.MediaTitle.String()
 		}
 
-		switch strings.TrimSpace(infoString) {
-		case "1":
-			trackSdpInfo.Purpose = PurposeGuest
-		case "2":
-			trackSdpInfo.Purpose = PurposeMain
-		default:
-			trackSdpInfo.Purpose = PurposeGuest
-		}
+		parseSdpInformation(infoString, trackSdpInfo)
 
 		if msid, fund := desc.Attribute("msid"); fund {
 			if idList := strings.SplitAfter(msid, " "); len(idList) == 2 {
@@ -87,12 +80,11 @@ func setEgressTrackInfo(sdpOrigin *webrtc.SessionDescription, repo *trackSdpInfo
 			if idList := strings.SplitAfter(msid, " "); len(idList) == 2 {
 				egressTrackId := idList[1]
 				if sdpInfo, ok := repo.getSdpInfoByEgressTrackId(egressTrackId); ok {
-					info := sdp.Information(fmt.Sprintf("%d", sdpInfo.Purpose))
+					info := buildSdpInformation(sdpInfo)
 					desc.MediaTitle = &info
 					if mid, fundMid := desc.Attribute("mid"); fundMid {
 						sdpInfo.EgressMid = mid
 					}
-
 				}
 			}
 		}
@@ -106,4 +98,35 @@ func setEgressTrackInfo(sdpOrigin *webrtc.SessionDescription, repo *trackSdpInfo
 		SDP:  string(sdpByt),
 	}
 	return sdpNew, nil
+}
+
+func parseSdpInformation(infoString string, trackSdpInfo *TrackSdpInfo) {
+	if info := strings.SplitAfter(infoString, " "); len(info) == 3 {
+		switch strings.TrimSpace(info[0]) {
+		case "1":
+			trackSdpInfo.Purpose = PurposeGuest
+		case "2":
+			trackSdpInfo.Purpose = PurposeMain
+		default:
+			trackSdpInfo.Purpose = PurposeGuest
+		}
+
+		switch strings.TrimSpace(info[1]) {
+		case "1":
+			trackSdpInfo.Mute = true
+		case "2":
+			trackSdpInfo.Mute = false
+		default:
+			trackSdpInfo.Mute = false
+		}
+		trackSdpInfo.Info = info[2]
+	}
+}
+
+func buildSdpInformation(trackSdpInfo *TrackSdpInfo) sdp.Information {
+	muted := "2"
+	if trackSdpInfo.Mute {
+		muted = "1"
+	}
+	return sdp.Information(fmt.Sprintf("%d %s %s", trackSdpInfo.Purpose, muted, trackSdpInfo.Info))
 }

@@ -17,6 +17,7 @@ type TrackSdpInfo struct {
 
 	Purpose Purpose
 	Mute    bool
+	Info    string
 }
 
 type Purpose int
@@ -39,5 +40,5 @@ func (p Purpose) ToString() string {
 
 func newTrackSdpInfo(sessionId uuid.UUID) *TrackSdpInfo {
 	id := uuid.New()
-	return &TrackSdpInfo{Id: id, SessionId: sessionId, Purpose: PurposeGuest, Mute: false}
+	return &TrackSdpInfo{Id: id, SessionId: sessionId, Purpose: PurposeGuest, Mute: false, Info: "Guest"}
 }

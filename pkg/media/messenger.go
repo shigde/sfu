@@ -135,7 +135,7 @@ func (m *Messenger) SendMute(mute *message.Mute) error {
 
 	byteMsg, err := message.Marshal(channelMsg)
 	if err != nil {
-		return fmt.Errorf("marshaling offer message (msgId %d offer %d): %w", err)
+		return fmt.Errorf("marshaling mute message: %w", err)
 	}
 
 	select {
