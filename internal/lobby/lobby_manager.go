@@ -3,6 +3,7 @@ package lobby
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
@@ -26,8 +27,8 @@ type rtpEngine interface {
 	EstablishStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
 }
 
-func NewLobbyManager(storage storage.Storage, e rtpEngine) *LobbyManager {
-	lobbies := newLobbyRepository(storage, e)
+func NewLobbyManager(storage storage.Storage, e rtpEngine, hostUrl *url.URL) *LobbyManager {
+	lobbies := newLobbyRepository(storage, e, hostUrl)
 	lobbyGarbageCollector := make(chan uuid.UUID)
 	go func() {
 		for id := range lobbyGarbageCollector {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -15,7 +16,12 @@ import (
 
 func main() {
 	ctx := context.Background()
-	conf, err := config.ParseConfig("config.toml")
+	configArg := flag.String("config", "config.toml", "config file: default config.toml")
+	flag.Parse()
+
+	fmt.Println("config:", *configArg)
+
+	conf, err := config.ParseConfig(*configArg)
 	if err != nil {
 		panic(fmt.Errorf("parsing config: %w", err))
 		return

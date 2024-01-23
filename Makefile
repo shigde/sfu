@@ -19,10 +19,14 @@ build: go_init
 	go build -race -o ./bin/$(SERVER_NAME) ./cmd/server
 
 run: build
-	./bin/$(SERVER_NAME) -c config.toml
+	./bin/$(SERVER_NAME) -config=config.toml
+
+
+run-remote: build
+	./bin/$(SERVER_NAME) -config=config-remote.toml
 
 race:
-	go run -race ./cmd/server -c config.toml
+	go run -race ./cmd/server -config=config.toml
 
 build-linux: go_init
 	GOOS=linux GOARCH=amd64 go build -o bin/$(SERVER_NAME).linux.amd64 $(GO_LDFLAGS) ./cmd/server

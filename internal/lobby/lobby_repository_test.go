@@ -2,6 +2,7 @@ package lobby
 
 import (
 	"context"
+	"net/url"
 	"sync"
 	"testing"
 
@@ -15,7 +16,8 @@ func testRtpStreamLobbyRepositorySetup(t *testing.T) *lobbyRepository {
 	store := storage.NewTestStore()
 	_ = store.GetDatabase().AutoMigrate(&LobbyEntity{})
 	var engine rtpEngine
-	repository := newLobbyRepository(store, engine)
+	host, _ := url.Parse("http://localhost:1234/federation/accounts/shig-test")
+	repository := newLobbyRepository(store, engine, host)
 
 	return repository
 }
