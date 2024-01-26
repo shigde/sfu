@@ -242,3 +242,21 @@ func (m *LobbyManager) StopLiveStream(
 	}
 	return nil
 }
+
+func (m *LobbyManager) CreateLobbyHostPipe(ctx context.Context, lobbyId uuid.UUID, offer *webrtc.SessionDescription, instanceId uuid.UUID) (struct {
+	Answer       *webrtc.SessionDescription
+	Resource     uuid.UUID
+	RtpSessionId uuid.UUID
+}, error) {
+	var answerData struct {
+		Answer       *webrtc.SessionDescription
+		Resource     uuid.UUID
+		RtpSessionId uuid.UUID
+	}
+
+	return answerData, nil
+}
+
+func (m *LobbyManager) CloseLobbyHostPipe(ctx context.Context, lobbyId uuid.UUID, instanceId uuid.UUID) (bool, error) {
+	return true, nil
+}
