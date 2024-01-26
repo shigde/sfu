@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
-	"github.com/shigde/sfu/pkg/client"
 	"golang.org/x/exp/slog"
 )
 
@@ -16,13 +15,12 @@ type hostInstanceController struct {
 	ctx      context.Context
 	lobbyId  uuid.UUID
 	lobby    *lobby
-	hostApi  *client.HostApi
+	hostApi  *hostInstanceApiClient
 	settings hostInstanceSettings
 }
 
 func newHostInstanceController(ctx context.Context, lobbyId uuid.UUID, lobby *lobby, settings hostInstanceSettings) *hostInstanceController {
-	opt := client.WithUrl(settings.url)
-	hostApi := client.NewHostApi("", opt)
+	hostApi := NewHostInstanceApiClient(settings.instanceId, settings.token, settings.url)
 	controller := &hostInstanceController{
 		ctx:      ctx,
 		lobbyId:  lobbyId,
@@ -107,9 +105,10 @@ func (c *hostInstanceController) onHostConnectionRequest(offer *webrtc.SessionDe
 }
 
 type hostInstanceSettings struct {
-	url    *url.URL
-	space  string
-	stream string
-	isHost bool
-	token  string
+	url        *url.URL
+	space      string
+	stream     string
+	isHost     bool
+	instanceId uuid.UUID
+	token      string
 }

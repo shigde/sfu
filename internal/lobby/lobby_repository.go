@@ -54,11 +54,12 @@ func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUI
 		isHost := r.lobbyIsHost(entity.Host)
 		hostUrl, _ := url.Parse(entity.Host)
 		hostSettings := hostInstanceSettings{
-			isHost: isHost,
-			url:    hostUrl,
-			token:  token,
-			space:  entity.Space,
-			stream: entity.LiveStreamId.String(),
+			instanceId: uuid.New(),
+			isHost:     isHost,
+			url:        hostUrl,
+			token:      token,
+			space:      entity.Space,
+			stream:     entity.LiveStreamId.String(),
 		}
 
 		lobby := newLobby(

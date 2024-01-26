@@ -18,9 +18,19 @@ func testStreamLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 	entity := &LobbyEntity{
 		UUID:         uuid.New(),
 		LiveStreamId: uuid.New(),
+		Space:        "space",
 		Host:         "http://localhost:1234/federation/accounts/shig-test",
 	}
-	lobby := newLobby(entity.UUID, entity, engine, make(chan uuid.UUID), true)
+
+	hostSettings := hostInstanceSettings{
+		isHost: true,
+		url:    nil,
+		token:  "token",
+		space:  entity.Space,
+		stream: entity.LiveStreamId.String(),
+	}
+
+	lobby := newLobby(entity.UUID, entity, engine, make(chan uuid.UUID), hostSettings)
 	user := uuid.New()
 	session := newSession(user, lobby.hub, engine, lobby.sessionQuit)
 	session.signal.messenger = newMockedMessenger(t)

@@ -45,7 +45,7 @@ func testRouterSetup(t *testing.T) (*testHelper, *stream.Space, *stream.LiveStre
 	liveStream.AccountId = account.ID
 	liveStream.Space = space
 	liveStream.SpaceId = space.ID
-	liveStream.Lobby = lobby.NewLobbyEntity(liveStream.UUID)
+	liveStream.Lobby = lobby.NewLobbyEntity(liveStream.UUID, space.Identifier)
 
 	_, _ = streamRepo.Add(context.Background(), liveStream)
 
