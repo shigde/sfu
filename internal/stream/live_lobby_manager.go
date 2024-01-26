@@ -33,6 +33,7 @@ type liveLobbyManager interface {
 
 	LeaveLobby(ctx context.Context, lobbyId uuid.UUID, userId uuid.UUID) (bool, error)
 
+	// Live Stream API
 	StartLiveStream(
 		ctx context.Context,
 		lobbyId uuid.UUID,
@@ -46,4 +47,13 @@ type liveLobbyManager interface {
 		lobbyId uuid.UUID,
 		userId uuid.UUID,
 	) error
+
+	// Host Pipe API
+	CreateLobbyHostPipe(ctx context.Context, u uuid.UUID, offer *webrtc.SessionDescription, instanceId uuid.UUID) (struct {
+		Answer       *webrtc.SessionDescription
+		Resource     uuid.UUID
+		RtpSessionId uuid.UUID
+	}, error)
+
+	CloseLobbyHostPipe(ctx context.Context, u uuid.UUID, id uuid.UUID) (bool, error)
 }

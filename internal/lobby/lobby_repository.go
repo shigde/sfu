@@ -50,8 +50,24 @@ func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUI
 			return nil, fmt.Errorf("updating lobby entity as running: %w", err)
 		}
 
+		token := ""
 		isHost := r.lobbyIsHost(entity.Host)
-		lobby := newLobby(lobbyId, entity, r.rtpEngine, lobbyGarbageCollector, isHost)
+		hostUrl, _ := url.Parse(entity.Host)
+		hostSettings := hostInstanceSettings{
+			isHost: isHost,
+			url:    hostUrl,
+			token:  token,
+			space:  entity.Space,
+			stream: entity.LiveStreamId.String(),
+		}
+
+		lobby := newLobby(
+			lobbyId,
+			entity,
+			r.rtpEngine,
+			lobbyGarbageCollector,
+			hostSettings,
+		)
 
 		r.lobbies[lobbyId] = lobby
 		metric.RunningLobbyInc(lobby.entity.LiveStreamId.String(), lobbyId.String())

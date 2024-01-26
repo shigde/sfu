@@ -33,6 +33,7 @@ var (
 
 type session struct {
 	Id        uuid.UUID
+	isRemote  bool
 	ctx       context.Context
 	user      uuid.UUID
 	rtpEngine rtpEngine

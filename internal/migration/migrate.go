@@ -25,6 +25,7 @@ func Migrate(config *instance.FederationConfig, storage storage.Storage) error {
 		&models.Server{},
 		&auth.Account{},
 		&lobby.LobbyEntity{},
+		&lobby.Instance{},
 		&stream.Space{},
 		&stream.LiveStream{},
 	); err != nil {

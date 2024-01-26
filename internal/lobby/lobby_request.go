@@ -45,6 +45,22 @@ type liveStreamData struct {
 	response chan bool
 }
 
+// Lobby request data for host pipes ----------
+type hostGetOfferData struct {
+	response chan *hostOfferResponse
+}
+
+type hostGetAnswerData struct {
+	offer    *webrtc.SessionDescription
+	response chan *hostAnswerResponse
+}
+
+type hostSetAnswerData struct {
+	answer   *webrtc.SessionDescription
+	response chan bool
+}
+
+// ---------------------------------------------
 func newLobbyRequest(ctx context.Context, user uuid.UUID) *lobbyRequest {
 	errChan := make(chan error)
 	return &lobbyRequest{
@@ -110,6 +126,29 @@ func newLeaveData() *leaveData {
 	}
 }
 
+func newHostGetOfferData() *hostGetOfferData {
+	resChan := make(chan *hostOfferResponse)
+	return &hostGetOfferData{
+		response: resChan,
+	}
+}
+
+func newHostGetAnswerData(offer *webrtc.SessionDescription) *hostGetAnswerData {
+	resChan := make(chan *hostAnswerResponse)
+	return &hostGetAnswerData{
+		offer:    offer,
+		response: resChan,
+	}
+}
+
+func newHostSetAnswerData(answer *webrtc.SessionDescription) *hostSetAnswerData {
+	resChan := make(chan bool)
+	return &hostSetAnswerData{
+		answer:   answer,
+		response: resChan,
+	}
+}
+
 type createIngressEndpointResponse struct {
 	answer       *webrtc.SessionDescription
 	resource     uuid.UUID
@@ -127,5 +166,15 @@ type initEgressEndpointResponse struct {
 }
 
 type finalCreateEgressEndpointResponse struct {
+	RtpSessionId uuid.UUID
+}
+
+type hostOfferResponse struct {
+	offer        *webrtc.SessionDescription
+	RtpSessionId uuid.UUID
+}
+
+type hostAnswerResponse struct {
+	answer       *webrtc.SessionDescription
 	RtpSessionId uuid.UUID
 }

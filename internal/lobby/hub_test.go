@@ -1,23 +1,25 @@
 package lobby
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
-func testHubSetup(t *testing.T) *hub {
+func testHubSetup(t *testing.T) (*hub, func()) {
 	t.Helper()
 	sessions := newSessionRepository()
 	engine := newRtpEngineMock()
 	forwarder := newLiveStreamSenderMock()
-	hub := newHub(sessions, uuid.New(), forwarder, make(chan struct{}))
+	ctx, cancel := context.WithCancel(context.Background())
+	hub := newHub(ctx, sessions, uuid.New(), forwarder)
 	s1 := newSession(uuid.New(), hub, engine, nil)
 	s2 := newSession(uuid.New(), hub, engine, nil)
 	sessions.Add(s1)
 	sessions.Add(s2)
-	return hub
+	return hub, cancel
 }
 func testHubSessionSetup(t *testing.T, hub *hub) *session {
 	t.Helper()
@@ -30,8 +32,8 @@ func testHubSessionSetup(t *testing.T, hub *hub) *session {
 func TestHub(t *testing.T) {
 
 	t.Run("get tracks from other session", func(t *testing.T) {
-		hub := testHubSetup(t)
-		defer hub.stop()
+		hub, stop := testHubSetup(t)
+		defer stop()
 		assert.NotNil(t, hub)
 	})
 }

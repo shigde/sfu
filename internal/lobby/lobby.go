@@ -23,6 +23,7 @@ var (
 )
 
 type lobby struct {
+	ctx                   context.Context
 	Id                    uuid.UUID
 	sessions              *sessionRepository
 	liveStreamSender      liveStreamSender
@@ -32,25 +33,27 @@ type lobby struct {
 	rtpEngine             rtpEngine
 	resourceId            uuid.UUID
 	entity                *LobbyEntity
-	quit                  chan struct{}
+	hostController        *hostInstanceController
+	stopRunning           func()
 	reqChan               chan *lobbyRequest
 	sessionQuit           chan uuid.UUID
 	lobbyGarbageCollector chan<- uuid.UUID
 }
 
-func newLobby(id uuid.UUID, entity *LobbyEntity, rtpEngine rtpEngine, lobbyGarbageCollector chan<- uuid.UUID, isHost bool) *lobby {
+func newLobby(id uuid.UUID, entity *LobbyEntity, rtpEngine rtpEngine, lobbyGarbageCollector chan<- uuid.UUID, settings hostInstanceSettings) *lobby {
+	ctx, stop := context.WithCancel(context.Background())
 	sessions := newSessionRepository()
-	quitChan := make(chan struct{})
 	reqChan := make(chan *lobbyRequest)
 	childQuitChan := make(chan uuid.UUID)
-	liveStreamSender, err := rtp.NewLiveStreamSender(id, quitChan)
+	liveStreamSender, err := rtp.NewLiveStreamSender(ctx, id)
 	if err != nil {
 		slog.Error("create live stream sender", "err", err)
 	}
 
-	streamer := rtmp.NewStreamer(quitChan)
-	hub := newHub(sessions, entity.LiveStreamId, liveStreamSender, quitChan)
+	streamer := rtmp.NewStreamer(ctx)
+	hub := newHub(ctx, sessions, entity.LiveStreamId, liveStreamSender)
 	lobby := &lobby{
+		ctx:                   ctx,
 		Id:                    id,
 		resourceId:            uuid.New(),
 		rtpEngine:             rtpEngine,
@@ -58,19 +61,20 @@ func newLobby(id uuid.UUID, entity *LobbyEntity, rtpEngine rtpEngine, lobbyGarba
 		liveStreamSender:      liveStreamSender,
 		streamer:              streamer,
 		hub:                   hub,
-		isHost:                isHost,
 		entity:                entity,
-		quit:                  quitChan,
+		stopRunning:           stop,
 		reqChan:               reqChan,
 		sessionQuit:           childQuitChan,
 		lobbyGarbageCollector: lobbyGarbageCollector,
 	}
 	go lobby.run()
+	lobby.hostController = newHostInstanceController(ctx, id, lobby, settings)
 	return lobby
 }
 
 func (l *lobby) run() {
 	slog.Info("lobby.lobby: run", "lobbyId", l.Id)
+
 	for {
 		select {
 		case req := <-l.reqChan:
@@ -95,7 +99,7 @@ func (l *lobby) run() {
 			if _, err := l.deleteSessionByUserId(id); err != nil {
 				slog.Error("lobby.lobby: deleting session because internally reason", "err", err, "session", id)
 			}
-		case <-l.quit:
+		case <-l.ctx.Done():
 			slog.Info("lobby.lobby: close lobby", "lobbyId", l.Id)
 			return
 		}
@@ -122,7 +126,7 @@ func (l *lobby) runRequest(req *lobbyRequest) {
 	select {
 	case l.reqChan <- req:
 		slog.Debug("lobby.lobby: runRequest - request finish", "lobbyId", l.Id, "user", req.user)
-	case <-l.quit:
+	case <-l.ctx.Done():
 		req.err <- errLobbyStopped
 		slog.Debug("lobby.lobby: runRequest - interrupted because lobby closed", "lobbyId", l.Id, "user", req.user)
 	case <-time.After(lobbyReqTimeout):
@@ -144,7 +148,7 @@ func (l *lobby) handleCreateIngressEndpoint(lobbyReq *lobbyRequest) {
 		case lobbyReq.err <- ErrSessionAlreadyExists:
 		case <-lobbyReq.ctx.Done():
 			lobbyReq.err <- errLobbyRequestTimeout
-		case <-l.quit:
+		case <-l.ctx.Done():
 			lobbyReq.err <- errLobbyStopped
 		}
 		return
@@ -170,7 +174,7 @@ func (l *lobby) handleCreateIngressEndpoint(lobbyReq *lobbyRequest) {
 		lobbyReq.err <- fmt.Errorf("start session for joing: %w", err)
 	case <-lobbyReq.ctx.Done():
 		lobbyReq.err <- errLobbyRequestTimeout
-	case <-l.quit:
+	case <-l.ctx.Done():
 		lobbyReq.err <- errLobbyStopped
 	}
 }
@@ -204,7 +208,7 @@ func (l *lobby) handleInitEgressEndpoint(req *lobbyRequest) {
 		req.err <- fmt.Errorf("start session for listening: %w", err)
 	case <-req.ctx.Done():
 		req.err <- errLobbyRequestTimeout
-	case <-l.quit:
+	case <-l.ctx.Done():
 		req.err <- errLobbyStopped
 	}
 }
@@ -222,7 +226,7 @@ func (l *lobby) handleFinalCreateEgressEndpointData(req *lobbyRequest) {
 		case req.err <- fmt.Errorf("no session existing for user %s: %w", req.user, errNoSession):
 		case <-req.ctx.Done():
 			req.err <- errLobbyRequestTimeout
-		case <-l.quit:
+		case <-l.ctx.Done():
 			req.err <- errLobbyStopped
 		}
 		return
@@ -243,7 +247,7 @@ func (l *lobby) handleFinalCreateEgressEndpointData(req *lobbyRequest) {
 		req.err <- fmt.Errorf("listening on session: %w", err)
 	case <-req.ctx.Done():
 		req.err <- errLobbyRequestTimeout
-	case <-l.quit:
+	case <-l.ctx.Done():
 		req.err <- errLobbyStopped
 	}
 }
@@ -261,7 +265,7 @@ func (l *lobby) handleCreateMainEgressEndpointData(lobbyReq *lobbyRequest) {
 		case lobbyReq.err <- ErrSessionAlreadyExists:
 		case <-lobbyReq.ctx.Done():
 			lobbyReq.err <- errLobbyRequestTimeout
-		case <-l.quit:
+		case <-l.ctx.Done():
 			lobbyReq.err <- errLobbyStopped
 		}
 		return
@@ -284,7 +288,7 @@ func (l *lobby) handleCreateMainEgressEndpointData(lobbyReq *lobbyRequest) {
 		lobbyReq.err <- fmt.Errorf("start session for joing: %w", err)
 	case <-lobbyReq.ctx.Done():
 		lobbyReq.err <- errLobbyRequestTimeout
-	case <-l.quit:
+	case <-l.ctx.Done():
 		lobbyReq.err <- errLobbyStopped
 	}
 }
@@ -306,7 +310,7 @@ func (l *lobby) handleLiveStreamReq(req *lobbyRequest) {
 	if data.cmd == "start" {
 		slog.Debug("lobby.lobby: start ffmpeg sender", "lobbyId", l.Id, "user", req.user)
 		streamUrl := fmt.Sprintf("%s/%s", data.rtmpUrl, data.key)
-		if err := l.streamer.StartFFmpeg(context.Background(), streamUrl); err != nil {
+		if err := l.streamer.StartFFmpeg(streamUrl); err != nil {
 			req.err <- fmt.Errorf("starting ffmeg: %w", err)
 			return
 		}
@@ -314,7 +318,7 @@ func (l *lobby) handleLiveStreamReq(req *lobbyRequest) {
 	if data.cmd == "stop" {
 		slog.Debug("lobby.lobby: stop ffmpeg sender", "lobbyId", l.Id, "user", req.user)
 		oldStreamer := l.streamer
-		l.streamer = rtmp.NewStreamer(l.quit)
+		l.streamer = rtmp.NewStreamer(l.ctx)
 		oldStreamer.Stop()
 	}
 
@@ -327,10 +331,10 @@ func (l *lobby) handleLiveStreamReq(req *lobbyRequest) {
 func (l *lobby) stop() {
 	slog.Info("lobby.lobby: stop", "lobbyId", l.Id)
 	select {
-	case <-l.quit:
+	case <-l.ctx.Done():
 		slog.Warn("lobby.lobby: the lobby was already closed", "lobbyId", l.Id)
 	default:
-		close(l.quit)
+		l.stopRunning()
 		slog.Info("lobby.lobby: stopped was triggered", "lobbyId", l.Id)
 	}
 }

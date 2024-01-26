@@ -1,6 +1,7 @@
 package rtp
 
 import (
+	"context"
 	"errors"
 	"net"
 	"sync"
@@ -10,31 +11,30 @@ import (
 )
 
 type liveStreamWriter struct {
+	ctx context.Context
 	sync.Mutex
-	id         string
-	udp        *UdpConnection
-	quit       chan struct{}
-	globalQuit <-chan struct{}
+	id   string
+	udp  *UdpConnection
+	stop func()
 }
 
-func newLiveStreamWriter(id string, udp *UdpConnection, globalQuit <-chan struct{}) *liveStreamWriter {
+func newLiveStreamWriter(parent context.Context, id string, udp *UdpConnection) *liveStreamWriter {
+	ctx, stop := context.WithCancel(parent)
 	return &liveStreamWriter{
-		id:         id,
-		udp:        udp,
-		quit:       make(chan struct{}),
-		globalQuit: globalQuit,
+		ctx:  ctx,
+		id:   id,
+		udp:  udp,
+		stop: stop,
 	}
 }
 
 func (w *liveStreamWriter) close() {
 	slog.Info("rtp.liveStreamWriter: close", "track id", w.id)
 	select {
-	case <-w.globalQuit:
+	case <-w.ctx.Done():
 		slog.Warn("rtp.liveStreamWriter the writer was already closed, con not close by global again", "track id", w.id)
-	case <-w.quit:
-		slog.Warn("rtp.liveStreamWriter the Writer was already closed, con not close by local again", "track id", w.id)
 	default:
-		close(w.quit)
+		w.stop()
 		slog.Info("rtp.liveStreamWriter close was triggered", "track id", w.id)
 	}
 }
