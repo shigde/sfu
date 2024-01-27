@@ -44,7 +44,7 @@ func (c *hostInstanceController) run() {
 	}
 }
 
-func (c *hostInstanceController) connectToHost() {
+func (c *hostInstanceController) connectToHost(instanceId uuid.UUID) {
 	ctx, cancelReq := context.WithCancel(context.Background())
 	request := newLobbyRequest(ctx, c.lobbyId)
 	data := newHostGetOfferData()
@@ -57,7 +57,7 @@ func (c *hostInstanceController) connectToHost() {
 			slog.Error("connect to host", "err", fmt.Errorf("requesting joining lobby: %w", err))
 		case res := <-data.response:
 			if answer, err := c.hostApi.PostHostOffer(c.settings.space, c.settings.stream, res.offer); err == nil {
-				c.onHostAnswerResponse(answer)
+				c.onHostAnswerResponse(answer, instanceId)
 			} else {
 				slog.Error("lobby.hostInstanceController: remote host answer request", "err", err)
 			}
@@ -66,9 +66,9 @@ func (c *hostInstanceController) connectToHost() {
 	go c.lobby.runRequest(request)
 }
 
-func (c *hostInstanceController) onHostAnswerResponse(answer *webrtc.SessionDescription) {
+func (c *hostInstanceController) onHostAnswerResponse(answer *webrtc.SessionDescription, instanceId uuid.UUID) {
 	ctx, cancelReq := context.WithCancel(context.Background())
-	request := newLobbyRequest(ctx, c.lobbyId)
+	request := newLobbyRequest(ctx, instanceId)
 	data := newHostSetAnswerData(answer)
 	request.data = data
 	go func() {
@@ -86,10 +86,10 @@ func (c *hostInstanceController) onHostAnswerResponse(answer *webrtc.SessionDesc
 	go c.lobby.runRequest(request)
 }
 
-func (c *hostInstanceController) onHostConnectionRequest(offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+func (c *hostInstanceController) onHostConnectionRequest(offer *webrtc.SessionDescription, instanceId uuid.UUID) (*webrtc.SessionDescription, error) {
 	ctx, cancelReq := context.WithCancel(context.Background())
 	defer cancelReq()
-	request := newLobbyRequest(ctx, c.lobbyId)
+	request := newLobbyRequest(ctx, instanceId)
 	data := newHostGetAnswerData(offer)
 	request.data = data
 	go c.lobby.runRequest(request)

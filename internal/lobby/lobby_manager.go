@@ -254,9 +254,18 @@ func (m *LobbyManager) CreateLobbyHostPipe(ctx context.Context, lobbyId uuid.UUI
 		RtpSessionId uuid.UUID
 	}
 
-	return answerData, nil
+	lobby, err := m.lobbies.getOrCreateLobby(ctx, lobbyId, m.lobbyGarbageCollector)
+	if err != nil {
+		return answerData, fmt.Errorf("getting or creating lobby: %w", err)
+	}
+
+	if answer, err := lobby.hostController.onHostConnectionRequest(offer, instanceId); err == nil {
+		answerData.Answer = answer
+		return answerData, nil
+	}
+	return answerData, fmt.Errorf("creating host pipe: %w", err)
 }
 
 func (m *LobbyManager) CloseLobbyHostPipe(ctx context.Context, lobbyId uuid.UUID, instanceId uuid.UUID) (bool, error) {
-	return true, nil
+	return m.LeaveLobby(ctx, lobbyId, instanceId)
 }

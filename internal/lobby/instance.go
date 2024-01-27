@@ -6,7 +6,7 @@ import (
 )
 
 type Instance struct {
-	UUID  uuid.UUID
+	UUID  uuid.UUID // my id for this instance like user id
 	Token bool
 	Host  string
 	gorm.Model
