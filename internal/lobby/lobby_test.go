@@ -291,4 +291,122 @@ func TestStreamLobby(t *testing.T) {
 			t.Fatalf("test fails because run in timeout")
 		}
 	})
+
+	t.Run("new host ingress endpoint", func(t *testing.T) {
+		lobby, _ := testStreamLobbySetup(t)
+		defer lobby.stop()
+
+		request := newLobbyRequest(context.Background(), uuid.New())
+		joinData := newHostGetAnswerData(mockedOffer)
+		request.data = joinData
+
+		go lobby.runRequest(request)
+
+		select {
+		case data := <-joinData.response:
+			assert.Equal(t, mockedAnswer, data.answer)
+			assert.False(t, uuid.Nil == data.RtpSessionId)
+		case <-time.After(time.Second * 3):
+			t.Fail()
+		}
+	})
+
+	t.Run("cancel new host ingress endpoint req lobby", func(t *testing.T) {
+		lobby, _ := testStreamLobbySetup(t)
+		defer lobby.stop()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		request := newLobbyRequest(ctx, uuid.New())
+		joinData := newHostGetAnswerData(mockedOffer)
+		request.data = joinData
+
+		cancel()
+		go lobby.runRequest(request)
+
+		select {
+		case err := <-request.err:
+			assert.ErrorIs(t, err, errLobbyRequestTimeout)
+		case <-time.After(time.Second * 3):
+			t.Fail()
+		}
+	})
+
+	t.Run("new host egress offer endpoint", func(t *testing.T) {
+		lobby, _ := testStreamLobbySetup(t)
+		defer lobby.stop()
+
+		request := newLobbyRequest(context.Background(), uuid.New())
+		joinData := newHostGetOfferData()
+		request.data = joinData
+
+		go lobby.runRequest(request)
+
+		select {
+		case data := <-joinData.response:
+			assert.Equal(t, mockedAnswer, data.offer)
+			assert.False(t, uuid.Nil == data.RtpSessionId)
+		case <-time.After(time.Second * 3):
+			t.Fail()
+		}
+	})
+
+	t.Run("cancel new host egress get offer endpoint req lobby", func(t *testing.T) {
+		lobby, _ := testStreamLobbySetup(t)
+		defer lobby.stop()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		request := newLobbyRequest(ctx, uuid.New())
+		joinData := newHostGetOfferData()
+		request.data = joinData
+
+		cancel()
+		go lobby.runRequest(request)
+
+		select {
+		case err := <-request.err:
+			assert.ErrorIs(t, err, errLobbyRequestTimeout)
+		case <-time.After(time.Second * 3):
+			t.Fail()
+		}
+	})
+
+	t.Run("new host egress endpoint set answer", func(t *testing.T) {
+		lobby, id := testStreamLobbySetup(t)
+		defer lobby.stop()
+		session, _ := lobby.sessions.FindByUserId(id)
+		session.signal.stopWaitingForMessenger()
+
+		request := newLobbyRequest(context.Background(), id)
+		joinData := newHostSetAnswerData(mockedAnswer)
+		request.data = joinData
+
+		go lobby.runRequest(request)
+
+		select {
+		case data := <-joinData.response:
+			assert.True(t, data)
+		case <-time.After(time.Second * 10):
+			t.Fail()
+		}
+	})
+
+	t.Run("cancel new host egress endpoint set answer req lobby", func(t *testing.T) {
+		lobby, id := testStreamLobbySetup(t)
+		defer lobby.stop()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		request := newLobbyRequest(ctx, id)
+		joinData := newHostSetAnswerData(mockedAnswer)
+		request.data = joinData
+
+		cancel()
+		go lobby.runRequest(request)
+
+		select {
+		case err := <-request.err:
+			assert.ErrorIs(t, err, errLobbyRequestTimeout)
+		case <-time.After(time.Second * 3):
+			t.Fail()
+		}
+	})
 }

@@ -52,7 +52,8 @@ func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUI
 
 		token := ""
 		isHost := r.lobbyIsHost(entity.Host)
-		hostUrl, _ := url.Parse(entity.Host)
+		actorUrl, _ := url.Parse(entity.Host)
+		hostUrl, _ := url.Parse(fmt.Sprintf("%s://%s", actorUrl.Scheme, actorUrl.Host))
 		hostSettings := hostInstanceSettings{
 			instanceId: uuid.New(),
 			isHost:     isHost,

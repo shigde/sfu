@@ -31,6 +31,7 @@ func (a *hostInstanceApiClient) PostHostOffer(spaceId string, streamId string, o
 	body := bytes.NewBuffer([]byte(offer.SDP))
 	c := http.Client{Timeout: time.Duration(1) * time.Second}
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s/space/%s/stream/%s/pipe", a.url.String(), spaceId, streamId), body)
+
 	if err != nil {
 		return nil, fmt.Errorf("requesting answer: %w", err)
 	}

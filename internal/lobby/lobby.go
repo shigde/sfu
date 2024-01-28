@@ -91,6 +91,12 @@ func (l *lobby) run() {
 				l.handleLeave(req)
 			case *liveStreamData:
 				l.handleLiveStreamReq(req)
+			case *hostGetOfferData:
+				l.handleOfferHostEgressEndpoint(req)
+			case *hostSetAnswerData:
+				l.handleAnswerHostEgressEndpoint(req)
+			case *hostGetAnswerData:
+				l.handleHostIngressEndpoint(req)
 			default:
 				slog.Error("lobby.lobby: not supported request type in lobby", "type", requestType)
 			}
@@ -192,7 +198,7 @@ func (l *lobby) handleInitEgressEndpoint(req *lobbyRequest) {
 		req.err <- errNoSession
 		return
 	}
-	startSessionReq := newInitEgressRequest(req.ctx)
+	startSessionReq := newSessionRequest(ctx, nil, initEgressReq)
 
 	go func() {
 		slog.Info("lobby.lobby: create offerIngressReq request", "lobbyId", l.Id, "user", req.user)
@@ -360,6 +366,112 @@ func (l *lobby) deleteSessionByUserId(userId uuid.UUID) (bool, error) {
 	return false, errNoSession
 }
 
-func (l *lobby) log(msg string) {
-	slog.Debug(msg, "lobbyId", l.Id, "obj", "lobby")
+func (l *lobby) handleOfferHostEgressEndpoint(lobbyReq *lobbyRequest) {
+	slog.Info("lobby.lobby: handle start offer host egress endpoint", "lobbyId", l.Id, "user", lobbyReq.user)
+	ctx, span := otel.Tracer(tracerName).Start(lobbyReq.ctx, "lobby:handleOfferHostEgressEndpoint")
+	lobbyReq.ctx = ctx
+	defer span.End()
+
+	data, _ := lobbyReq.data.(*hostGetOfferData)
+
+	session, ok := l.sessions.FindByUserId(lobbyReq.user)
+	if ok {
+		lobbyReq.err <- ErrSessionAlreadyExists
+		return
+	}
+	session = newSession(lobbyReq.user, l.hub, l.rtpEngine, l.sessionQuit)
+	l.sessions.Add(session)
+	startSessionReq := newSessionRequest(ctx, nil, offerHostEgressReq)
+
+	go func() {
+		slog.Info("lobby.lobby: create offerHostEgressReq request", "lobbyId", l.Id, "user", lobbyReq.user)
+		session.runRequest(startSessionReq)
+	}()
+	select {
+	case offer := <-startSessionReq.respSDPChan:
+		data.response <- &hostOfferResponse{
+			offer:        offer,
+			RtpSessionId: session.Id,
+		}
+	case err := <-startSessionReq.err:
+		lobbyReq.err <- fmt.Errorf("handling offer host egress endpoint : %w", err)
+
+	case <-lobbyReq.ctx.Done():
+		lobbyReq.err <- errLobbyRequestTimeout
+	case <-l.ctx.Done():
+		lobbyReq.err <- errLobbyStopped
+	}
+}
+
+func (l *lobby) handleAnswerHostEgressEndpoint(lobbyReq *lobbyRequest) {
+	slog.Info("lobby.lobby: handle answer host egress endpoint", "lobbyId", l.Id, "instance", lobbyReq.user)
+	ctx, span := otel.Tracer(tracerName).Start(lobbyReq.ctx, "lobby:handleFinalCreateEgressEndpointData")
+	lobbyReq.ctx = ctx
+	defer span.End()
+
+	data, _ := lobbyReq.data.(*hostSetAnswerData)
+	session, ok := l.sessions.FindByUserId(lobbyReq.user)
+	if !ok {
+		select {
+		case lobbyReq.err <- fmt.Errorf("no session existing for instance %s: %w", lobbyReq.user, errNoSession):
+		case <-lobbyReq.ctx.Done():
+			lobbyReq.err <- errLobbyRequestTimeout
+		case <-l.ctx.Done():
+			lobbyReq.err <- errLobbyStopped
+		}
+		return
+	}
+
+	answerReq := newSessionRequest(lobbyReq.ctx, data.answer, answerHostEgressReq)
+	go func() {
+		slog.Info("lobby.lobby: create answerHostEgressReq request", "lobbyId", l.Id, "instanceId", lobbyReq.user)
+		session.runRequest(answerReq)
+	}()
+
+	select {
+	case _ = <-answerReq.respSDPChan:
+		data.response <- true
+	case err := <-answerReq.err:
+		lobbyReq.err <- fmt.Errorf("handle answer host egress endpoint: %w", err)
+	case <-lobbyReq.ctx.Done():
+		lobbyReq.err <- errLobbyRequestTimeout
+	case <-l.ctx.Done():
+		lobbyReq.err <- errLobbyStopped
+	}
+}
+
+func (l *lobby) handleHostIngressEndpoint(lobbyReq *lobbyRequest) {
+	slog.Info("lobby.lobby: handle host ingress endpoint", "lobbyId", l.Id, "instanceId", lobbyReq.user)
+	ctx, span := otel.Tracer(tracerName).Start(lobbyReq.ctx, "lobby:handleHostIngressEndpoint")
+	lobbyReq.ctx = ctx
+	defer span.End()
+
+	data, _ := lobbyReq.data.(*hostGetAnswerData)
+	session, ok := l.sessions.FindByUserId(lobbyReq.user)
+	if !ok {
+		session = newSession(lobbyReq.user, l.hub, l.rtpEngine, l.sessionQuit)
+		l.sessions.Add(session)
+		metric.RunningSessionsInc(l.Id.String())
+	}
+
+	offerReq := newSessionRequest(lobbyReq.ctx, data.offer, offerHostIngressReq)
+
+	go func() {
+		slog.Info("lobby.lobby: create offerHostIngressReq request", "lobbyId", l.Id, "instanceId", lobbyReq.user)
+		session.runRequest(offerReq)
+	}()
+
+	select {
+	case answer := <-offerReq.respSDPChan:
+		data.response <- &hostAnswerResponse{
+			answer:       answer,
+			RtpSessionId: session.Id,
+		}
+	case err := <-offerReq.err:
+		lobbyReq.err <- fmt.Errorf("handling host ingress endpoint: %w", err)
+	case <-lobbyReq.ctx.Done():
+		lobbyReq.err <- errLobbyRequestTimeout
+	case <-l.ctx.Done():
+		lobbyReq.err <- errLobbyStopped
+	}
 }

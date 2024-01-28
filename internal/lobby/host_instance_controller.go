@@ -30,6 +30,10 @@ func newHostInstanceController(ctx context.Context, lobbyId uuid.UUID, lobby *lo
 	}
 
 	go controller.run()
+	if !settings.isHost {
+		slog.Debug("lobby.hostInstanceController. connect to live stream host instance", "instanceId", settings.instanceId)
+		controller.connectToHost(settings.instanceId)
+	}
 	return controller
 }
 
