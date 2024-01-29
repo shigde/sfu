@@ -263,7 +263,33 @@ func (m *LobbyManager) CreateLobbyHostPipe(ctx context.Context, lobbyId uuid.UUI
 		answerData.Answer = answer
 		return answerData, nil
 	}
-	return answerData, fmt.Errorf("creating lobby host ingress connection req: %w", err)
+	return answerData, fmt.Errorf("creating lobby host pipe connection req: %w", err)
+}
+
+func (m *LobbyManager) CreateLobbyHostIngress(_ context.Context, lobbyId uuid.UUID, offer *webrtc.SessionDescription, instanceId uuid.UUID) (struct {
+	Answer       *webrtc.SessionDescription
+	Resource     uuid.UUID
+	RtpSessionId uuid.UUID
+}, error) {
+	var answerData struct {
+		Answer       *webrtc.SessionDescription
+		Resource     uuid.UUID
+		RtpSessionId uuid.UUID
+	}
+
+	lobby, hasLobby := m.lobbies.getLobby(lobbyId)
+	if !hasLobby {
+		return answerData, errLobbyNotFound
+	}
+
+	var answer *webrtc.SessionDescription
+	var err error
+	if answer, err = lobby.hostController.onHostIngressConnectionRequest(offer, instanceId); err != nil {
+		return answerData, fmt.Errorf("creating lobby host ingress connection req: %w", err)
+	}
+
+	answerData.Answer = answer
+	return answerData, nil
 }
 
 func (m *LobbyManager) CloseLobbyHostPipe(ctx context.Context, lobbyId uuid.UUID, instanceId uuid.UUID) (bool, error) {

@@ -120,16 +120,9 @@ func openHostIngress(streamService *stream.LiveStreamService, liveService *strea
 		auth.SetNewRequestToken(w, user.UUID)
 
 		answer, resourceId, err := liveService.CreateLobbyHostIngressConnection(ctx, offer, liveStream, userId)
-		if err != nil && errors.Is(err, lobby.ErrSessionAlreadyExists) {
-			w.WriteHeader(http.StatusConflict)
-			telemetry.RecordError(span, err)
-			httpError(w, "session already exists", http.StatusConflict, err)
-			return
-		}
-
 		if err != nil {
 			telemetry.RecordError(span, err)
-			httpError(w, "error build host pipe", http.StatusInternalServerError, err)
+			httpError(w, "error build host ingress connection", http.StatusInternalServerError, err)
 			return
 		}
 

@@ -129,6 +129,19 @@ func (m *testLobbyManager) CreateLobbyHostPipe(ctx context.Context, u uuid.UUID,
 	return answerData, nil
 }
 
+func (m *testLobbyManager) CreateLobbyHostIngress(_ context.Context, _ uuid.UUID, _ *webrtc.SessionDescription, _ uuid.UUID) (struct {
+	Answer       *webrtc.SessionDescription
+	Resource     uuid.UUID
+	RtpSessionId uuid.UUID
+}, error) {
+	var answerData struct {
+		Answer       *webrtc.SessionDescription
+		Resource     uuid.UUID
+		RtpSessionId uuid.UUID
+	}
+	return answerData, nil
+}
+
 func (m *testLobbyManager) CloseLobbyHostPipe(ctx context.Context, u uuid.UUID, id uuid.UUID) (bool, error) {
 	return true, nil
 }

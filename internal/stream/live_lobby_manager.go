@@ -48,7 +48,7 @@ type liveLobbyManager interface {
 		userId uuid.UUID,
 	) error
 
-	// Host Pipe API
+	// Server to Server API
 	CreateLobbyHostPipe(ctx context.Context, u uuid.UUID, offer *webrtc.SessionDescription, instanceId uuid.UUID) (struct {
 		Answer       *webrtc.SessionDescription
 		Resource     uuid.UUID

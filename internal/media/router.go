@@ -48,8 +48,9 @@ func NewRouter(
 	// Static Stream listeners
 	router.HandleFunc("/space/{space}/stream/{id}/static/whep", auth.HttpMiddleware(securityConfig, whepStaticAnswer(streamService, liveLobbyService))).Methods("POST")
 
-	// Host pipes
+	// Server to Server endpoints
 	router.HandleFunc("/space/{space}/stream/{id}/pipe", auth.HttpMiddleware(securityConfig, openPipe(streamService, liveLobbyService))).Methods("POST")
+	router.HandleFunc("/space/{space}/stream/{id}/hostingress", auth.HttpMiddleware(securityConfig, openHostIngress(streamService, liveLobbyService))).Methods("POST")
 	router.HandleFunc("/space/{space}/stream/{id}/pipe", auth.HttpMiddleware(securityConfig, closePipe(streamService, liveLobbyService))).Methods("DELETE")
 
 	return router
