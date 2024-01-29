@@ -17,19 +17,21 @@ import (
 var errLobbyNotFound = errors.New("lobby not found")
 
 type lobbyRepository struct {
-	locker    *sync.RWMutex
-	lobbies   map[uuid.UUID]*lobby
-	hostUrl   *url.URL
-	store     storage.Storage
-	rtpEngine rtpEngine
+	locker           *sync.RWMutex
+	lobbies          map[uuid.UUID]*lobby
+	instanceActorUrl *url.URL
+	registerToken    string
+	store            storage.Storage
+	rtpEngine        rtpEngine
 }
 
-func newLobbyRepository(store storage.Storage, rtpEngine rtpEngine, hostUrl *url.URL) *lobbyRepository {
+func newLobbyRepository(store storage.Storage, rtpEngine rtpEngine, hostUrl *url.URL, registerToken string) *lobbyRepository {
 	lobbies := make(map[uuid.UUID]*lobby)
 	return &lobbyRepository{
 		&sync.RWMutex{},
 		lobbies,
 		hostUrl,
+		registerToken,
 		store,
 		rtpEngine,
 	}
@@ -50,15 +52,17 @@ func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUI
 			return nil, fmt.Errorf("updating lobby entity as running: %w", err)
 		}
 
-		token := ""
+		instanceId, _ := uuid.Parse("7251719d-a687-4f76-995c-05e03faff69d")
+		name := "shig@localhost:8090"
 		isHost := r.lobbyIsHost(entity.Host)
 		actorUrl, _ := url.Parse(entity.Host)
 		hostUrl, _ := url.Parse(fmt.Sprintf("%s://%s", actorUrl.Scheme, actorUrl.Host))
 		hostSettings := hostInstanceSettings{
-			instanceId: uuid.New(),
+			instanceId: instanceId,
 			isHost:     isHost,
 			url:        hostUrl,
-			token:      token,
+			token:      r.registerToken,
+			name:       name,
 			space:      entity.Space,
 			stream:     entity.LiveStreamId.String(),
 		}
@@ -152,12 +156,12 @@ func (r *lobbyRepository) updateLobbyEntity(ctx context.Context, lobby *LobbyEnt
 	return lobby, nil
 }
 
-func (r *lobbyRepository) lobbyIsHost(lobbyHost string) bool {
-	if lobbyHostUrl, err := url.Parse(lobbyHost); err == nil {
-		return r.hostUrl.Host == lobbyHostUrl.Host &&
-			r.hostUrl.Scheme == lobbyHostUrl.Scheme &&
-			r.hostUrl.Path == lobbyHostUrl.Path
+func (r *lobbyRepository) lobbyIsHost(streamHostActor string) bool {
+	isHost := true
+	if r.instanceActorUrl.String() != streamHostActor {
+		isHost = false
 	}
-	return true
+	slog.Debug("lobby.lobbyRepository: lobby is host", "isHost", isHost, "streamHostActor", streamHostActor, "instanceActor", r.instanceActorUrl.String())
+	return isHost
 
 }

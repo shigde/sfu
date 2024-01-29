@@ -19,8 +19,8 @@ func testLobbyManagerSetup(t *testing.T) (*LobbyManager, *lobby, uuid.UUID) {
 
 	engine := mockRtpEngineForOffer(mockedAnswer)
 
-	host, _ := url.Parse("http://localhost:1234/federation/accounts/shig-test")
-	manager := NewLobbyManager(store, engine, host)
+	host, _ := url.Parse("")
+	manager := NewLobbyManager(store, engine, host, "test-key")
 	lobby, _ := manager.lobbies.getOrCreateLobby(context.Background(), uuid.New(), make(chan uuid.UUID))
 	user := uuid.New()
 	session := newSession(user, lobby.hub, engine, nil)

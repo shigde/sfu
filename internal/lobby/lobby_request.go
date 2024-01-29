@@ -46,16 +46,30 @@ type liveStreamData struct {
 }
 
 // Lobby request data for host pipes ----------
-type hostGetOfferData struct {
+type hostGetPipeOfferData struct {
 	response chan *hostOfferResponse
 }
 
-type hostGetAnswerData struct {
+type hostGetPipeAnswerData struct {
 	offer    *webrtc.SessionDescription
 	response chan *hostAnswerResponse
 }
 
-type hostSetAnswerData struct {
+type hostSetPipeAnswerData struct {
+	answer   *webrtc.SessionDescription
+	response chan bool
+}
+
+type hostGetEgressOfferData struct {
+	response chan *hostOfferResponse
+}
+
+type hostGetIngressAnswerData struct {
+	offer    *webrtc.SessionDescription
+	response chan *hostAnswerResponse
+}
+
+type hostSetEgressAnswerData struct {
 	answer   *webrtc.SessionDescription
 	response chan bool
 }
@@ -126,24 +140,47 @@ func newLeaveData() *leaveData {
 	}
 }
 
-func newHostGetOfferData() *hostGetOfferData {
+func newHostGetPipeOfferData() *hostGetPipeOfferData {
 	resChan := make(chan *hostOfferResponse)
-	return &hostGetOfferData{
+	return &hostGetPipeOfferData{
 		response: resChan,
 	}
 }
 
-func newHostGetAnswerData(offer *webrtc.SessionDescription) *hostGetAnswerData {
+func newHostGetPipeAnswerData(offer *webrtc.SessionDescription) *hostGetPipeAnswerData {
 	resChan := make(chan *hostAnswerResponse)
-	return &hostGetAnswerData{
+	return &hostGetPipeAnswerData{
 		offer:    offer,
 		response: resChan,
 	}
 }
 
-func newHostSetAnswerData(answer *webrtc.SessionDescription) *hostSetAnswerData {
+func newHostSetPipeAnswerData(answer *webrtc.SessionDescription) *hostSetPipeAnswerData {
 	resChan := make(chan bool)
-	return &hostSetAnswerData{
+	return &hostSetPipeAnswerData{
+		answer:   answer,
+		response: resChan,
+	}
+}
+
+func newHostGetEgressOfferData() *hostGetEgressOfferData {
+	resChan := make(chan *hostOfferResponse)
+	return &hostGetEgressOfferData{
+		response: resChan,
+	}
+}
+
+func newHostGetIngressAnswerData(offer *webrtc.SessionDescription) *hostGetIngressAnswerData {
+	resChan := make(chan *hostAnswerResponse)
+	return &hostGetIngressAnswerData{
+		offer:    offer,
+		response: resChan,
+	}
+}
+
+func newHostSetEgressAnswerData(answer *webrtc.SessionDescription) *hostSetEgressAnswerData {
+	resChan := make(chan bool)
+	return &hostSetEgressAnswerData{
 		answer:   answer,
 		response: resChan,
 	}

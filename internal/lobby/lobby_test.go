@@ -292,12 +292,130 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
+	t.Run("new host pipe remote endpoint", func(t *testing.T) {
+		lobby, _ := testStreamLobbySetup(t)
+		defer lobby.stop()
+
+		request := newLobbyRequest(context.Background(), uuid.New())
+		joinData := newHostGetPipeAnswerData(mockedOffer)
+		request.data = joinData
+
+		go lobby.runRequest(request)
+
+		select {
+		case data := <-joinData.response:
+			assert.Equal(t, mockedAnswer, data.answer)
+			assert.False(t, uuid.Nil == data.RtpSessionId)
+		case <-time.After(time.Second * 3):
+			t.Fail()
+		}
+	})
+
+	t.Run("cancel new host pipe remote endpoint req lobby", func(t *testing.T) {
+		lobby, _ := testStreamLobbySetup(t)
+		defer lobby.stop()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		request := newLobbyRequest(ctx, uuid.New())
+		joinData := newHostGetPipeAnswerData(mockedOffer)
+		request.data = joinData
+
+		cancel()
+		go lobby.runRequest(request)
+
+		select {
+		case err := <-request.err:
+			assert.ErrorIs(t, err, errLobbyRequestTimeout)
+		case <-time.After(time.Second * 3):
+			t.Fail()
+		}
+	})
+
+	t.Run("new host pipe offer endpoint", func(t *testing.T) {
+		lobby, _ := testStreamLobbySetup(t)
+		defer lobby.stop()
+
+		request := newLobbyRequest(context.Background(), uuid.New())
+		joinData := newHostGetPipeOfferData()
+		request.data = joinData
+
+		go lobby.runRequest(request)
+
+		select {
+		case data := <-joinData.response:
+			assert.Equal(t, mockedAnswer, data.offer)
+			assert.False(t, uuid.Nil == data.RtpSessionId)
+		case <-time.After(time.Second * 3):
+			t.Fail()
+		}
+	})
+
+	t.Run("cancel new host pipe get offer endpoint req lobby", func(t *testing.T) {
+		lobby, _ := testStreamLobbySetup(t)
+		defer lobby.stop()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		request := newLobbyRequest(ctx, uuid.New())
+		joinData := newHostGetPipeOfferData()
+		request.data = joinData
+
+		cancel()
+		go lobby.runRequest(request)
+
+		select {
+		case err := <-request.err:
+			assert.ErrorIs(t, err, errLobbyRequestTimeout)
+		case <-time.After(time.Second * 3):
+			t.Fail()
+		}
+	})
+
+	t.Run("new host pipe endpoint set answer", func(t *testing.T) {
+		lobby, id := testStreamLobbySetup(t)
+		defer lobby.stop()
+		session, _ := lobby.sessions.FindByUserId(id)
+		session.channel = mockConnection(mockedOffer)
+
+		request := newLobbyRequest(context.Background(), id)
+		joinData := newHostSetPipeAnswerData(mockedAnswer)
+		request.data = joinData
+
+		go lobby.runRequest(request)
+
+		select {
+		case data := <-joinData.response:
+			assert.True(t, data)
+		case <-time.After(time.Second * 3):
+			t.Fail()
+		}
+	})
+
+	t.Run("cancel new host pipe endpoint set answer req lobby", func(t *testing.T) {
+		lobby, id := testStreamLobbySetup(t)
+		defer lobby.stop()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		request := newLobbyRequest(ctx, id)
+		joinData := newHostSetPipeAnswerData(mockedAnswer)
+		request.data = joinData
+
+		cancel()
+		go lobby.runRequest(request)
+
+		select {
+		case err := <-request.err:
+			assert.ErrorIs(t, err, errLobbyRequestTimeout)
+		case <-time.After(time.Second * 3):
+			t.Fail()
+		}
+	})
+
 	t.Run("new host ingress endpoint", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
 		request := newLobbyRequest(context.Background(), uuid.New())
-		joinData := newHostGetAnswerData(mockedOffer)
+		joinData := newHostGetIngressAnswerData(mockedOffer)
 		request.data = joinData
 
 		go lobby.runRequest(request)
@@ -317,7 +435,7 @@ func TestStreamLobby(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		request := newLobbyRequest(ctx, uuid.New())
-		joinData := newHostGetAnswerData(mockedOffer)
+		joinData := newHostGetIngressAnswerData(mockedOffer)
 		request.data = joinData
 
 		cancel()
@@ -336,7 +454,7 @@ func TestStreamLobby(t *testing.T) {
 		defer lobby.stop()
 
 		request := newLobbyRequest(context.Background(), uuid.New())
-		joinData := newHostGetOfferData()
+		joinData := newHostGetEgressOfferData()
 		request.data = joinData
 
 		go lobby.runRequest(request)
@@ -356,7 +474,7 @@ func TestStreamLobby(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		request := newLobbyRequest(ctx, uuid.New())
-		joinData := newHostGetOfferData()
+		joinData := newHostGetEgressOfferData()
 		request.data = joinData
 
 		cancel()
@@ -377,7 +495,7 @@ func TestStreamLobby(t *testing.T) {
 		session.signal.stopWaitingForMessenger()
 
 		request := newLobbyRequest(context.Background(), id)
-		joinData := newHostSetAnswerData(mockedAnswer)
+		joinData := newHostSetEgressAnswerData(mockedAnswer)
 		request.data = joinData
 
 		go lobby.runRequest(request)
@@ -396,7 +514,7 @@ func TestStreamLobby(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 		request := newLobbyRequest(ctx, id)
-		joinData := newHostSetAnswerData(mockedAnswer)
+		joinData := newHostSetEgressAnswerData(mockedAnswer)
 		request.data = joinData
 
 		cancel()

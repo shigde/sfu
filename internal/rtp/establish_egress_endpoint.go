@@ -60,10 +60,10 @@ func EstablishEgressEndpoint(sessionCxt context.Context, e *Engine, sessionId uu
 	}
 	endpoint.initComplete = initComplete
 	if endpoint.onNegotiationNeeded != nil {
+		slog.Debug("rtp.engine: sender: OnNegotiationNeeded setup start")
 		peerConnection.OnNegotiationNeeded(endpoint.doRenegotiation)
 		slog.Debug("rtp.engine: sender: OnNegotiationNeeded setup finish")
 	}
-
 	if endpoint.onChannel != nil {
 		err = creatDC(peerConnection, endpoint.onChannel)
 		if err != nil {

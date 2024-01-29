@@ -25,6 +25,9 @@ const (
 	offerHostIngressReq
 	offerHostEgressReq
 	answerHostEgressReq
+	offerHostRemotePipeReq
+	offerHostPipeReq
+	answerHostPipeReq
 )
 
 func newSessionRequest(ctx context.Context, sdp *webrtc.SessionDescription, reqType sessionReqType) *sessionRequest {

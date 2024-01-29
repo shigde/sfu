@@ -20,7 +20,7 @@ type hostInstanceController struct {
 }
 
 func newHostInstanceController(ctx context.Context, lobbyId uuid.UUID, lobby *lobby, settings hostInstanceSettings) *hostInstanceController {
-	hostApi := NewHostInstanceApiClient(settings.instanceId, settings.token, settings.url)
+	hostApi := NewHostInstanceApiClient(settings.instanceId, settings.token, settings.name, settings.url)
 	controller := &hostInstanceController{
 		ctx:      ctx,
 		lobbyId:  lobbyId,
@@ -31,8 +31,17 @@ func newHostInstanceController(ctx context.Context, lobbyId uuid.UUID, lobby *lo
 
 	go controller.run()
 	if !settings.isHost {
-		slog.Debug("lobby.hostInstanceController. connect to live stream host instance", "instanceId", settings.instanceId)
-		controller.connectToHost(settings.instanceId)
+		go func() {
+			slog.Debug("lobby.hostInstanceController. connect to live stream host instance", "instanceId", settings.instanceId)
+			if err := controller.connectToHostPipe(settings.instanceId); err != nil {
+				slog.Error("lobby.hostInstanceController: connecting pipe", "err", err)
+				return
+			}
+			//if err := controller.connectToHostEgress(settings.instanceId); err != nil {
+			//	slog.Error("lobby.hostInstanceController: connecting ingress", "err", err)
+			//	return
+			//}
+		}()
 	}
 	return controller
 }
@@ -48,53 +57,106 @@ func (c *hostInstanceController) run() {
 	}
 }
 
-func (c *hostInstanceController) connectToHost(instanceId uuid.UUID) {
+func (c *hostInstanceController) connectToHostPipe(instanceId uuid.UUID) error {
+	if _, err := c.hostApi.Login(); err != nil {
+		return fmt.Errorf("login to remote host: %w", err)
+	}
 	ctx, cancelReq := context.WithCancel(context.Background())
-	request := newLobbyRequest(ctx, c.lobbyId)
-	data := newHostGetOfferData()
-	request.data = data
-	go func() {
-		select {
-		case <-c.ctx.Done():
-			cancelReq()
-		case err := <-request.err:
-			slog.Error("connect to host", "err", fmt.Errorf("requesting joining lobby: %w", err))
-		case res := <-data.response:
-			if answer, err := c.hostApi.PostHostOffer(c.settings.space, c.settings.stream, res.offer); err == nil {
-				c.onHostAnswerResponse(answer, instanceId)
-			} else {
-				slog.Error("lobby.hostInstanceController: remote host answer request", "err", err)
-			}
-		}
-	}()
-	go c.lobby.runRequest(request)
-}
+	defer cancelReq()
 
-func (c *hostInstanceController) onHostAnswerResponse(answer *webrtc.SessionDescription, instanceId uuid.UUID) {
-	ctx, cancelReq := context.WithCancel(context.Background())
 	request := newLobbyRequest(ctx, instanceId)
-	data := newHostSetAnswerData(answer)
+	data := newHostGetPipeOfferData()
 	request.data = data
-	go func() {
-		defer cancelReq()
-		select {
-		case <-c.ctx.Done():
-		case err := <-request.err:
-			slog.Error("lobby.hostInstanceController: connect to host", "err", fmt.Errorf("requesting joining lobby: %w", err))
-		case connected := <-data.response:
-			if !connected {
-				slog.Error("lobby.hostInstanceController", "err", "connection could not be established!")
-			}
-		}
-	}()
 	go c.lobby.runRequest(request)
+
+	var answer *webrtc.SessionDescription
+	select {
+	case <-c.ctx.Done():
+		return errSessionAlreadyClosed
+	case err := <-request.err:
+		return fmt.Errorf("requesting pipe offer: %w", err)
+	case res := <-data.response:
+		var err error
+		if answer, err = c.hostApi.PostHostPipeOffer(c.settings.space, c.settings.stream, res.offer); err != nil {
+			return fmt.Errorf("remote host answer request: %w", err)
+		}
+	}
+	return c.onHostPipeAnswerResponse(answer, instanceId)
 }
 
-func (c *hostInstanceController) onHostConnectionRequest(offer *webrtc.SessionDescription, instanceId uuid.UUID) (*webrtc.SessionDescription, error) {
+func (c *hostInstanceController) onHostPipeAnswerResponse(answer *webrtc.SessionDescription, instanceId uuid.UUID) error {
 	ctx, cancelReq := context.WithCancel(context.Background())
 	defer cancelReq()
 	request := newLobbyRequest(ctx, instanceId)
-	data := newHostGetAnswerData(offer)
+	data := newHostSetPipeAnswerData(answer)
+	request.data = data
+	go c.lobby.runRequest(request)
+
+	select {
+	case <-c.ctx.Done():
+		return errSessionAlreadyClosed
+	case err := <-request.err:
+		return fmt.Errorf("setting answer for pip connection: %w", err)
+	case connected := <-data.response:
+		slog.Info("lobby.hostInstanceController received answer response", "isSuccess", connected)
+		if !connected {
+			return errors.New("pipe connection could not be established")
+		}
+	}
+	return nil
+}
+
+func (c *hostInstanceController) connectToHostEgress(instanceId uuid.UUID) error {
+	ctx, cancelReq := context.WithCancel(context.Background())
+	defer cancelReq()
+
+	request := newLobbyRequest(ctx, instanceId)
+	data := newHostGetEgressOfferData()
+	request.data = data
+	go c.lobby.runRequest(request)
+
+	var answer *webrtc.SessionDescription
+	select {
+	case <-c.ctx.Done():
+		return errSessionAlreadyClosed
+	case err := <-request.err:
+		return fmt.Errorf("requesting egress offer: %w", err)
+	case res := <-data.response:
+		var err error
+		if answer, err = c.hostApi.PostHostIngressOffer(c.settings.space, c.settings.stream, res.offer); err != nil {
+			return fmt.Errorf("remote host egress answer request: %w", err)
+		}
+	}
+	return c.onHostEgressAnswerResponse(answer, instanceId)
+}
+
+func (c *hostInstanceController) onHostEgressAnswerResponse(answer *webrtc.SessionDescription, instanceId uuid.UUID) error {
+	ctx, cancelReq := context.WithCancel(context.Background())
+	defer cancelReq()
+	request := newLobbyRequest(ctx, instanceId)
+	data := newHostSetEgressAnswerData(answer)
+	request.data = data
+	go c.lobby.runRequest(request)
+
+	select {
+	case <-c.ctx.Done():
+		return errSessionAlreadyClosed
+	case err := <-request.err:
+		return fmt.Errorf("setting answer for pip connection: %w", err)
+	case connected := <-data.response:
+		slog.Info("lobby.hostInstanceController received answer response", "isSuccess", connected)
+		if !connected {
+			return errors.New("pipe connection could not be established")
+		}
+	}
+	return nil
+}
+
+func (c *hostInstanceController) onHostPipeConnectionRequest(offer *webrtc.SessionDescription, instanceId uuid.UUID) (*webrtc.SessionDescription, error) {
+	ctx, cancelReq := context.WithCancel(context.Background())
+	defer cancelReq()
+	request := newLobbyRequest(ctx, instanceId)
+	data := newHostGetPipeAnswerData(offer)
 	request.data = data
 	go c.lobby.runRequest(request)
 
@@ -104,6 +166,26 @@ func (c *hostInstanceController) onHostConnectionRequest(offer *webrtc.SessionDe
 	case err := <-request.err:
 		return nil, fmt.Errorf("getting host answer: %w", err)
 	case res := <-data.response:
+		slog.Info("lobby.hostInstanceController: getting host answer response success")
+		return res.answer, nil
+	}
+}
+
+func (c *hostInstanceController) onHostIngressConnectionRequest(offer *webrtc.SessionDescription, instanceId uuid.UUID) (*webrtc.SessionDescription, error) {
+	ctx, cancelReq := context.WithCancel(context.Background())
+	defer cancelReq()
+	request := newLobbyRequest(ctx, instanceId)
+	data := newHostGetIngressAnswerData(offer)
+	request.data = data
+	go c.lobby.runRequest(request)
+
+	select {
+	case <-c.ctx.Done():
+		return nil, errors.New("cancel request while the main context is finished")
+	case err := <-request.err:
+		return nil, fmt.Errorf("getting host ingress answer: %w", err)
+	case res := <-data.response:
+		slog.Info("lobby.hostInstanceController: getting host ingress answer response success")
 		return res.answer, nil
 	}
 }
@@ -114,5 +196,6 @@ type hostInstanceSettings struct {
 	stream     string
 	isHost     bool
 	instanceId uuid.UUID
+	name       string
 	token      string
 }

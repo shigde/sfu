@@ -46,14 +46,13 @@ func (s *signal) OnIngressChannel(ingressDC *webrtc.DataChannel) {
 }
 
 func (s *signal) OnEgressChannel(egressDC *webrtc.DataChannel) {
-	slog.Debug("lobby.signal: get ingress datachannel sender and create messenger", "sessionId", s.session, "userId", s.user)
-	s.messenger = newMessenger(egressDC)
-	s.stopWaitingForMessenger()
 	// we crete an egress data channel because we do not want munging the sdp in case of not added tracks to egress endpoint
 }
 
-func (s *signal) OnHostEgressChannel(_ *webrtc.DataChannel) {
-	// we crete an egress data channel because we do not want munging the sdp in case of not added tracks to egress endpoint
+func (s *signal) OnHostPipeChannel(egressDC *webrtc.DataChannel) {
+	slog.Debug("lobby.signal: get host egress datachannel sender and create messenger", "sessionId", s.session, "userId", s.user)
+	s.messenger = newMessenger(egressDC)
+	s.stopWaitingForMessenger()
 }
 
 func (s *signal) stopWaitingForMessenger() {

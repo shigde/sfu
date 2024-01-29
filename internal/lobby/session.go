@@ -40,6 +40,7 @@ type session struct {
 	hub       *hub
 	ingress   *rtp.Endpoint
 	egress    *rtp.Endpoint
+	channel   *rtp.Endpoint
 	signal    *signal
 	reqChan   chan *sessionRequest
 	doStop    chan<- uuid.UUID
@@ -87,7 +88,7 @@ func (s *session) runRequest(req *sessionRequest) {
 	slog.Debug("lobby.sessions: runRequest", "id", s.Id, "user", s.user)
 	select {
 	case s.reqChan <- req:
-		slog.Debug("lobby.sessions: runRequest - return response", "id", s.Id, "user", s.user)
+		slog.Debug("lobby.sessions: runRequest - added to request queue", "id", s.Id, "user", s.user)
 	case <-s.ctx.Done():
 		req.err <- errSessionAlreadyClosed
 		slog.Debug("lobby.sessions: runRequest - interrupted because sessions closed", "id", s.Id, "user", s.user)
@@ -111,6 +112,14 @@ func (s *session) handleSessionReq(req *sessionRequest) {
 		sdp, err = s.handleAnswerEgressReq(req)
 	case offerStaticEgressReq:
 		sdp, err = s.handleOfferStaticEgressReq(req)
+		// Data Channels for Server to server
+	case offerHostRemotePipeReq:
+		sdp, err = s.handleOfferHostRemotePipeReq(req)
+	case offerHostPipeReq:
+		sdp, err = s.handleOfferHostPipeReq(req)
+	case answerHostPipeReq:
+		sdp, err = s.handleAnswerHostPipeReq(req)
+		// Media Server to Server
 	case offerHostIngressReq:
 		sdp, err = s.handleOfferHostIngressReq(req)
 	case offerHostEgressReq:
@@ -305,6 +314,7 @@ func (s *session) sendMuteTrack(info *rtp.TrackInfo) {
 func (s *session) handleOfferHostIngressReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
 	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleOfferHostIngressReq")
 	defer span.End()
+	slog.Debug("lobby.sessions: handleOfferHostIngressReq", "id", s.Id, "instanceId", s.user)
 
 	if s.ingress != nil {
 		return nil, errReceiverInSessionAlreadyExists
@@ -332,6 +342,7 @@ func (s *session) handleOfferHostIngressReq(req *sessionRequest) (*webrtc.Sessio
 func (s *session) handleOfferHostEgressReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
 	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleInitEgressReq")
 	defer span.End()
+	slog.Debug("lobby.sessions: handleOfferHostEgressReq", "id", s.Id, "instanceId", s.user)
 
 	if s.egress != nil {
 		return nil, errSenderInSessionAlreadyExists
@@ -342,9 +353,20 @@ func (s *session) handleOfferHostEgressReq(req *sessionRequest) (*webrtc.Session
 		return hub.getTrackList(sessionId, filterForSession(sessionId))
 	})
 
+	waitBeforeONNSetup := make(chan struct{})
 	option := make([]rtp.EndpointOption, 0)
 	option = append(option, withTrackCbk)
-	option = append(option, rtp.EndpointWithDataChannel(s.signal.OnHostEgressChannel))
+	option = append(option, rtp.EndpointWithDataChannel(s.signal.OnHostPipeChannel))
+	option = append(option, rtp.EndpointWithonIceStateConnectedListener(func() {
+		slog.Debug("lobby.sessions: IceStateConnectedListener we can start renegotiation", "id", s.Id, "instanceId", s.user)
+		select {
+		case <-waitBeforeONNSetup:
+		default:
+			close(waitBeforeONNSetup)
+		}
+	}))
+
+	option = append(option, rtp.EndpointWithONNSetupTrigger(waitBeforeONNSetup))
 	option = append(option, rtp.EndpointWithNegotiationNeededListener(s.signal.OnNegotiationNeeded))
 	option = append(option, rtp.EndpointWithLostConnectionListener(s.onLostConnectionListener))
 
@@ -368,18 +390,18 @@ func (s *session) handleOfferHostEgressReq(req *sessionRequest) (*webrtc.Session
 func (s *session) handleAnswerHostEgressReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
 	_, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleAnswerHostEgressReq")
 	defer span.End()
+	slog.Debug("lobby.sessions: handleOfferHostEgressReq", "id", s.Id, "instanceId", s.user)
 
 	if s.egress == nil || s.signal.egressEndpoint == nil {
 		return nil, errNoSenderInSession
 	}
-
-	s.signal.onAnswer(req.reqSDP, 0)
-
+	s.egress.SetAnswer(req.reqSDP)
 	select {
 	case err := <-s.signal.waitForMessengerSetupFinished():
 		if err != nil {
 			return nil, fmt.Errorf("waiting for messenger: %w", err)
 		}
+		slog.Debug("lobby.sessions: handleOfferHostEgressReq dada channel is ready start renegotiation setup", "id", s.Id, "instanceId", s.user)
 	case <-s.ctx.Done():
 		return nil, errSessionAlreadyClosed
 	case <-time.After(sessionReqTimeout):
@@ -387,5 +409,74 @@ func (s *session) handleAnswerHostEgressReq(req *sessionRequest) (*webrtc.Sessio
 	}
 
 	s.signal.addEgressEndpoint(s.egress)
+	return nil, nil
+}
+
+// Data Channel Endpoints
+func (s *session) handleOfferHostRemotePipeReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
+	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleOfferHostRemotePipeReq")
+	defer span.End()
+	slog.Debug("lobby.sessions: handleOfferHostRemotePipeReq", "id", s.Id, "instanceId", s.user)
+
+	if s.channel != nil {
+		return nil, errReceiverInSessionAlreadyExists
+	}
+
+	option := make([]rtp.EndpointOption, 0)
+	option = append(option, rtp.EndpointWithDataChannel(s.signal.OnIngressChannel))
+	option = append(option, rtp.EndpointWithLostConnectionListener(s.onLostConnectionListener))
+
+	endpoint, err := s.rtpEngine.EstablishIngressEndpoint(s.ctx, s.Id, s.hub.LiveStreamId, *req.reqSDP, option...)
+	if err != nil {
+		return nil, fmt.Errorf("create rtp connection: %w", err)
+	}
+	s.channel = endpoint
+	ctxTimeout, cancel := context.WithTimeout(ctx, iceGatheringTimeout)
+	defer cancel()
+	answer, err := s.channel.GetLocalDescription(ctxTimeout)
+	if err != nil {
+		return nil, fmt.Errorf("create rtp handleOfferHostRemotePipeReq: %w", err)
+	}
+	return answer, nil
+}
+
+func (s *session) handleOfferHostPipeReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
+	ctx, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleOfferHostPipeReq")
+	defer span.End()
+	slog.Debug("lobby.sessions: handleOfferHostPipeReq", "id", s.Id, "instanceId", s.user)
+
+	if s.channel != nil {
+		return nil, errSenderInSessionAlreadyExists
+	}
+
+	option := make([]rtp.EndpointOption, 0)
+	option = append(option, rtp.EndpointWithDataChannel(s.signal.OnHostPipeChannel))
+	option = append(option, rtp.EndpointWithLostConnectionListener(s.onLostConnectionListener))
+
+	endpoint, err := s.rtpEngine.EstablishEgressEndpoint(s.ctx, s.Id, s.hub.LiveStreamId, option...)
+	if err != nil {
+		return nil, fmt.Errorf("create rtp connection: %w", err)
+	}
+	s.channel = endpoint
+
+	ctxTimeout, cancel := context.WithTimeout(ctx, iceGatheringTimeout)
+	defer cancel()
+	offer, err := s.channel.GetLocalDescription(ctxTimeout)
+	if err != nil {
+		return nil, fmt.Errorf("create rtp answerPipeReq: %w", err)
+	}
+
+	return offer, nil
+}
+
+func (s *session) handleAnswerHostPipeReq(req *sessionRequest) (*webrtc.SessionDescription, error) {
+	_, span := otel.Tracer(tracerName).Start(req.ctx, "session:handleAnswerHostPipeReq")
+	defer span.End()
+	slog.Debug("lobby.sessions: handleAnswerHostPipeReq", "id", s.Id, "instanceId", s.user)
+
+	if s.channel == nil {
+		return nil, errNoSenderInSession
+	}
+	_ = s.channel.SetAnswer(req.reqSDP)
 	return nil, nil
 }

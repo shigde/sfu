@@ -27,8 +27,8 @@ type rtpEngine interface {
 	EstablishStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
 }
 
-func NewLobbyManager(storage storage.Storage, e rtpEngine, hostUrl *url.URL) *LobbyManager {
-	lobbies := newLobbyRepository(storage, e, hostUrl)
+func NewLobbyManager(storage storage.Storage, e rtpEngine, hostUrl *url.URL, registerToken string) *LobbyManager {
+	lobbies := newLobbyRepository(storage, e, hostUrl, registerToken)
 	lobbyGarbageCollector := make(chan uuid.UUID)
 	go func() {
 		for id := range lobbyGarbageCollector {
@@ -259,11 +259,11 @@ func (m *LobbyManager) CreateLobbyHostPipe(ctx context.Context, lobbyId uuid.UUI
 		return answerData, fmt.Errorf("getting or creating lobby: %w", err)
 	}
 
-	if answer, err := lobby.hostController.onHostConnectionRequest(offer, instanceId); err == nil {
+	if answer, err := lobby.hostController.onHostPipeConnectionRequest(offer, instanceId); err == nil {
 		answerData.Answer = answer
 		return answerData, nil
 	}
-	return answerData, fmt.Errorf("creating host pipe: %w", err)
+	return answerData, fmt.Errorf("creating lobby host ingress connection req: %w", err)
 }
 
 func (m *LobbyManager) CloseLobbyHostPipe(ctx context.Context, lobbyId uuid.UUID, instanceId uuid.UUID) (bool, error) {

@@ -34,7 +34,9 @@ type Endpoint struct {
 	onChannel           func(dc *webrtc.DataChannel)
 	onEstablished       func()
 	onNegotiationNeeded func(offer webrtc.SessionDescription)
+	waitBeforeONNSetup  <-chan struct{}
 	onLostConnection    func()
+	onIceStateConnected func()
 	getCurrentTracksCbk func(sessionId uuid.UUID) ([]*TrackInfo, error)
 	initTracks          []*initTrack // deprecated
 	dispatcher          TrackDispatcher
@@ -212,7 +214,9 @@ func (c *Endpoint) doRenegotiation() {
 		return
 	case <-c.initComplete:
 	}
+
 	slog.Debug("rtp.establish_egress: sender OnNegotiationNeeded was triggered")
+
 	offer, err := c.peerConnection.CreateOffer(nil)
 	if err != nil {
 		slog.Error("rtp.establish_egress:: sender doRenegotiation", "err", err)
@@ -248,6 +252,10 @@ func (c *Endpoint) onICEConnectionStateChange(state webrtc.ICEConnectionState) {
 		if c.onLostConnection != nil {
 			c.onLostConnection()
 		}
+	}
+
+	if state == webrtc.ICEConnectionStateConnected && c.onIceStateConnected != nil {
+		c.onIceStateConnected()
 	}
 }
 

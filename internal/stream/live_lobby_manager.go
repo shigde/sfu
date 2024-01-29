@@ -55,5 +55,11 @@ type liveLobbyManager interface {
 		RtpSessionId uuid.UUID
 	}, error)
 
+	CreateLobbyHostIngress(ctx context.Context, u uuid.UUID, offer *webrtc.SessionDescription, instanceId uuid.UUID) (struct {
+		Answer       *webrtc.SessionDescription
+		Resource     uuid.UUID
+		RtpSessionId uuid.UUID
+	}, error)
+
 	CloseLobbyHostPipe(ctx context.Context, u uuid.UUID, id uuid.UUID) (bool, error)
 }

@@ -85,7 +85,15 @@ func (s *LiveLobbyService) StopLiveStream(ctx context.Context, stream *LiveStrea
 func (s *LiveLobbyService) CreateLobbyHostConnection(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, instanceId uuid.UUID) (*webrtc.SessionDescription, string, error) {
 	resourceData, err := s.lobbyManager.CreateLobbyHostPipe(ctx, stream.Lobby.UUID, offer, instanceId)
 	if err != nil {
-		return nil, "", fmt.Errorf("creating host pipe: %w", err)
+		return nil, "", fmt.Errorf("creating lobby host connection: %w", err)
+	}
+	return resourceData.Answer, "", nil
+}
+
+func (s *LiveLobbyService) CreateLobbyHostIngressConnection(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, instanceId uuid.UUID) (*webrtc.SessionDescription, string, error) {
+	resourceData, err := s.lobbyManager.CreateLobbyHostIngress(ctx, stream.Lobby.UUID, offer, instanceId)
+	if err != nil {
+		return nil, "", fmt.Errorf("creating lobby host ingress connection: %w", err)
 	}
 	return resourceData.Answer, "", nil
 }

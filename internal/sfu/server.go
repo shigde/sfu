@@ -49,7 +49,7 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 
 	host, _ := url.Parse(config.FederationConfig.InstanceUrl.String())
 	host.Path = fmt.Sprintf("federation/accounts/%s", config.FederationConfig.InstanceUsername)
-	lobbyManager := lobby.NewLobbyManager(store, engine, host)
+	lobbyManager := lobby.NewLobbyManager(store, engine, host, config.FederationConfig.RegisterToken)
 
 	streamRepo := stream.NewLiveStreamRepository(store)
 	spaceRepo := stream.NewSpaceRepository(store)

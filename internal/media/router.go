@@ -49,8 +49,8 @@ func NewRouter(
 	router.HandleFunc("/space/{space}/stream/{id}/static/whep", auth.HttpMiddleware(securityConfig, whepStaticAnswer(streamService, liveLobbyService))).Methods("POST")
 
 	// Host pipes
-	router.HandleFunc("/space/{space}/stream/{id}/pipe", openPipe(streamService, liveLobbyService)).Methods("POST")
-	router.HandleFunc("/space/{space}/stream/{id}/pipe", closePipe(streamService, liveLobbyService)).Methods("DELETE")
+	router.HandleFunc("/space/{space}/stream/{id}/pipe", auth.HttpMiddleware(securityConfig, openPipe(streamService, liveLobbyService))).Methods("POST")
+	router.HandleFunc("/space/{space}/stream/{id}/pipe", auth.HttpMiddleware(securityConfig, closePipe(streamService, liveLobbyService))).Methods("DELETE")
 
 	return router
 }

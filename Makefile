@@ -22,7 +22,7 @@ run: build
 	./bin/$(SERVER_NAME) -config=config.toml
 
 
-run-remote:
+run-remote: build
 	./bin/$(SERVER_NAME) -config=config-remote.toml
 
 race:

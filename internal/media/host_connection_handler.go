@@ -22,11 +22,6 @@ func openPipe(streamService *stream.LiveStreamService, liveService *stream.LiveL
 
 		w.Header().Set("Content-Type", "application/sdp")
 
-		if err := auth.StartSession(w, r); err != nil {
-			telemetry.RecordError(span, err)
-			httpError(w, "error", http.StatusInternalServerError, err)
-		}
-
 		liveStream, _, err := getLiveStream(r, streamService)
 		if err != nil {
 			telemetry.RecordError(span, err)
@@ -67,7 +62,74 @@ func openPipe(streamService *stream.LiveStreamService, liveService *stream.LiveL
 
 		if err != nil {
 			telemetry.RecordError(span, err)
-			httpError(w, "error build whip", http.StatusInternalServerError, err)
+			httpError(w, "error build host pipe", http.StatusInternalServerError, err)
+			return
+		}
+
+		response := []byte(answer.SDP)
+		hash := md5.Sum(response)
+
+		w.WriteHeader(http.StatusCreated)
+		w.Header().Set("etag", fmt.Sprintf("%x", hash))
+		w.Header().Set("Location", "resource/"+resourceId)
+		contentLen, err := w.Write(response)
+		if err != nil {
+			telemetry.RecordError(span, err)
+			httpError(w, "error build response", http.StatusInternalServerError, err)
+			return
+		}
+		w.Header().Set("Content-Length", strconv.Itoa(contentLen))
+	}
+}
+
+func openHostIngress(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "open-host-Ingress")
+		defer span.End()
+
+		w.Header().Set("Content-Type", "application/sdp")
+
+		liveStream, _, err := getLiveStream(r, streamService)
+		if err != nil {
+			telemetry.RecordError(span, err)
+			handleResourceError(w, err)
+			return
+		}
+
+		offer, err := getSdpPayload(w, r, webrtc.SDPTypeOffer)
+		if err != nil {
+			telemetry.RecordError(span, err)
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(err.Error()))
+			return
+		}
+
+		user, ok := auth.PrincipalFromContext(r.Context())
+		if !ok {
+			telemetry.RecordError(span, errors.New("no user"))
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		userId, err := user.GetUuid()
+		if err != nil {
+			telemetry.RecordError(span, err)
+			httpError(w, "error user", http.StatusBadRequest, err)
+			return
+		}
+		auth.SetNewRequestToken(w, user.UUID)
+
+		answer, resourceId, err := liveService.CreateLobbyHostIngressConnection(ctx, offer, liveStream, userId)
+		if err != nil && errors.Is(err, lobby.ErrSessionAlreadyExists) {
+			w.WriteHeader(http.StatusConflict)
+			telemetry.RecordError(span, err)
+			httpError(w, "session already exists", http.StatusConflict, err)
+			return
+		}
+
+		if err != nil {
+			telemetry.RecordError(span, err)
+			httpError(w, "error build host pipe", http.StatusInternalServerError, err)
 			return
 		}
 
