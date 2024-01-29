@@ -425,6 +425,7 @@ func (s *session) handleOfferHostRemotePipeReq(req *sessionRequest) (*webrtc.Ses
 	option := make([]rtp.EndpointOption, 0)
 	option = append(option, rtp.EndpointWithDataChannel(s.signal.OnIngressChannel))
 	option = append(option, rtp.EndpointWithLostConnectionListener(s.onLostConnectionListener))
+	option = append(option, rtp.EndpointWithTrackDispatcher(s.hub))
 
 	endpoint, err := s.rtpEngine.EstablishIngressEndpoint(s.ctx, s.Id, s.hub.LiveStreamId, *req.reqSDP, option...)
 	if err != nil {

@@ -285,7 +285,7 @@ func (m *LobbyManager) CreateLobbyHostIngress(_ context.Context, lobbyId uuid.UU
 	var answer *webrtc.SessionDescription
 	var err error
 	if answer, err = lobby.hostController.onHostIngressConnectionRequest(offer, instanceId); err != nil {
-		return answerData, fmt.Errorf("creating lobby host ingress connection req: %w", err)
+		return answerData, fmt.Errorf("creating lobby host remote ingress connection req: %w", err)
 	}
 
 	answerData.Answer = answer

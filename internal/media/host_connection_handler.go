@@ -52,7 +52,7 @@ func openPipe(streamService *stream.LiveStreamService, liveService *stream.LiveL
 		}
 		auth.SetNewRequestToken(w, user.UUID)
 
-		answer, resourceId, err := liveService.CreateLobbyHostConnection(ctx, offer, liveStream, userId)
+		answer, resourceId, err := liveService.CreateLobbyHostPipeConnection(ctx, offer, liveStream, userId)
 		if err != nil && errors.Is(err, lobby.ErrSessionAlreadyExists) {
 			w.WriteHeader(http.StatusConflict)
 			telemetry.RecordError(span, err)

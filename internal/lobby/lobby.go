@@ -579,7 +579,7 @@ func (l *lobby) handleHostRemotePipeEndpoint(lobbyReq *lobbyRequest) {
 	offerReq := newSessionRequest(lobbyReq.ctx, data.offer, offerHostRemotePipeReq)
 
 	go func() {
-		slog.Info("lobby.lobby: create offerHostIngressReq request", "lobbyId", l.Id, "instanceId", lobbyReq.user)
+		slog.Info("lobby.lobby: create hostGetPipeAnswerData request", "lobbyId", l.Id, "instanceId", lobbyReq.user)
 		session.runRequest(offerReq)
 	}()
 

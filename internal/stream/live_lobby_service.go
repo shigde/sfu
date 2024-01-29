@@ -82,10 +82,10 @@ func (s *LiveLobbyService) StopLiveStream(ctx context.Context, stream *LiveStrea
 	return nil
 }
 
-func (s *LiveLobbyService) CreateLobbyHostConnection(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, instanceId uuid.UUID) (*webrtc.SessionDescription, string, error) {
+func (s *LiveLobbyService) CreateLobbyHostPipeConnection(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, instanceId uuid.UUID) (*webrtc.SessionDescription, string, error) {
 	resourceData, err := s.lobbyManager.CreateLobbyHostPipe(ctx, stream.Lobby.UUID, offer, instanceId)
 	if err != nil {
-		return nil, "", fmt.Errorf("creating lobby host connection: %w", err)
+		return nil, "", fmt.Errorf("creating lobby host pipe connection: %w", err)
 	}
 	return resourceData.Answer, "", nil
 }
