@@ -92,6 +92,21 @@ func (c *Endpoint) SetAnswer(sdp *webrtc.SessionDescription) error {
 	return c.peerConnection.SetRemoteDescription(*sdp)
 }
 
+func (c *Endpoint) SetNewOffer(sdp *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+	if err := c.peerConnection.SetRemoteDescription(*sdp); err != nil {
+		return nil, fmt.Errorf("set new offer: %w", err)
+	}
+
+	answer, err := c.peerConnection.CreateAnswer(nil)
+	if err != nil {
+		return nil, err
+	}
+	if err = c.peerConnection.SetLocalDescription(answer); err != nil {
+		return nil, err
+	}
+	return &answer, nil
+}
+
 func (c *Endpoint) SetInitComplete() {
 	select {
 	case <-c.initComplete:
@@ -293,6 +308,7 @@ type peerConnection interface {
 	RemoveTrack(sender *webrtc.RTPSender) error
 	SignalingState() webrtc.SignalingState
 	CreateOffer(options *webrtc.OfferOptions) (webrtc.SessionDescription, error)
+	CreateAnswer(options *webrtc.AnswerOptions) (webrtc.SessionDescription, error)
 	OnICEConnectionStateChange(f func(webrtc.ICEConnectionState))
 	OnNegotiationNeeded(f func())
 	Close() error

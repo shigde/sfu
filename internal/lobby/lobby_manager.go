@@ -259,7 +259,7 @@ func (m *LobbyManager) CreateLobbyHostPipe(ctx context.Context, lobbyId uuid.UUI
 		return answerData, fmt.Errorf("getting or creating lobby: %w", err)
 	}
 
-	if answer, err := lobby.hostController.onHostPipeConnectionRequest(offer, instanceId); err == nil {
+	if answer, err := lobby.hostController.onRemoteHostPipeConnectionRequest(offer, instanceId); err == nil {
 		answerData.Answer = answer
 		return answerData, nil
 	}
@@ -284,7 +284,7 @@ func (m *LobbyManager) CreateLobbyHostIngress(_ context.Context, lobbyId uuid.UU
 
 	var answer *webrtc.SessionDescription
 	var err error
-	if answer, err = lobby.hostController.onHostIngressConnectionRequest(offer, instanceId); err != nil {
+	if answer, err = lobby.hostController.onRemoteHostIngressConnectionRequest(offer, instanceId); err != nil {
 		return answerData, fmt.Errorf("creating lobby host remote ingress connection req: %w", err)
 	}
 

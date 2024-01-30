@@ -256,7 +256,7 @@ func TestRtpSessionListen(t *testing.T) {
 		session.ingress = mockConnection(nil)
 		session.signal.messenger = newMockedMessenger(t)
 		session.egress = mockConnection(mockedOffer)
-		session.signal.egressEndpoint = session.egress
+		session.signal.egress = session.egress
 
 		req := newSessionRequest(context.Background(), mockedAnswer, answerEgressReq)
 		go func() {
@@ -457,7 +457,7 @@ func TestRtpSessionHostEgressAnswer(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		session.signal.messenger = newMockedMessenger(t)
 		session.egress = mockConnection(mockedOffer)
-		session.signal.egressEndpoint = session.egress
+		session.signal.egress = session.egress
 
 		req := newSessionRequest(context.Background(), mockedAnswer, answerHostEgressReq)
 		oldTimeOut := waitingTimeOut
@@ -481,7 +481,7 @@ func TestRtpSessionHostEgressAnswer(t *testing.T) {
 		session.signal.messenger = newMockedMessenger(t)
 		session.signal.stopWaitingForMessenger()
 		session.egress = mockConnection(mockedOffer)
-		session.signal.egressEndpoint = session.egress
+		session.signal.egress = session.egress
 
 		req := newSessionRequest(context.Background(), mockedAnswer, answerHostEgressReq)
 		go func() {

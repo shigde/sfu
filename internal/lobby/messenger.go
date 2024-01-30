@@ -53,21 +53,37 @@ func newMessenger(s msgSender) *messenger {
 
 func (m *messenger) sendOffer(offer *webrtc.SessionDescription, number uint32) (uint32, error) {
 	slog.Debug("lobby.messenger: start to send offer", "number", number)
-	sdp := &message.Sdp{
-		SDP:    offer,
+	id := m.count()
+	return m.sendSDP(offer, id, number)
+}
+func (m *messenger) sendAnswer(sdp *webrtc.SessionDescription, id uint32, number uint32) (uint32, error) {
+	slog.Debug("lobby.messenger: start to send answer", "number", number)
+	return m.sendSDP(sdp, id, number)
+}
+
+func (m *messenger) sendSDP(sdp *webrtc.SessionDescription, id uint32, number uint32) (uint32, error) {
+	sdpMsg := &message.Sdp{
+		SDP:    sdp,
 		Number: number,
 	}
 
-	id := m.count()
+	var msgTye message.MsgType
+	switch sdp.Type {
+	case webrtc.SDPTypeOffer:
+		msgTye = message.OfferMsg
+	case webrtc.SDPTypeAnswer:
+		msgTye = message.AnswerMsg
+	}
+
 	channelMsg := &message.ChannelMsg{
 		Id:   id,
-		Type: message.OfferMsg,
-		Data: sdp,
+		Type: msgTye,
+		Data: sdpMsg,
 	}
 
 	byteMsg, err := message.Marshal(channelMsg)
 	if err != nil {
-		return id, fmt.Errorf("marshaling offer message (msgId %d offer %d): %w", id, number, err)
+		return id, fmt.Errorf("marshaling offer message (msgId %d sdp %d): %w", id, number, err)
 	}
 
 	select {
@@ -75,7 +91,7 @@ func (m *messenger) sendOffer(offer *webrtc.SessionDescription, number uint32) (
 	default:
 		select {
 		case m.queueChan <- byteMsg:
-			slog.Debug("lobby.messenger: offer is send", "number", number)
+			slog.Debug("lobby.messenger: sdp is send", "number", number)
 		case <-m.quit:
 		}
 	}
@@ -141,6 +157,8 @@ func (m *messenger) notifyAll(msg *message.ChannelMsg) {
 	switch msg.Type {
 	case message.AnswerMsg:
 		m.handleAnswerMsg(msg)
+	case message.OfferMsg:
+		m.handleOfferMsg(msg)
 	case message.MuteMsg:
 		m.handleMuteMsg(msg)
 	default:
@@ -149,21 +167,39 @@ func (m *messenger) notifyAll(msg *message.ChannelMsg) {
 }
 
 func (m *messenger) handleAnswerMsg(msg *message.ChannelMsg) {
-	jsonStr, err := json.Marshal(msg.Data)
+	answer, err := m.unmarshalSdp(msg)
 	if err != nil {
-		slog.Error("lobby.messenger: unmarshal answer", "err", err, "dataChannel", m.sender.Label())
+		slog.Error("messenger: handleAnswerMsg", "err", err)
 	}
-	answer, err := message.SdpUnmarshal(jsonStr)
-	if err != nil {
-		slog.Error("lobby.messenger: unmarshal sdp of answer", "err", err, "dataChannel", m.sender.Label())
-	}
-	slog.Debug("lobby.messenger: handleAnswerMsg", "number", answer.Number)
-
 	m.locker.RLock()
 	defer m.locker.RUnlock()
 	for _, observer := range m.observerList {
 		observer.onAnswer(answer.SDP, answer.Number)
 	}
+}
+
+func (m *messenger) handleOfferMsg(msg *message.ChannelMsg) {
+	offer, err := m.unmarshalSdp(msg)
+	if err != nil {
+		slog.Error("messenger: handleOfferMsg", "err", err)
+	}
+	m.locker.RLock()
+	defer m.locker.RUnlock()
+	for _, observer := range m.observerList {
+		observer.onOffer(offer.SDP, msg.Id, offer.Number)
+	}
+}
+
+func (m *messenger) unmarshalSdp(msg *message.ChannelMsg) (*message.Sdp, error) {
+	jsonStr, err := json.Marshal(msg.Data)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal message: %w", err)
+	}
+	sdp, err := message.SdpUnmarshal(jsonStr)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal sdp of mesge: %w", err)
+	}
+	return sdp, nil
 }
 
 func (m *messenger) handleMuteMsg(msg *message.ChannelMsg) {
@@ -206,6 +242,7 @@ type msgSender interface {
 
 type msgObserver interface {
 	onAnswer(sdp *webrtc.SessionDescription, number uint32)
+	onOffer(sdp *webrtc.SessionDescription, responseId uint32, responseMsgNumber uint32)
 	onMute(mute *message.Mute)
 	getId() uuid.UUID
 }

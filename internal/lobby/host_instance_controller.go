@@ -33,14 +33,19 @@ func newHostInstanceController(ctx context.Context, lobbyId uuid.UUID, lobby *lo
 	if !settings.isHost {
 		go func() {
 			slog.Debug("lobby.hostInstanceController. connect to live stream host instance", "instanceId", settings.instanceId)
+			if _, err := hostApi.Login(); err != nil {
+				slog.Error("login to remote host", "err", err)
+				return
+			}
+
 			if err := controller.connectToHostPipe(settings.instanceId); err != nil {
 				slog.Error("lobby.hostInstanceController: connecting pipe", "err", err)
 				return
 			}
-			//if err := controller.connectToHostEgress(settings.instanceId); err != nil {
-			//	slog.Error("lobby.hostInstanceController: connecting ingress", "err", err)
-			//	return
-			//}
+			if err := controller.connectToHostEgress(settings.instanceId); err != nil {
+				slog.Error("lobby.hostInstanceController: connecting ingress", "err", err)
+				return
+			}
 		}()
 	}
 	return controller
@@ -58,9 +63,6 @@ func (c *hostInstanceController) run() {
 }
 
 func (c *hostInstanceController) connectToHostPipe(instanceId uuid.UUID) error {
-	if _, err := c.hostApi.Login(); err != nil {
-		return fmt.Errorf("login to remote host: %w", err)
-	}
 	ctx, cancelReq := context.WithCancel(context.Background())
 	defer cancelReq()
 
@@ -152,9 +154,10 @@ func (c *hostInstanceController) onHostEgressAnswerResponse(answer *webrtc.Sessi
 	return nil
 }
 
-func (c *hostInstanceController) onHostPipeConnectionRequest(offer *webrtc.SessionDescription, instanceId uuid.UUID) (*webrtc.SessionDescription, error) {
+func (c *hostInstanceController) onRemoteHostPipeConnectionRequest(offer *webrtc.SessionDescription, instanceId uuid.UUID) (*webrtc.SessionDescription, error) {
 	ctx, cancelReq := context.WithCancel(context.Background())
 	defer cancelReq()
+
 	request := newLobbyRequest(ctx, instanceId)
 	data := newHostGetPipeAnswerData(offer)
 	request.data = data
@@ -171,7 +174,7 @@ func (c *hostInstanceController) onHostPipeConnectionRequest(offer *webrtc.Sessi
 	}
 }
 
-func (c *hostInstanceController) onHostIngressConnectionRequest(offer *webrtc.SessionDescription, instanceId uuid.UUID) (*webrtc.SessionDescription, error) {
+func (c *hostInstanceController) onRemoteHostIngressConnectionRequest(offer *webrtc.SessionDescription, instanceId uuid.UUID) (*webrtc.SessionDescription, error) {
 	ctx, cancelReq := context.WithCancel(context.Background())
 	defer cancelReq()
 	request := newLobbyRequest(ctx, instanceId)
@@ -186,6 +189,23 @@ func (c *hostInstanceController) onHostIngressConnectionRequest(offer *webrtc.Se
 		return nil, fmt.Errorf("getting host ingress answer: %w", err)
 	case res := <-data.response:
 		slog.Info("lobby.hostInstanceController: getting host ingress answer response success")
+
+		if c.settings.isHost {
+			go func() {
+				remoteHost, _ := url.Parse("http://localhost:8090")
+				c.hostApi.url = remoteHost
+				slog.Debug("lobby.hostInstanceController: start egress endpoint")
+				if _, err := c.hostApi.Login(); err != nil {
+					slog.Error("login to remote host", "err", err)
+					return
+				}
+				if err := c.connectToHostEgress(instanceId); err != nil {
+					slog.Error("lobby.hostInstanceController: connecting egress", "err", err)
+					return
+				}
+			}()
+		}
+
 		return res.answer, nil
 	}
 }

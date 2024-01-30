@@ -37,13 +37,13 @@ func testStreamLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 	session.ingress = mockConnection(mockedAnswer)
 
 	session.egress = mockConnection(mockedAnswer)
-	session.signal.egressEndpoint = session.egress
+	session.signal.egress = session.egress
 	lobby.sessions.Add(session)
 	return lobby, user
 }
 func TestStreamLobby(t *testing.T) {
 
-	t.Run("new ingress endpoint", func(t *testing.T) {
+	t.Run("new ingress egress", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -63,7 +63,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("cancel new ingress endpoint req lobby", func(t *testing.T) {
+	t.Run("cancel new ingress egress req lobby", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -83,7 +83,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("finally create new egress endpoint in lobby", func(t *testing.T) {
+	t.Run("finally create new egress egress in lobby", func(t *testing.T) {
 		lobby, user := testStreamLobbySetup(t)
 		defer lobby.stop()
 		request := newLobbyRequest(context.Background(), user)
@@ -100,7 +100,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("cancel req for finally create new egress endpoint in lobby", func(t *testing.T) {
+	t.Run("cancel req for finally create new egress egress in lobby", func(t *testing.T) {
 		lobby, user := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -120,7 +120,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("init egress endpoint but no session was started before", func(t *testing.T) {
+	t.Run("init egress egress but no session was started before", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -140,7 +140,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("init egress endpoint", func(t *testing.T) {
+	t.Run("init egress egress", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -169,7 +169,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("cancel init egress endpoint lobby req", func(t *testing.T) {
+	t.Run("cancel init egress egress lobby req", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -221,7 +221,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("create static egress endpoint", func(t *testing.T) {
+	t.Run("create static egress egress", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -244,12 +244,12 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("create static egress endpoint, but endpoint already exits", func(t *testing.T) {
+	t.Run("create static egress egress, but egress already exits", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
 		user := uuid.New()
-		// Creat a session to simulate existing endpoint
+		// Creat a session to simulate existing egress
 		session := newSession(user, nil, nil, nil)
 		lobby.sessions.Add(session)
 
@@ -269,7 +269,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("cancel request to create static egress endpoint", func(t *testing.T) {
+	t.Run("cancel request to create static egress egress", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -292,7 +292,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("new host pipe remote endpoint", func(t *testing.T) {
+	t.Run("new host pipe remote egress", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -311,7 +311,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("cancel new host pipe remote endpoint req lobby", func(t *testing.T) {
+	t.Run("cancel new host pipe remote egress req lobby", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -331,7 +331,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("new host pipe offer endpoint", func(t *testing.T) {
+	t.Run("new host pipe offer egress", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -350,7 +350,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("cancel new host pipe get offer endpoint req lobby", func(t *testing.T) {
+	t.Run("cancel new host pipe get offer egress req lobby", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -370,7 +370,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("new host pipe endpoint set answer", func(t *testing.T) {
+	t.Run("new host pipe egress set answer", func(t *testing.T) {
 		lobby, id := testStreamLobbySetup(t)
 		defer lobby.stop()
 		session, _ := lobby.sessions.FindByUserId(id)
@@ -390,7 +390,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("cancel new host pipe endpoint set answer req lobby", func(t *testing.T) {
+	t.Run("cancel new host pipe egress set answer req lobby", func(t *testing.T) {
 		lobby, id := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -410,7 +410,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("new host ingress endpoint", func(t *testing.T) {
+	t.Run("new host ingress egress", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -429,7 +429,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("cancel new host ingress endpoint req lobby", func(t *testing.T) {
+	t.Run("cancel new host ingress egress req lobby", func(t *testing.T) {
 		lobby, _ := testStreamLobbySetup(t)
 		defer lobby.stop()
 
@@ -449,11 +449,14 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("new host egress offer endpoint", func(t *testing.T) {
-		lobby, _ := testStreamLobbySetup(t)
+	t.Run("new host egress offer egress", func(t *testing.T) {
+		lobby, id := testStreamLobbySetup(t)
 		defer lobby.stop()
+		session, _ := lobby.sessions.FindByUserId(id)
+		session.channel = mockConnection(mockedAnswer)
+		session.egress = nil
 
-		request := newLobbyRequest(context.Background(), uuid.New())
+		request := newLobbyRequest(context.Background(), id)
 		joinData := newHostGetEgressOfferData()
 		request.data = joinData
 
@@ -468,12 +471,12 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("cancel new host egress get offer endpoint req lobby", func(t *testing.T) {
-		lobby, _ := testStreamLobbySetup(t)
+	t.Run("cancel new host egress get offer egress req lobby", func(t *testing.T) {
+		lobby, id := testStreamLobbySetup(t)
 		defer lobby.stop()
 
 		ctx, cancel := context.WithCancel(context.Background())
-		request := newLobbyRequest(ctx, uuid.New())
+		request := newLobbyRequest(ctx, id)
 		joinData := newHostGetEgressOfferData()
 		request.data = joinData
 
@@ -488,7 +491,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("new host egress endpoint set answer", func(t *testing.T) {
+	t.Run("new host egress egress set answer", func(t *testing.T) {
 		lobby, id := testStreamLobbySetup(t)
 		defer lobby.stop()
 		session, _ := lobby.sessions.FindByUserId(id)
@@ -508,7 +511,7 @@ func TestStreamLobby(t *testing.T) {
 		}
 	})
 
-	t.Run("cancel new host egress endpoint set answer req lobby", func(t *testing.T) {
+	t.Run("cancel new host egress egress set answer req lobby", func(t *testing.T) {
 		lobby, id := testStreamLobbySetup(t)
 		defer lobby.stop()
 

@@ -379,7 +379,7 @@ func (l *lobby) deleteSessionByUserId(userId uuid.UUID) (bool, error) {
 }
 
 func (l *lobby) handleOfferHostEgressEndpoint(lobbyReq *lobbyRequest) {
-	slog.Info("lobby.lobby: handle start offer host egress endpoint", "lobbyId", l.Id, "user", lobbyReq.user)
+	slog.Info("lobby.lobby: handle start offer host egress egress", "lobbyId", l.Id, "user", lobbyReq.user)
 	ctx, span := otel.Tracer(tracerName).Start(lobbyReq.ctx, "lobby:handleOfferHostEgressEndpoint")
 	lobbyReq.ctx = ctx
 	defer span.End()
@@ -387,12 +387,17 @@ func (l *lobby) handleOfferHostEgressEndpoint(lobbyReq *lobbyRequest) {
 	data, _ := lobbyReq.data.(*hostGetEgressOfferData)
 
 	session, ok := l.sessions.FindByUserId(lobbyReq.user)
-	if ok {
-		lobbyReq.err <- ErrSessionAlreadyExists
+	if !ok {
+		select {
+		case lobbyReq.err <- fmt.Errorf("no session existing for instance %s: %w", lobbyReq.user, errNoSession):
+		case <-lobbyReq.ctx.Done():
+			lobbyReq.err <- errLobbyRequestTimeout
+		case <-l.ctx.Done():
+			lobbyReq.err <- errLobbyStopped
+		}
 		return
 	}
-	session = newSession(lobbyReq.user, l.hub, l.rtpEngine, l.sessionQuit)
-	l.sessions.Add(session)
+
 	startSessionReq := newSessionRequest(ctx, nil, offerHostEgressReq)
 
 	go func() {
@@ -406,7 +411,7 @@ func (l *lobby) handleOfferHostEgressEndpoint(lobbyReq *lobbyRequest) {
 			RtpSessionId: session.Id,
 		}
 	case err := <-startSessionReq.err:
-		lobbyReq.err <- fmt.Errorf("handling offer host egress endpoint : %w", err)
+		lobbyReq.err <- fmt.Errorf("handling offer host egress egress : %w", err)
 
 	case <-lobbyReq.ctx.Done():
 		lobbyReq.err <- errLobbyRequestTimeout
@@ -416,7 +421,7 @@ func (l *lobby) handleOfferHostEgressEndpoint(lobbyReq *lobbyRequest) {
 }
 
 func (l *lobby) handleAnswerHostEgressEndpoint(lobbyReq *lobbyRequest) {
-	slog.Info("lobby.lobby: handle answer host egress endpoint", "lobbyId", l.Id, "instance", lobbyReq.user)
+	slog.Info("lobby.lobby: handle answer host egress egress", "lobbyId", l.Id, "instance", lobbyReq.user)
 	ctx, span := otel.Tracer(tracerName).Start(lobbyReq.ctx, "lobby:handleFinalCreateEgressEndpointData")
 	lobbyReq.ctx = ctx
 	defer span.End()
@@ -444,7 +449,7 @@ func (l *lobby) handleAnswerHostEgressEndpoint(lobbyReq *lobbyRequest) {
 	case _ = <-answerReq.respSDPChan:
 		data.response <- true
 	case err := <-answerReq.err:
-		lobbyReq.err <- fmt.Errorf("handle answer host egress endpoint: %w", err)
+		lobbyReq.err <- fmt.Errorf("handle answer host egress egress: %w", err)
 	case <-lobbyReq.ctx.Done():
 		lobbyReq.err <- errLobbyRequestTimeout
 	case <-l.ctx.Done():
@@ -453,7 +458,7 @@ func (l *lobby) handleAnswerHostEgressEndpoint(lobbyReq *lobbyRequest) {
 }
 
 func (l *lobby) handleHostIngressEndpoint(lobbyReq *lobbyRequest) {
-	slog.Info("lobby.lobby: handle host ingress endpoint", "lobbyId", l.Id, "instanceId", lobbyReq.user)
+	slog.Info("lobby.lobby: handle host ingress egress", "lobbyId", l.Id, "instanceId", lobbyReq.user)
 	ctx, span := otel.Tracer(tracerName).Start(lobbyReq.ctx, "lobby:handleHostIngressEndpoint")
 	lobbyReq.ctx = ctx
 	defer span.End()
@@ -480,7 +485,7 @@ func (l *lobby) handleHostIngressEndpoint(lobbyReq *lobbyRequest) {
 			RtpSessionId: session.Id,
 		}
 	case err := <-offerReq.err:
-		lobbyReq.err <- fmt.Errorf("handling host ingress endpoint: %w", err)
+		lobbyReq.err <- fmt.Errorf("handling host ingress egress: %w", err)
 	case <-lobbyReq.ctx.Done():
 		lobbyReq.err <- errLobbyRequestTimeout
 	case <-l.ctx.Done():
@@ -489,7 +494,7 @@ func (l *lobby) handleHostIngressEndpoint(lobbyReq *lobbyRequest) {
 }
 
 func (l *lobby) handleOfferHostPipeEndpoint(lobbyReq *lobbyRequest) {
-	slog.Info("lobby.lobby: handle start offer host pipe endpoint", "lobbyId", l.Id, "user", lobbyReq.user)
+	slog.Info("lobby.lobby: handle start offer host pipe egress", "lobbyId", l.Id, "user", lobbyReq.user)
 	ctx, span := otel.Tracer(tracerName).Start(lobbyReq.ctx, "lobby:handleOfferHostPipeEndpoint")
 	lobbyReq.ctx = ctx
 	defer span.End()
@@ -516,7 +521,7 @@ func (l *lobby) handleOfferHostPipeEndpoint(lobbyReq *lobbyRequest) {
 			RtpSessionId: session.Id,
 		}
 	case err := <-startSessionReq.err:
-		lobbyReq.err <- fmt.Errorf("handling offer host egress endpoint : %w", err)
+		lobbyReq.err <- fmt.Errorf("handling offer host egress egress : %w", err)
 
 	case <-lobbyReq.ctx.Done():
 		lobbyReq.err <- errLobbyRequestTimeout
@@ -526,7 +531,7 @@ func (l *lobby) handleOfferHostPipeEndpoint(lobbyReq *lobbyRequest) {
 }
 
 func (l *lobby) handleAnswerHostPipeEndpoint(lobbyReq *lobbyRequest) {
-	slog.Info("lobby.lobby: handle answer host pipe endpoint", "lobbyId", l.Id, "instance", lobbyReq.user)
+	slog.Info("lobby.lobby: handle answer host pipe egress", "lobbyId", l.Id, "instance", lobbyReq.user)
 	ctx, span := otel.Tracer(tracerName).Start(lobbyReq.ctx, "lobby:handleAnswerHostPipeEndpoint")
 	lobbyReq.ctx = ctx
 	defer span.End()
@@ -554,7 +559,7 @@ func (l *lobby) handleAnswerHostPipeEndpoint(lobbyReq *lobbyRequest) {
 	case _ = <-answerReq.respSDPChan:
 		data.response <- true
 	case err := <-answerReq.err:
-		lobbyReq.err <- fmt.Errorf("handle answer host egress endpoint: %w", err)
+		lobbyReq.err <- fmt.Errorf("handle answer host egress egress: %w", err)
 	case <-lobbyReq.ctx.Done():
 		lobbyReq.err <- errLobbyRequestTimeout
 	case <-l.ctx.Done():
@@ -563,7 +568,7 @@ func (l *lobby) handleAnswerHostPipeEndpoint(lobbyReq *lobbyRequest) {
 }
 
 func (l *lobby) handleHostRemotePipeEndpoint(lobbyReq *lobbyRequest) {
-	slog.Info("lobby.lobby: handle host remote pipe endpoint", "lobbyId", l.Id, "instanceId", lobbyReq.user)
+	slog.Info("lobby.lobby: handle host remote pipe egress", "lobbyId", l.Id, "instanceId", lobbyReq.user)
 	ctx, span := otel.Tracer(tracerName).Start(lobbyReq.ctx, "lobby:handleHostRemotePipeEndpoint")
 	lobbyReq.ctx = ctx
 	defer span.End()
@@ -590,7 +595,7 @@ func (l *lobby) handleHostRemotePipeEndpoint(lobbyReq *lobbyRequest) {
 			RtpSessionId: session.Id,
 		}
 	case err := <-offerReq.err:
-		lobbyReq.err <- fmt.Errorf("handling host ingress endpoint: %w", err)
+		lobbyReq.err <- fmt.Errorf("handling host ingress egress: %w", err)
 	case <-lobbyReq.ctx.Done():
 		lobbyReq.err <- errLobbyRequestTimeout
 	case <-l.ctx.Done():

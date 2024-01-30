@@ -110,7 +110,7 @@ func (h *hub) DispatchMuteTrack(track *rtp.TrackInfo) {
 
 // getTrackList Is called from the Egress endpoints when the connection is established.
 // In ths wax the egress endpoints can receive the current tracks of the lobby
-// The session set this methode as callback to the egress endpoint
+// The session set this methode as callback to the egress egress
 func (h *hub) getTrackList(sessionId uuid.UUID, filters ...filterHubTracks) ([]*rtp.TrackInfo, error) {
 	var hubList []*rtp.TrackInfo
 	trackListChan := make(chan []*rtp.TrackInfo)
@@ -230,7 +230,7 @@ func (h *hub) increaseNodeGraphStats(sessionId string, endpointType rtp.Endpoint
 	index := endpointType.ToString() + sessionId
 	metricNode, ok := h.metricNodes[index]
 	if !ok {
-		// if metric not found create the endpoint and the edge from endpoint to lobby
+		// if metric not found create the egress and the edge from egress to lobby
 		metricNode = metric.BuildNode(sessionId, h.LiveStreamId.String(), endpointType.ToString())
 		metric.GraphAddEdge(sessionId, h.LiveStreamId.String(), endpointType.ToString())
 	}

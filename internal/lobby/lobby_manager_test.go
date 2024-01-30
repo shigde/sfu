@@ -26,7 +26,7 @@ func testLobbyManagerSetup(t *testing.T) (*LobbyManager, *lobby, uuid.UUID) {
 	session := newSession(user, lobby.hub, engine, nil)
 	session.signal.messenger = newMockedMessenger(t)
 	session.egress = mockConnection(mockedAnswer)
-	session.signal.egressEndpoint = session.egress
+	session.signal.egress = session.egress
 
 	lobby.sessions.Add(session)
 
@@ -34,7 +34,7 @@ func testLobbyManagerSetup(t *testing.T) (*LobbyManager, *lobby, uuid.UUID) {
 }
 
 func TestLobbyManager(t *testing.T) {
-	t.Run("Create lobby ingestion endpoint with timeout", func(t *testing.T) {
+	t.Run("Create lobby ingestion egress with timeout", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 		defer lobby.stop()
 
@@ -45,7 +45,7 @@ func TestLobbyManager(t *testing.T) {
 		assert.ErrorIs(t, err, errLobbyRequestTimeout)
 	})
 
-	t.Run("Create new lobby with ingestion endpoint", func(t *testing.T) {
+	t.Run("Create new lobby with ingestion egress", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 		defer lobby.stop()
 
@@ -58,7 +58,7 @@ func TestLobbyManager(t *testing.T) {
 		assert.False(t, uuid.Nil == data.Resource)
 	})
 
-	t.Run("Create ingestion endpoint when lobby already started", func(t *testing.T) {
+	t.Run("Create ingestion egress when lobby already started", func(t *testing.T) {
 		manager, lobby, _ := testLobbyManagerSetup(t)
 		defer lobby.stop()
 

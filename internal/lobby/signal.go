@@ -22,7 +22,8 @@ type signal struct {
 	sessionCtx        context.Context
 	session           uuid.UUID
 	user              uuid.UUID
-	egressEndpoint    *rtp.Endpoint
+	egress            *rtp.Endpoint
+	ingress           *rtp.Endpoint
 	onMuteCbk         func(_ *message.Mute)
 	messenger         *messenger
 	offerNumber       atomic.Uint32
@@ -45,8 +46,8 @@ func (s *signal) OnIngressChannel(ingressDC *webrtc.DataChannel) {
 	s.stopWaitingForMessenger()
 }
 
-func (s *signal) OnEgressChannel(egressDC *webrtc.DataChannel) {
-	// we crete an egress data channel because we do not want munging the sdp in case of not added tracks to egress endpoint
+func (s *signal) OnEmptyChannel(_ *webrtc.DataChannel) {
+	// we crete an egress data channel because we do not want munging the sdp in case of not added tracks to egress egress
 }
 
 func (s *signal) OnHostPipeChannel(egressDC *webrtc.DataChannel) {
@@ -64,10 +65,18 @@ func (s *signal) stopWaitingForMessenger() {
 	}
 }
 
-func (s *signal) addEgressEndpoint(egressEndpoint *rtp.Endpoint) {
-	s.egressEndpoint = egressEndpoint
+func (s *signal) addEgressEndpoint(endpoint *rtp.Endpoint) {
+	s.egress = endpoint
 	s.offerNumber.Store(0)
-	s.messenger.register(s)
+	if s.ingress == nil {
+		s.messenger.register(s)
+	}
+}
+func (s *signal) addIngressEndpoint(endpoint *rtp.Endpoint) {
+	s.ingress = endpoint
+	if s.egress == nil {
+		s.messenger.register(s)
+	}
 }
 
 func (s *signal) OnNegotiationNeeded(offer webrtc.SessionDescription) {
@@ -86,10 +95,22 @@ func (s *signal) onAnswer(sdp *webrtc.SessionDescription, number uint32) {
 
 	slog.Debug("lobby.signal: onAnswer set", "number", number, "currentNumber", current, "sessionId", s.session, "user", s.user)
 
-	if err := s.egressEndpoint.SetAnswer(sdp); err != nil {
+	if err := s.egress.SetAnswer(sdp); err != nil {
 		slog.Error("lobby.signal: on answer was trigger with error", "err", err, "sessionId", s.session, "userId", s.user)
 	}
-	s.egressEndpoint.SetInitComplete()
+	s.egress.SetInitComplete()
+}
+
+func (s *signal) onOffer(sdp *webrtc.SessionDescription, responseId uint32, number uint32) {
+	slog.Debug("lobby.signal: onAnswer set", "number", number, "sessionId", s.session, "user", s.user)
+
+	answer, err := s.ingress.SetNewOffer(sdp)
+	if err != nil {
+		slog.Error("lobby.signal: on answer was trigger with error", "err", err, "sessionId", s.session, "userId", s.user)
+	}
+	if _, err := s.messenger.sendAnswer(answer, responseId, number); err != nil {
+		slog.Error("lobby.signal: on answer was trigger with error", "err", err, "sessionId", s.session, "userId", s.user)
+	}
 }
 
 func (s *signal) onMute(mute *message.Mute) {
