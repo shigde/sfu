@@ -93,6 +93,9 @@ func (c *Endpoint) SetAnswer(sdp *webrtc.SessionDescription) error {
 }
 
 func (c *Endpoint) SetNewOffer(sdp *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+
+	err := getIngressTrackSdpInfo(*sdp, uuid.MustParse(c.sessionId), c.trackSdpInfoRepository)
+
 	if err := c.peerConnection.SetRemoteDescription(*sdp); err != nil {
 		return nil, fmt.Errorf("set new offer: %w", err)
 	}

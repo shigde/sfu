@@ -43,27 +43,27 @@ type LobbySessionTrackMetric struct {
 
 func RecordTrackStats(labels Labels, statsRec *stats.Stats) {
 	if labels[Direction] == "ingress" {
-		//PacketInc(labels, statsRec.InboundRTPStreamStats.PacketsReceived)
-		//PacketBytesInc(labels, statsRec.InboundRTPStreamStats.BytesReceived)
-		//NackInc(labels, statsRec.InboundRTPStreamStats.NACKCount)
-		//PliInc(labels, statsRec.InboundRTPStreamStats.PLICount)
-		//FirInc(labels, statsRec.InboundRTPStreamStats.FIRCount)
-		//PacketLossTotalInc(labels, statsRec.InboundRTPStreamStats.PacketsLost)
-		//PacketLossInc(labels, statsRec.InboundRTPStreamStats.PacketsLost)
-		//JitterInc(labels, statsRec.InboundRTPStreamStats.Jitter)
-		//RttInc(labels, statsRec.RemoteOutboundRTPStreamStats.RoundTripTimeMeasurements)
+		PacketInc(labels, statsRec.InboundRTPStreamStats.PacketsReceived)
+		PacketBytesInc(labels, statsRec.InboundRTPStreamStats.BytesReceived)
+		NackInc(labels, statsRec.InboundRTPStreamStats.NACKCount)
+		PliInc(labels, statsRec.InboundRTPStreamStats.PLICount)
+		FirInc(labels, statsRec.InboundRTPStreamStats.FIRCount)
+		PacketLossTotalInc(labels, statsRec.InboundRTPStreamStats.PacketsLost)
+		PacketLossInc(labels, statsRec.InboundRTPStreamStats.PacketsLost)
+		JitterInc(labels, statsRec.InboundRTPStreamStats.Jitter)
+		RttInc(labels, statsRec.RemoteOutboundRTPStreamStats.RoundTripTimeMeasurements)
 	}
 
 	if labels[Direction] == "egress" {
-		//PacketInc(labels, statsRec.OutboundRTPStreamStats.PacketsSent)
-		//PacketBytesInc(labels, statsRec.OutboundRTPStreamStats.BytesSent)
-		//NackInc(labels, statsRec.OutboundRTPStreamStats.NACKCount)
-		//PliInc(labels, statsRec.OutboundRTPStreamStats.PLICount)
-		//FirInc(labels, statsRec.OutboundRTPStreamStats.FIRCount)
-		//PacketLossTotalInc(labels, statsRec.RemoteInboundRTPStreamStats.PacketsLost)
-		//PacketLossInc(labels, statsRec.RemoteInboundRTPStreamStats.PacketsLost)
-		//JitterInc(labels, statsRec.RemoteInboundRTPStreamStats.Jitter)
-		//RttInc(labels, statsRec.RemoteInboundRTPStreamStats.RoundTripTimeMeasurements)
+		PacketInc(labels, statsRec.OutboundRTPStreamStats.PacketsSent)
+		PacketBytesInc(labels, statsRec.OutboundRTPStreamStats.BytesSent)
+		NackInc(labels, statsRec.OutboundRTPStreamStats.NACKCount)
+		PliInc(labels, statsRec.OutboundRTPStreamStats.PLICount)
+		FirInc(labels, statsRec.OutboundRTPStreamStats.FIRCount)
+		PacketLossTotalInc(labels, statsRec.RemoteInboundRTPStreamStats.PacketsLost)
+		PacketLossInc(labels, statsRec.RemoteInboundRTPStreamStats.PacketsLost)
+		JitterInc(labels, statsRec.RemoteInboundRTPStreamStats.Jitter)
+		RttInc(labels, statsRec.RemoteInboundRTPStreamStats.RoundTripTimeMeasurements)
 	}
 }
 
