@@ -53,7 +53,7 @@ func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUI
 		}
 
 		instanceId, _ := uuid.Parse("7251719d-a687-4f76-995c-05e03faff69d")
-		name := "shig@localhost:8090"
+		name := "shig@fosdem-stream.shig.de"
 
 		isHost := r.lobbyIsHost(entity.Host)
 		actorUrl, _ := url.Parse(entity.Host)

@@ -26,9 +26,9 @@ var (
 )
 
 var (
-	sessionReqTimeout = 3 * time.Second
+	sessionReqTimeout = 5 * time.Second
 
-	iceGatheringTimeout = 2 * time.Second
+	iceGatheringTimeout = 5 * time.Second
 )
 
 type session struct {

@@ -19,7 +19,7 @@ var (
 	ErrSessionAlreadyExists = errors.New("session already exists")
 	errLobbyStopped         = errors.New("error because lobby stopped")
 	errLobbyRequestTimeout  = errors.New("lobby request timeout error")
-	lobbyReqTimeout         = 3 * time.Second
+	lobbyReqTimeout         = 10 * time.Second
 )
 
 type lobby struct {

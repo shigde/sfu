@@ -19,7 +19,8 @@ type LobbyEntity struct {
 
 func NewLobbyEntity(streamID uuid.UUID, space string) *LobbyEntity {
 	// @TODO: The host should be send by Activity Pub
-	host, _ := url.Parse("http://localhost:8080/federation/accounts/shig")
+	host, _ := url.Parse("https://stream.shig.de/federation/accounts/shig")
+	// host, _ := url.Parse("http://localhost:8080/federation/accounts/shig")
 	return &LobbyEntity{
 		UUID:         uuid.New(),
 		IsRunning:    false,

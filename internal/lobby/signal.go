@@ -15,7 +15,7 @@ import (
 
 var errTimeoutByWaitingForMessenger = errors.New("timeout by waiting for messenger")
 var errSessionClosedByWaitingForMessenger = errors.New("session closed by waiting for messenger")
-var waitingTimeOut = 3 * time.Second
+var waitingTimeOut = 10 * time.Second
 
 type signal struct {
 	id                uuid.UUID
