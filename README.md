@@ -1,6 +1,36 @@
-# Shig SFU
-Shig is a Fediverse service designed to distribute and clone live streams among Fediverse instances. 
-Shig is constructed based on the WHIP/WHEP approach for both incoming and outgoing streams.
+# Shig Instance
+
+Shig is a federated service designed to distribute and replicate live streams among Fediverse instances. 
+It's built upon the WHIP/WHEP approach for both inbound and outbound streams.
+Through an ActivityPub integration, Shig can follow other Fediverse services and receive updates on live stream activities.
+
+!["live-stream"](./docs/img/shig-stream-exchange.jpeg)
+
+## Features
+
+| Feature                  |                          | Develop State | Release |
+|--------------------------|--------------------------|---------------|---------|
+| **Endpoints**            |                          |               |         |
+|                          | WHIP/WHEP (Lobby)        | finish        |         |
+|                          | WHIP/WHEP (Instances)    | testing       |         |
+|                          | WHIP/WHEP (Static Files) | develop       |         |
+|                          | Mute/Unmute              | testing       |         |
+|                          | WebRTC to RTMP           | develop       |         |
+|                          | WebRTC to HLS            | planned       |         |
+| **Bandwidth Estimation** |                          |               |         |
+|                          | Receiver/Sender Reports  | planned       |         |
+|                          | Simulcast                | planned       |         |
+|                          | FEC                      | planned       |         |
+| **Activity Pub**         |                          |               |         |
+|                          | Fallow PeerTube          | finish        |         |
+|                          | Fallow Channel           | finish        |         |
+|                          | Fallow Shig Instance     | planned       |         |
+|                          | Fallow Remote PeerTube   | testing       |         |
+|                          | OAuth between Services   | planned       |         |
+| **Deployment**           |                          |               |         |
+|                          | Docker                   | planned       |         |
+
+**Develop States**: planed | develop | testing | finish
 
 ## Documentaion
 
@@ -47,16 +77,18 @@ docker build -t shig-builder .
 ```
 
 ###### Build Shig Instance
+
 ```shell
 export DOCKER_DEFAULT_PLATFORM=linux/amd64
 docker run --rm -v "$PWD":/usr/src/myapp -w /usr/src/myapp shig-builder make build-linux
 ```
+
 ###### Build Shig CLT
+
 ```shell
 export DOCKER_DEFAULT_PLATFORM=linux/amd64
 docker run --rm -v "$PWD":/usr/src/myapp -w /usr/src/myapp shig-builder make build-clt-linux
 ```
-
 
 ## Monitoring
 
@@ -68,7 +100,8 @@ please install grafana loki docker plugin
 docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
 ```
 
-### Start Develop Monitoring 
+### Start Develop Monitoring
+
 ```shell
 make monitor
 ```
