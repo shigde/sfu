@@ -21,7 +21,6 @@ build: go_init
 run: build
 	./bin/$(SERVER_NAME) -config=config.toml
 
-
 run-remote: build
 	./bin/$(SERVER_NAME) -config=config-remote.toml
 
@@ -33,7 +32,6 @@ build-linux: go_init
 
 build-clt-linux: go_init
 	GOOS=linux GOARCH=amd64 go build -o bin/$(CLT_NAME).linux.amd64 $(GO_LDFLAGS) ./cmd/clt
-
 
 build-clt:
 	go build -o bin/$(CLT_NAME) ./cmd/clt
@@ -68,3 +66,14 @@ build-streamer: go_init
 run-streamer: build-streamer
 	 ./bin/media_streamer -c config.toml
 
+docker-build-linux:
+	DOCKER_DEFAULT_PLATFORM=linux/amd64 docker run --rm -v ${CURDIR}:/usr/src/shigde -w /usr/src/shigde golang:1.21 make build-linux
+
+docker-build-container:
+	DOCKER_DEFAULT_PLATFORM=linux/amd64 docker image build . --tag shigde/instance
+
+docker-run:
+	docker run --rm docker.io/shigde/instance
+
+build-container: build-linux
+	docker image build . --tag shigde/instance \

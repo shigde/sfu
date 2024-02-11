@@ -43,7 +43,7 @@ Through an ActivityPub integration, Shig can follow other Fediverse services and
 
 ## Quick Start
 
-### Run SFU
+### Run Shig Instance
 
 ```shell
 make run
@@ -61,29 +61,31 @@ mv shig-dev.db shig.db
 
 Now you can start the SFU with some data.
 
-### Build
+## Build
 
 ```shell
 make build
 ``` 
 
-#### If you have Mac M1 / M2 -> Build a linux arm64 with Docker
-
-Once time build a docker image for your container
+#### Build Docker Container for Shig Instance
 
 ```shell
-export DOCKER_DEFAULT_PLATFORM=linux/amd64
-docker build -t shig-builder .
-```
+make build-container
+``` 
 
-###### Build Shig Instance
+### Build with Docker
 
 ```shell
-export DOCKER_DEFAULT_PLATFORM=linux/amd64
-docker run --rm -v "$PWD":/usr/src/myapp -w /usr/src/myapp shig-builder make build-linux
+make docker-build
 ```
 
-###### Build Shig CLT
+#### Build Docker Container for Shig Instance
+
+```shell
+make docker-build-container
+```
+
+## Build Shig CLT
 
 ```shell
 export DOCKER_DEFAULT_PLATFORM=linux/amd64
