@@ -23,6 +23,10 @@ type Config struct {
 	*instance.FederationConfig `mapstructure:"federation"`
 }
 
+type Environment struct {
+	*instance.FederationEnv
+}
+
 type ServerConfig struct {
 	Host string `mapstructure:"host"`
 	Port int    `mapstructure:"port"`

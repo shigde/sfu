@@ -20,9 +20,24 @@ type FederationConfig struct {
 	ServerInitTime   sql.NullTime
 }
 
-func ValidateFederationConfig(config *FederationConfig) error {
+type FederationEnv struct {
+	Domain        string
+	RegisterToken string
+}
+
+func ValidateFederationConfig(config *FederationConfig, env *FederationEnv) error {
 	if !config.Enable {
 		return nil
+	}
+
+	// Env overrides config file
+	if len(env.Domain) > 0 {
+		config.Domain = env.Domain
+	}
+
+	// Env overrides config file
+	if len(env.RegisterToken) > 0 {
+		config.RegisterToken = env.RegisterToken
 	}
 
 	if len(config.InstanceUsername) < 1 {

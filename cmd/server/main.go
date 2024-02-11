@@ -21,7 +21,8 @@ func main() {
 
 	fmt.Println("config:", *configArg)
 
-	conf, err := config.ParseConfig(*configArg)
+	env := config.ParseEnv()
+	conf, err := config.ParseConfig(*configArg, env)
 	if err != nil {
 		panic(fmt.Errorf("parsing config: %w", err))
 		return

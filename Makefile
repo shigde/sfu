@@ -69,7 +69,7 @@ run-streamer: build-streamer
 docker-build-linux:
 	DOCKER_DEFAULT_PLATFORM=linux/amd64 docker run --rm -v ${CURDIR}:/usr/src/shigde -w /usr/src/shigde golang:1.21 make build-linux
 
-docker-build-container:
+docker-build-container: docker-build-linux
 	DOCKER_DEFAULT_PLATFORM=linux/amd64 docker image build . --tag shigde/instance
 
 docker-run:
