@@ -59,7 +59,7 @@ func ParseConfig(file string, env *sfu.Environment) (*sfu.Config, error) {
 		return nil, err
 	}
 
-	if err := sfu.ValidateServerConfig(config.ServerConfig); err != nil {
+	if err := sfu.ValidateServerConfig(config.ServerConfig, &env.ServerEnv); err != nil {
 		return nil, err
 	}
 
