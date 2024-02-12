@@ -55,7 +55,7 @@ func ParseConfig(file string, env *sfu.Environment) (*sfu.Config, error) {
 		return nil, err
 	}
 
-	if err := instance.ValidateFederationConfig(config.FederationConfig, env.FederationEnv); err != nil {
+	if err := instance.ValidateFederationConfig(config.FederationConfig, &env.FederationEnv); err != nil {
 		return nil, err
 	}
 

@@ -11,7 +11,7 @@ logfile = "/var/log/shigde.log"
 [store]
 # currently only Sqlite3 supported
 name = "sqlite3"
-dataSource = "shig.db"
+dataSource = "/var/lib/shigde/shig.db"
 
 [security]
 # set list of domains allowed to request api

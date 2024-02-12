@@ -24,7 +24,8 @@ type Config struct {
 }
 
 type Environment struct {
-	*instance.FederationEnv
+	ServerEnv
+	instance.FederationEnv
 }
 
 type ServerConfig struct {
@@ -32,7 +33,14 @@ type ServerConfig struct {
 	Port int    `mapstructure:"port"`
 }
 
-func ValidateServerConfig(config *ServerConfig) error {
+type ServerEnv struct {
+	Port int
+}
+
+func ValidateServerConfig(config *ServerConfig, env *ServerEnv) error {
+	if env.Port >= 1 {
+		config.Port = env.Port
+	}
 	if len(config.Host) < 1 {
 		return fmt.Errorf("server.Host should not be empty")
 	}
