@@ -64,7 +64,7 @@ iceServer = [{ urls = ["stun:stun.l.google.com:19302"] }]
 [federation]
 enable = true
 # The domain of your public api
-domain = "localhost:8080"
+domain = "stream.localhost:8080"
 https = false
 release = "v0"
 instanceUsername = "shig"

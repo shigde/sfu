@@ -5,8 +5,10 @@ import (
 )
 
 func ExtractName(withName WithName) string {
-	name := withName.GetActivityStreamsName()
-	return name.Name()
+	if withName.GetActivityStreamsName().Len() == 1 {
+		return withName.GetActivityStreamsName().At(0).GetXMLSchemaString()
+	}
+	return ""
 }
 
 type WithName interface {
