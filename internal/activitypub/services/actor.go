@@ -22,7 +22,8 @@ func NewActorService(config *instance.FederationConfig, actorRep *models.ActorRe
 }
 
 func (a *ActorService) GetLocalInstanceActor(ctx context.Context) (*models.Actor, error) {
-	actor, err := a.actorRep.GetActorForUserName(ctx, a.config.InstanceUsername)
+	actorIri := instance.BuildAccountIri(a.config.InstanceUrl, a.config.InstanceUsername)
+	actor, err := a.actorRep.GetActorByActorIRI(ctx, actorIri)
 	if err != nil {
 		return nil, fmt.Errorf("reading local instance actor from db: %w", err)
 	}

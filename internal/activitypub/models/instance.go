@@ -5,7 +5,7 @@ import (
 )
 
 type Instance struct {
-	ActorId uint   `gorm:"not null;"`
+	ActorId uint   `gorm:"not null;unique;"`
 	Actor   *Actor `gorm:"foreignKey:ActorId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	gorm.Model
 }

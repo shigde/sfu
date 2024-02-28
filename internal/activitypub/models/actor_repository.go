@@ -41,8 +41,12 @@ func (r *ActorRepository) Add(_ context.Context, actor *Actor) (*Actor, error) {
 }
 
 func (r *ActorRepository) Upsert(ctx context.Context, actor *Actor) (*Actor, error) {
+	r.locker.Lock()
 	tx, cancel := r.store.GetDatabaseWithContext(ctx)
-	defer cancel()
+	defer func() {
+		defer r.locker.Unlock()
+		cancel()
+	}()
 
 	result := tx.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "actor_iri"}},
@@ -56,8 +60,12 @@ func (r *ActorRepository) Upsert(ctx context.Context, actor *Actor) (*Actor, err
 }
 
 func (r *ActorRepository) GetActorForUserName(ctx context.Context, name string) (*Actor, error) {
+	r.locker.RLock()
 	tx, cancel := r.store.GetDatabaseWithContext(ctx)
-	defer cancel()
+	defer func() {
+		defer r.locker.RUnlock()
+		cancel()
+	}()
 
 	actor := &Actor{PreferredUsername: name}
 	result := tx.First(actor)
@@ -72,6 +80,28 @@ func (r *ActorRepository) GetActorForUserName(ctx context.Context, name string) 
 	return actor, nil
 }
 
+func (r *ActorRepository) GetActorByActorIRI(ctx context.Context, actorIri *url.URL) (*Actor, error) {
+	r.locker.RLock()
+	tx, cancel := r.store.GetDatabaseWithContext(ctx)
+	defer func() {
+		defer r.locker.RUnlock()
+		cancel()
+	}()
+	var actor Actor
+
+	result := tx.Where("actor_iri=?", actorIri.String()).First(&actor)
+	if result.Error != nil {
+		err := fmt.Errorf("finding actor for IRI %s: %w", actorIri.String(), result.Error)
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errors.Join(err, ErrActorNotFound)
+		}
+		return nil, err
+	}
+	return &actor, nil
+}
+
+// GetActorForIRI
+// @deprecated
 func (r *ActorRepository) GetActorForIRI(ctx context.Context, iri *url.URL, iriType IriType) (*Actor, error) {
 	tx, cancel := r.store.GetDatabaseWithContext(ctx)
 	defer cancel()
@@ -99,8 +129,12 @@ func (r *ActorRepository) GetActorForIRI(ctx context.Context, iri *url.URL, iriT
 }
 
 func (r *ActorRepository) GetAllActorsByIds(ctx context.Context, actorIds []uint) ([]*Actor, error) {
+	r.locker.RLock()
 	tx, cancel := r.store.GetDatabaseWithContext(ctx)
-	defer cancel()
+	defer func() {
+		defer r.locker.RUnlock()
+		cancel()
+	}()
 
 	var actors []*Actor
 	results := tx.Where("id IN ?", actorIds).Find(&actors)
@@ -116,7 +150,7 @@ func (r *ActorRepository) GetAllActorsByIds(ctx context.Context, actorIds []uint
 }
 
 func (r *ActorRepository) GetPublicKey(ctx context.Context, actorIRI *url.URL) (string, error) {
-	actor, err := r.GetActorForIRI(ctx, actorIRI, ActorIri)
+	actor, err := r.GetActorByActorIRI(ctx, actorIRI)
 	if err != nil {
 		return "", fmt.Errorf("getting public key: %w", err)
 	}
@@ -124,7 +158,7 @@ func (r *ActorRepository) GetPublicKey(ctx context.Context, actorIRI *url.URL) (
 }
 
 func (r *ActorRepository) GetPrivateKey(ctx context.Context, actorIRI *url.URL) (string, error) {
-	actor, err := r.GetActorForIRI(ctx, actorIRI, ActorIri)
+	actor, err := r.GetActorByActorIRI(ctx, actorIRI)
 	if err != nil {
 		return "", fmt.Errorf("getting private key: %w", err)
 	}
@@ -132,7 +166,7 @@ func (r *ActorRepository) GetPrivateKey(ctx context.Context, actorIRI *url.URL) 
 }
 
 func (r *ActorRepository) GetKeyPair(ctx context.Context, actorIRI *url.URL) (publicKey string, privateKey string, err error) {
-	actor, err := r.GetActorForIRI(ctx, actorIRI, ActorIri)
+	actor, err := r.GetActorByActorIRI(ctx, actorIRI)
 	if err != nil {
 		return "", "", fmt.Errorf("getting key pair: %w", err)
 	}
