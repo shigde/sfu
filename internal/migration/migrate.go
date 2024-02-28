@@ -22,10 +22,9 @@ func Migrate(config *instance.FederationConfig, storage storage.Storage) error {
 		&models.Video{},
 		&models.Follow{},
 		&models.Actor{},
-		&models.Server{},
+		&models.Instance{},
 		&auth.Account{},
 		&lobby.LobbyEntity{},
-		&lobby.Instance{},
 		&stream.Space{},
 		&stream.LiveStream{},
 	); err != nil {
@@ -40,6 +39,8 @@ func Migrate(config *instance.FederationConfig, storage storage.Storage) error {
 				return fmt.Errorf("creating instance actor: %w", err)
 			}
 			db.Create(instanceActor)
+			shigInstance := models.NewInstance(instanceActor)
+			db.Create(shigInstance)
 		}
 	}
 
