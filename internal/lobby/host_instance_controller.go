@@ -192,9 +192,9 @@ func (c *hostInstanceController) onRemoteHostIngressConnectionRequest(offer *web
 
 		if c.settings.isHost {
 			go func() {
-				remoteHost, _ := url.Parse("https://fosdem-stream.shig.de")
+				remoteHost, _ := url.Parse("http://stream.localhost:8080")
 				c.hostApi.url = remoteHost
-				slog.Debug("lobby.hostInstanceController: start egress endpoint")
+				slog.Debug("lobby.hostInstanceController: start egress endpoint", "host", c.hostApi.url)
 				if _, err := c.hostApi.Login(); err != nil {
 					slog.Error("login to remote host", "err", err)
 					return

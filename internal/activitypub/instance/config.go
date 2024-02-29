@@ -8,16 +8,22 @@ import (
 )
 
 type FederationConfig struct {
-	Https            bool   `mapstructure:"https"`
-	Enable           bool   `mapstructure:"enable"`
-	Domain           string `mapstructure:"domain"`
-	Release          string `mapstructure:"release"`
-	InstanceUsername string `mapstructure:"instanceUsername"`
-	ServerName       string `mapstructure:"serverName"`
-	IsPrivate        bool   `mapstructure:"private"`
-	RegisterToken    string `mapstructure:"registerToken"`
+	Https            bool              `mapstructure:"https"`
+	Enable           bool              `mapstructure:"enable"`
+	Domain           string            `mapstructure:"domain"`
+	Release          string            `mapstructure:"release"`
+	InstanceUsername string            `mapstructure:"instanceUsername"`
+	ServerName       string            `mapstructure:"serverName"`
+	IsPrivate        bool              `mapstructure:"private"`
+	RegisterToken    string            `mapstructure:"registerToken"`
+	TrustedInstances []TrustedInstance `mapstructure:"trustedInstance"`
 	InstanceUrl      *url.URL
 	ServerInitTime   sql.NullTime
+}
+
+type TrustedInstance struct {
+	Actor string `mapstructure:"actor"`
+	Name  string `mapstructure:"name"`
 }
 
 type FederationEnv struct {
@@ -72,6 +78,25 @@ func ValidateFederationConfig(config *FederationConfig, env *FederationEnv) erro
 	config.ServerInitTime = sql.NullTime{
 		Time:  time.Time{},
 		Valid: true,
+	}
+
+	if len(config.TrustedInstances) != 0 {
+		for n, inst := range config.TrustedInstances {
+			if err := validateTrustedInstances(inst, n); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func validateTrustedInstances(inst TrustedInstance, n int) error {
+	if _, err := url.Parse(inst.Actor); err != nil {
+		return fmt.Errorf("federation.trustedInstances[]{actor=} has to be set for an instance, entry %d", n)
+	}
+	if len(inst.Name) < 1 {
+		return fmt.Errorf("federation.trustedInstances[]{name=} has to be set for an instance, entry %d", n)
 	}
 
 	return nil

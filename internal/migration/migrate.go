@@ -3,6 +3,7 @@ package migration
 import (
 	"errors"
 	"fmt"
+	"net/url"
 
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
@@ -41,8 +42,31 @@ func Migrate(config *instance.FederationConfig, storage storage.Storage) error {
 			db.Create(instanceActor)
 			shigInstance := models.NewInstance(instanceActor)
 			db.Create(shigInstance)
+
+			for _, inst := range config.TrustedInstances {
+				if err := buildTrustedInstanceAccount(db, inst); err != nil {
+					return err
+				}
+			}
 		}
 	}
 
+	return nil
+}
+
+func buildTrustedInstanceAccount(db *gorm.DB, trustedInstance instance.TrustedInstance) error {
+	actorId, err := url.Parse(trustedInstance.Actor)
+	if err != nil {
+		return fmt.Errorf("migration parsing trusted instance actor id: %w", err)
+	}
+	name := fmt.Sprintf("%s@%s", trustedInstance.Name, actorId.Host)
+	actor, err := models.NewTrustedInstanceActor(actorId, trustedInstance.Name)
+	if err != nil {
+		return fmt.Errorf("migration building actor: %w", err)
+	}
+
+	db.Create(actor)
+	account := auth.CreateInstanceAccount(name, actor)
+	db.Create(account)
 	return nil
 }

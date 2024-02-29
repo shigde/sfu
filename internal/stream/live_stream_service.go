@@ -39,7 +39,7 @@ func (ls *LiveStreamService) CreateStreamAccessByVideo(ctx context.Context, vide
 	account.User = userId
 	account.UUID = uuid.NewString()
 
-	lobbyEntity := lobby.NewLobbyEntity(streamID, channelId)
+	lobbyEntity := lobby.NewLobbyEntity(streamID, channelId, video.Instance.Actor.ActorIri)
 
 	space := &Space{}
 	space.Account = account

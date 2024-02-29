@@ -61,6 +61,28 @@ func NewInstanceActor(instanceUrl *url.URL, name string) (*Actor, error) {
 	}, nil
 }
 
+func NewTrustedInstanceActor(actorIri *url.URL, name string) (*Actor, error) {
+	instanceUrl, err := url.Parse(fmt.Sprintf("%s://%s", actorIri.Scheme, actorIri.Host))
+	if err != nil {
+		return nil, fmt.Errorf("trusted instance actor instanceUrl url")
+	}
+	now := time.Now()
+	return &Actor{
+		ActorType:         "Application",
+		PublicKey:         "",
+		PrivateKey:        sql.NullString{},
+		ActorIri:          actorIri.String(),
+		FollowingIri:      instance.BuildFollowingIri(actorIri).String(),
+		FollowersIri:      instance.BuildFollowersIri(actorIri).String(),
+		InboxIri:          instance.BuildInboxIri(actorIri).String(),
+		OutboxIri:         instance.BuildOutboxIri(actorIri).String(),
+		SharedInboxIri:    instance.BuildSharedInboxIri(instanceUrl).String(),
+		DisabledAt:        sql.NullTime{},
+		RemoteCreatedAt:   now,
+		PreferredUsername: name,
+	}, nil
+}
+
 func (s *Actor) GetActorIri() *url.URL {
 	iri, _ := url.Parse(s.ActorIri)
 	return iri

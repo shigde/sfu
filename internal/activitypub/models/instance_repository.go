@@ -57,7 +57,7 @@ func (r *InstanceRepository) GetInstanceByActorIri(ctx context.Context, iri *url
 
 	var shigInstance Instance
 
-	result := tx.Table("actors").Select("*").Where("actor_iri=?", iri.String()).Joins("left join instances on instances.actor_id = actors.id").First(&shigInstance)
+	result := tx.Preload("Actor").Table("actors").Select("*").Where("actor_iri=?", iri.String()).Joins("left join instances on instances.actor_id = actors.id").First(&shigInstance)
 	if result.Error != nil {
 		err := fmt.Errorf("finding instance by iri %s: %w", iri.String(), result.Error)
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {

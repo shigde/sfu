@@ -3,6 +3,7 @@ package media
 import (
 	"context"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/logging"
@@ -20,12 +21,14 @@ func NewRouter(
 	liveLobbyService *stream.LiveLobbyService,
 ) *mux.Router {
 	router := mux.NewRouter()
-	//cors := handlers.CORS(
+	cors := handlers.CORS(
+		handlers.AllowedOrigins([]string{"*"}),
+	)
 	//	handlers.AllowedOrigins([]string{"http://localhost:3000/"}),
 	//	handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"}),
 	//	handlers.AllowedHeaders([]string{"X-Req-Token"}),
 	//)
-	// router.Use(cors)
+	router.Use(cors)
 	// Auth
 	router.Use(logging.LoggingMiddleware)
 	router.HandleFunc("/authenticate", getAuthenticationHandler(accountService)).Methods("POST")

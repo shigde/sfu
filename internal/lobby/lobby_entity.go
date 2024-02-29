@@ -1,8 +1,6 @@
 package lobby
 
 import (
-	"net/url"
-
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -17,17 +15,15 @@ type LobbyEntity struct {
 	gorm.Model
 }
 
-func NewLobbyEntity(streamID uuid.UUID, space string) *LobbyEntity {
-	// @TODO: The host should be send by Activity Pub
-	host, _ := url.Parse("https://stream.shig.de/federation/accounts/shig")
-	// host, _ := url.Parse("http://localhost:8080/federation/accounts/shig")
+func NewLobbyEntity(streamID uuid.UUID, space string, shigHost string) *LobbyEntity {
+
 	return &LobbyEntity{
 		UUID:         uuid.New(),
 		IsRunning:    false,
 		IsLive:       false,
 		Space:        space,
 		LiveStreamId: streamID,
-		Host:         host.String(),
+		Host:         shigHost,
 	}
 }
 
