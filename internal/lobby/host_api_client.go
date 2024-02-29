@@ -15,16 +15,16 @@ import (
 	"github.com/shigde/sfu/pkg/authentication"
 )
 
-type hostInstanceApiClient struct {
-	instanceId uuid.UUID
+type hostApiClient struct {
+	instanceId uuid.UUID // not needed?
 	name       string
 	token      string
 	url        *url.URL
 	bearer     string
 }
 
-func NewHostInstanceApiClient(id uuid.UUID, token string, name string, shigUrl *url.URL) *hostInstanceApiClient {
-	return &hostInstanceApiClient{
+func newHostApiClient(id uuid.UUID, token string, name string, shigUrl *url.URL) *hostApiClient {
+	return &hostApiClient{
 		instanceId: id,
 		name:       name,
 		token:      token,
@@ -32,7 +32,7 @@ func NewHostInstanceApiClient(id uuid.UUID, token string, name string, shigUrl *
 	}
 }
 
-func (a *hostInstanceApiClient) Login() (*authentication.Token, error) {
+func (a *hostApiClient) Login() (*authentication.Token, error) {
 	loginUrl := fmt.Sprintf("%s/authenticate", a.url.String())
 	user := &authentication.User{
 		UserId: a.name,
@@ -78,17 +78,17 @@ func (a *hostInstanceApiClient) Login() (*authentication.Token, error) {
 	return &result, nil
 }
 
-func (a *hostInstanceApiClient) PostHostPipeOffer(spaceId string, streamId string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+func (a *hostApiClient) PostHostPipeOffer(spaceId string, streamId string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
 	requestUrl := fmt.Sprintf("%s/space/%s/stream/%s/pipe", a.url.String(), spaceId, streamId)
 	return a.doOfferRequest(requestUrl, offer)
 }
 
-func (a *hostInstanceApiClient) PostHostIngressOffer(spaceId string, streamId string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+func (a *hostApiClient) PostHostIngressOffer(spaceId string, streamId string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
 	requestUrl := fmt.Sprintf("%s/space/%s/stream/%s/hostingress", a.url.String(), spaceId, streamId)
 	return a.doOfferRequest(requestUrl, offer)
 }
 
-func (a *hostInstanceApiClient) doOfferRequest(reqUrl string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+func (a *hostApiClient) doOfferRequest(reqUrl string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
 	body := bytes.NewBuffer([]byte(offer.SDP))
 	c := http.Client{Timeout: time.Duration(1) * time.Second}
 	req, err := http.NewRequest("POST", reqUrl, body)
@@ -120,9 +120,9 @@ func (a *hostInstanceApiClient) doOfferRequest(reqUrl string, offer *webrtc.Sess
 	return &webrtc.SessionDescription{SDP: answer, Type: webrtc.SDPTypeAnswer}, nil
 }
 
-func (a *hostInstanceApiClient) getBearer() string {
+func (a *hostApiClient) getBearer() string {
 	return a.bearer
 }
-func (a *hostInstanceApiClient) setBearer(bearer string) {
+func (a *hostApiClient) setBearer(bearer string) {
 	a.bearer = bearer
 }

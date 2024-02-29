@@ -22,7 +22,7 @@ func testStreamLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 		Host:         "http://localhost:1234/federation/accounts/shig-test",
 	}
 
-	hostSettings := hostInstanceSettings{
+	hostSettings := hostSettings{
 		isHost: true,
 		url:    nil,
 		token:  "token",

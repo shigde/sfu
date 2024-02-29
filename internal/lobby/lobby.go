@@ -33,14 +33,14 @@ type lobby struct {
 	rtpEngine             rtpEngine
 	resourceId            uuid.UUID
 	entity                *LobbyEntity
-	hostController        *hostInstanceController
+	hostController        *hostController
 	stopRunning           func()
 	reqChan               chan *lobbyRequest
 	sessionQuit           chan uuid.UUID
 	lobbyGarbageCollector chan<- uuid.UUID
 }
 
-func newLobby(id uuid.UUID, entity *LobbyEntity, rtpEngine rtpEngine, lobbyGarbageCollector chan<- uuid.UUID, settings hostInstanceSettings) *lobby {
+func newLobby(id uuid.UUID, entity *LobbyEntity, rtpEngine rtpEngine, lobbyGarbageCollector chan<- uuid.UUID, settings *hostSettings) *lobby {
 	ctx, stop := context.WithCancel(context.Background())
 	sessions := newSessionRepository()
 	reqChan := make(chan *lobbyRequest)
@@ -68,7 +68,7 @@ func newLobby(id uuid.UUID, entity *LobbyEntity, rtpEngine rtpEngine, lobbyGarba
 		lobbyGarbageCollector: lobbyGarbageCollector,
 	}
 	go lobby.run()
-	lobby.hostController = newHostInstanceController(ctx, id, lobby, settings)
+	lobby.hostController = newHostController(ctx, id, lobby, settings)
 	return lobby
 }
 

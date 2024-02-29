@@ -55,18 +55,28 @@ func Migrate(config *instance.FederationConfig, storage storage.Storage) error {
 }
 
 func buildTrustedInstanceAccount(db *gorm.DB, trustedInstance instance.TrustedInstance) error {
-	actorId, err := url.Parse(trustedInstance.Actor)
+	actorIri, err := url.Parse(trustedInstance.Actor)
 	if err != nil {
 		return fmt.Errorf("migration parsing trusted instance actor id: %w", err)
 	}
-	name := fmt.Sprintf("%s@%s", trustedInstance.Name, actorId.Host)
-	actor, err := models.NewTrustedInstanceActor(actorId, trustedInstance.Name)
+	actorId := fmt.Sprintf("%s@%s", trustedInstance.Name, actorIri.Host)
+	actor, err := models.NewTrustedInstanceActor(actorIri, trustedInstance.Name)
 	if err != nil {
 		return fmt.Errorf("migration building actor: %w", err)
 	}
 
 	db.Create(actor)
-	account := auth.CreateInstanceAccount(name, actor)
+	var savedActor models.Actor
+
+	result := db.Where("actor_iri=?", actorIri.String()).First(&savedActor)
+	if result.Error != nil {
+		return fmt.Errorf("migration loading actor: %w", result.Error)
+	}
+
+	account := auth.CreateInstanceAccount(actorId, &savedActor)
 	db.Create(account)
+
+	trInstance := models.NewInstance(&savedActor)
+	db.Create(trInstance)
 	return nil
 }

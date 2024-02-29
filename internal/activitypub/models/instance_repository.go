@@ -47,7 +47,7 @@ func (r *InstanceRepository) Upsert(ctx context.Context, instance *Instance) (*I
 	return instance, nil
 }
 
-func (r *InstanceRepository) GetInstanceByActorIri(ctx context.Context, iri *url.URL) (*Instance, error) {
+func (r *InstanceRepository) GetInstanceByActorIri(ctx context.Context, actorIri *url.URL) (*Instance, error) {
 	r.locker.RLock()
 	tx, cancel := r.store.GetDatabaseWithContext(ctx)
 	defer func() {
@@ -55,11 +55,23 @@ func (r *InstanceRepository) GetInstanceByActorIri(ctx context.Context, iri *url
 		cancel()
 	}()
 
-	var shigInstance Instance
+	// @TODO Fix this:
+	// Joins dos not working, because, gorm doesn't do what it claims to do, that's why this hack first
+	var actor Actor
 
-	result := tx.Preload("Actor").Table("actors").Select("*").Where("actor_iri=?", iri.String()).Joins("left join instances on instances.actor_id = actors.id").First(&shigInstance)
+	result := tx.Where("actor_iri=?", actorIri.String()).First(&actor)
 	if result.Error != nil {
-		err := fmt.Errorf("finding instance by iri %s: %w", iri.String(), result.Error)
+		err := fmt.Errorf("finding actor for IRI %s: %w", actorIri.String(), result.Error)
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errors.Join(err, ErrActorNotFound)
+		}
+		return nil, err
+	}
+
+	var shigInstance Instance
+	result = tx.Preload("Actor").Where("actor_id=?", actor.ID).First(&shigInstance)
+	if result.Error != nil {
+		err := fmt.Errorf("finding instance by iri %s: %w", actorIri.String(), result.Error)
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, errors.Join(err, ErrInstanceNotFound)
 		}
@@ -67,5 +79,4 @@ func (r *InstanceRepository) GetInstanceByActorIri(ctx context.Context, iri *url
 	}
 
 	return &shigInstance, nil
-
 }

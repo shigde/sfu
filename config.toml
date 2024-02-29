@@ -73,5 +73,5 @@ private = false
 registerToken = "this-token-must-be-changed-in-public"
 
 [[federation.trustedInstance]]
-actor = "http://remote-stream.localhost:8080/federation/accounts/shig"
+actor = "http://remote-stream.localhost:8070/federation/accounts/shig"
 name = "shig"

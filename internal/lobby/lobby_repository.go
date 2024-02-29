@@ -52,22 +52,7 @@ func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUI
 			return nil, fmt.Errorf("updating lobby entity as running: %w", err)
 		}
 
-		instanceId, _ := uuid.Parse("7251719d-a687-4f76-995c-05e03faff69d")
-
-		name := "shig@fosdem-stream.shig.de"
-
-		isHost := r.lobbyIsHost(entity.Host)
-		actorUrl, _ := url.Parse(entity.Host)
-		hostUrl, _ := url.Parse(fmt.Sprintf("%s://%s", actorUrl.Scheme, actorUrl.Host))
-		hostSettings := hostInstanceSettings{
-			instanceId: instanceId,
-			isHost:     isHost,
-			url:        hostUrl,
-			token:      r.registerToken,
-			name:       name,
-			space:      entity.Space,
-			stream:     entity.LiveStreamId.String(),
-		}
+		hostSettings := newHostSettings(entity, r.instanceActorUrl, r.registerToken)
 
 		lobby := newLobby(
 			lobbyId,
