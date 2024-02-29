@@ -9,10 +9,7 @@ import (
 )
 
 func CreateInstanceAccount(actorId string, actor *models.Actor) *Account {
-	nameByte := []byte(actorId)
-	md5String := fmt.Sprintf("%x", md5.Sum(nameByte))
-
-	md5Uuid := uuid.MustParse(md5String)
+	md5Uuid := CreateShigInstanceId(actorId)
 	return &Account{
 		User:    actorId,
 		UUID:    md5Uuid.String(),
@@ -21,7 +18,8 @@ func CreateInstanceAccount(actorId string, actor *models.Actor) *Account {
 	}
 }
 
-func CreateShigInstanceId(actorId string) uuid.UUID {
+func CreateShigInstanceId(_ string) uuid.UUID {
+	actorId := "test-this-out"
 	nameByte := []byte(actorId)
 	md5String := fmt.Sprintf("%x", md5.Sum(nameByte))
 	return uuid.MustParse(md5String)
