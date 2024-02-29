@@ -42,46 +42,48 @@ type LobbySessionTrackMetric struct {
 }
 
 func RecordTrackStats(labels Labels, statsRec *stats.Stats) {
-	//if labels[Direction] == "ingress" {
-	//	PacketInc(labels, statsRec.InboundRTPStreamStats.PacketsReceived)
-	//	PacketBytesInc(labels, statsRec.InboundRTPStreamStats.BytesReceived)
-	//	NackInc(labels, statsRec.InboundRTPStreamStats.NACKCount)
-	//	PliInc(labels, statsRec.InboundRTPStreamStats.PLICount)
-	//	FirInc(labels, statsRec.InboundRTPStreamStats.FIRCount)
-	//	PacketLossTotalInc(labels, statsRec.InboundRTPStreamStats.PacketsLost)
-	//	PacketLossInc(labels, statsRec.InboundRTPStreamStats.PacketsLost)
-	//	JitterInc(labels, statsRec.InboundRTPStreamStats.Jitter)
-	//	RttInc(labels, statsRec.RemoteOutboundRTPStreamStats.RoundTripTimeMeasurements)
-	//}
-	//
-	//if labels[Direction] == "egress" {
-	//	PacketInc(labels, statsRec.OutboundRTPStreamStats.PacketsSent)
-	//	PacketBytesInc(labels, statsRec.OutboundRTPStreamStats.BytesSent)
-	//	NackInc(labels, statsRec.OutboundRTPStreamStats.NACKCount)
-	//	PliInc(labels, statsRec.OutboundRTPStreamStats.PLICount)
-	//	FirInc(labels, statsRec.OutboundRTPStreamStats.FIRCount)
-	//	PacketLossTotalInc(labels, statsRec.RemoteInboundRTPStreamStats.PacketsLost)
-	//	PacketLossInc(labels, statsRec.RemoteInboundRTPStreamStats.PacketsLost)
-	//	JitterInc(labels, statsRec.RemoteInboundRTPStreamStats.Jitter)
-	//	RttInc(labels, statsRec.RemoteInboundRTPStreamStats.RoundTripTimeMeasurements)
-	//}
+	if labels[Direction] == "ingress" {
+		PacketInc(labels, statsRec.InboundRTPStreamStats.PacketsReceived)
+		PacketBytesInc(labels, statsRec.InboundRTPStreamStats.BytesReceived)
+		NackInc(labels, statsRec.InboundRTPStreamStats.NACKCount)
+		PliInc(labels, statsRec.InboundRTPStreamStats.PLICount)
+		FirInc(labels, statsRec.InboundRTPStreamStats.FIRCount)
+		PacketLossTotalInc(labels, statsRec.InboundRTPStreamStats.PacketsLost)
+		PacketLossInc(labels, statsRec.InboundRTPStreamStats.PacketsLost)
+		JitterInc(labels, statsRec.InboundRTPStreamStats.Jitter)
+		RttInc(labels, statsRec.RemoteOutboundRTPStreamStats.RoundTripTimeMeasurements)
+	}
+
+	if labels[Direction] == "egress" {
+		PacketInc(labels, statsRec.OutboundRTPStreamStats.PacketsSent)
+		PacketBytesInc(labels, statsRec.OutboundRTPStreamStats.BytesSent)
+		NackInc(labels, statsRec.OutboundRTPStreamStats.NACKCount)
+		PliInc(labels, statsRec.OutboundRTPStreamStats.PLICount)
+		FirInc(labels, statsRec.OutboundRTPStreamStats.FIRCount)
+		PacketLossTotalInc(labels, statsRec.RemoteInboundRTPStreamStats.PacketsLost)
+		PacketLossInc(labels, statsRec.RemoteInboundRTPStreamStats.PacketsLost)
+		JitterInc(labels, statsRec.RemoteInboundRTPStreamStats.Jitter)
+		RttInc(labels, statsRec.RemoteInboundRTPStreamStats.RoundTripTimeMeasurements)
+	}
 }
 
 func CleanTrackStats(labels Labels) {
-	//PacketDel(labels)
-	//PacketBytesDel(labels)
-	//NackDel(labels)
-	//PliDel(labels)
-	//FirDel(labels)
-	//PacketLossTotalDel(labels)
-	//PacketLossDel(labels)
-	//JitterDel(labels)
-	//RttDel(labels)
+	PacketDel(labels)
+	PacketBytesDel(labels)
+	NackDel(labels)
+	PliDel(labels)
+	FirDel(labels)
+	PacketLossTotalDel(labels)
+	PacketLossDel(labels)
+	JitterDel(labels)
+	RttDel(labels)
 }
 
 func PacketInc(labels Labels, pkg uint64) {
 	if lobbySessionTrackMetric != nil {
-		lobbySessionTrackMetric.tracks.packet.With(toPromLabels(labels)).Set(float64(pkg))
+		if metric, err := lobbySessionTrackMetric.tracks.packet.GetMetricWith(toPromLabels(labels)); err != nil {
+			metric.Set(float64(pkg))
+		}
 	}
 }
 func PacketDel(labels Labels) {
@@ -92,7 +94,9 @@ func PacketDel(labels Labels) {
 
 func PacketBytesInc(labels Labels, pkg uint64) {
 	if lobbySessionTrackMetric != nil {
-		lobbySessionTrackMetric.tracks.packetBytes.With(toPromLabels(labels)).Set(float64(pkg))
+		if metric, err := lobbySessionTrackMetric.tracks.packetBytes.GetMetricWith(toPromLabels(labels)); err != nil {
+			metric.Set(float64(pkg))
+		}
 	}
 }
 func PacketBytesDel(labels Labels) {
@@ -106,7 +110,9 @@ func NackInc(labels Labels, nack uint32) {
 	//	return
 	//}
 	if lobbySessionTrackMetric != nil {
-		lobbySessionTrackMetric.tracks.nack.With(toPromLabels(labels)).Set(float64(nack))
+		if metric, err := lobbySessionTrackMetric.tracks.nack.GetMetricWith(toPromLabels(labels)); err != nil {
+			metric.Set(float64(nack))
+		}
 	}
 }
 func NackDel(labels Labels) {
@@ -120,7 +126,10 @@ func PliInc(labels Labels, pli uint32) {
 	//	return
 	//}
 	if lobbySessionTrackMetric != nil {
-		lobbySessionTrackMetric.tracks.pli.With(toPromLabels(labels)).Set(float64(pli))
+		if metric, err := lobbySessionTrackMetric.tracks.pli.GetMetricWith(toPromLabels(labels)); err != nil {
+			metric.Set(float64(pli))
+		}
+
 	}
 }
 func PliDel(labels Labels) {
@@ -134,7 +143,9 @@ func FirInc(labels Labels, fir uint32) {
 	//	return
 	//}
 	if lobbySessionTrackMetric != nil {
-		lobbySessionTrackMetric.tracks.fir.With(toPromLabels(labels)).Set(float64(fir))
+		if metric, err := lobbySessionTrackMetric.tracks.fir.GetMetricWith(toPromLabels(labels)); err != nil {
+			metric.Set(float64(fir))
+		}
 	}
 }
 func FirDel(labels Labels) {
@@ -147,7 +158,9 @@ func PacketLossTotalInc(labels Labels, pkg int64) {
 	//	return
 	//}
 	if lobbySessionTrackMetric != nil {
-		lobbySessionTrackMetric.tracks.packetLossTotal.With(toPromLabels(labels)).Set(float64(pkg))
+		if metric, err := lobbySessionTrackMetric.tracks.packetLossTotal.GetMetricWith(toPromLabels(labels)); err != nil {
+			metric.Set(float64(pkg))
+		}
 	}
 }
 func PacketLossTotalDel(labels Labels) {
@@ -160,7 +173,9 @@ func PacketLossInc(labels Labels, pkg int64) {
 		return
 	}
 	if lobbySessionTrackMetric != nil {
-		lobbySessionTrackMetric.tracks.packetLoss.With(toPromLabels(labels)).Observe(float64(pkg))
+		if metric, err := lobbySessionTrackMetric.tracks.packetLoss.GetMetricWith(toPromLabels(labels)); err != nil {
+			metric.Observe(float64(pkg))
+		}
 	}
 }
 func PacketLossDel(labels Labels) {
@@ -173,7 +188,10 @@ func JitterInc(labels Labels, jitter float64) {
 	//	return
 	//}
 	if lobbySessionTrackMetric != nil {
-		lobbySessionTrackMetric.tracks.jitter.With(toPromLabels(labels)).Observe(jitter)
+		if metric, err := lobbySessionTrackMetric.tracks.jitter.GetMetricWith(toPromLabels(labels)); err != nil {
+			metric.Observe(jitter)
+		}
+
 	}
 }
 func JitterDel(labels Labels) {
@@ -187,7 +205,9 @@ func RttInc(labels Labels, rtt uint64) {
 		return
 	}
 	if lobbySessionTrackMetric != nil {
-		lobbySessionTrackMetric.tracks.rtt.With(toPromLabels(labels)).Observe(float64(rtt))
+		if metric, err := lobbySessionTrackMetric.tracks.rtt.GetMetricWith(toPromLabels(labels)); err != nil {
+			metric.Observe(float64(rtt))
+		}
 	}
 }
 func RttDel(labels Labels) {
