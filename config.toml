@@ -27,7 +27,7 @@ defaultexpiretime = 604800  # 1 week not implemented et jet
 [metric.prometheus]
 enable = true
 endpoint = "/metrics" # Endpoint where the Prometheus metrics are delivered
-port = 8081
+port = 8091
 
 [telemetry]
 enable = false

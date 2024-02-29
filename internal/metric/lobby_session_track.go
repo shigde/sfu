@@ -81,9 +81,11 @@ func CleanTrackStats(labels Labels) {
 
 func PacketInc(labels Labels, pkg uint64) {
 	if lobbySessionTrackMetric != nil {
-		if metric, err := lobbySessionTrackMetric.tracks.packet.GetMetricWith(toPromLabels(labels)); err != nil {
-			metric.Set(float64(pkg))
-		}
+		lobbySessionTrackMetric.tracks.packet.With(toPromLabels(labels)).Set(float64(pkg))
+
+		//if metric, err := lobbySessionTrackMetric.tracks.packet.GetMetricWith(toPromLabels(labels)); err != nil {
+		//	metric.Set(float64(pkg))
+		//}
 	}
 }
 func PacketDel(labels Labels) {
@@ -94,9 +96,10 @@ func PacketDel(labels Labels) {
 
 func PacketBytesInc(labels Labels, pkg uint64) {
 	if lobbySessionTrackMetric != nil {
-		if metric, err := lobbySessionTrackMetric.tracks.packetBytes.GetMetricWith(toPromLabels(labels)); err != nil {
-			metric.Set(float64(pkg))
-		}
+		lobbySessionTrackMetric.tracks.packetBytes.With(toPromLabels(labels)).Set(float64(pkg))
+		//if metric, err := lobbySessionTrackMetric.tracks.packetBytes.GetMetricWith(toPromLabels(labels)); err != nil {
+		//	metric.Set(float64(pkg))
+		//}
 	}
 }
 func PacketBytesDel(labels Labels) {
