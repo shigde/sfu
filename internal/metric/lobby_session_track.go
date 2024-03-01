@@ -82,6 +82,10 @@ func CleanTrackStats(labels Labels) {
 func PacketInc(labels Labels, pkg uint64) {
 	if lobbySessionTrackMetric != nil {
 		lobbySessionTrackMetric.tracks.packet.With(toPromLabels(labels)).Set(float64(pkg))
+
+		//if metric, err := lobbySessionTrackMetric.tracks.packet.GetMetricWith(toPromLabels(labels)); err != nil {
+		//	metric.Set(float64(pkg))
+		//}
 	}
 }
 func PacketDel(labels Labels) {
@@ -93,6 +97,9 @@ func PacketDel(labels Labels) {
 func PacketBytesInc(labels Labels, pkg uint64) {
 	if lobbySessionTrackMetric != nil {
 		lobbySessionTrackMetric.tracks.packetBytes.With(toPromLabels(labels)).Set(float64(pkg))
+		//if metric, err := lobbySessionTrackMetric.tracks.packetBytes.GetMetricWith(toPromLabels(labels)); err != nil {
+		//	metric.Set(float64(pkg))
+		//}
 	}
 }
 func PacketBytesDel(labels Labels) {
@@ -106,7 +113,9 @@ func NackInc(labels Labels, nack uint32) {
 	//	return
 	//}
 	if lobbySessionTrackMetric != nil {
-		lobbySessionTrackMetric.tracks.nack.With(toPromLabels(labels)).Set(float64(nack))
+		if metric, err := lobbySessionTrackMetric.tracks.nack.GetMetricWith(toPromLabels(labels)); err != nil {
+			metric.Set(float64(nack))
+		}
 	}
 }
 func NackDel(labels Labels) {
@@ -120,7 +129,10 @@ func PliInc(labels Labels, pli uint32) {
 	//	return
 	//}
 	if lobbySessionTrackMetric != nil {
-		lobbySessionTrackMetric.tracks.pli.With(toPromLabels(labels)).Set(float64(pli))
+		if metric, err := lobbySessionTrackMetric.tracks.pli.GetMetricWith(toPromLabels(labels)); err != nil {
+			metric.Set(float64(pli))
+		}
+
 	}
 }
 func PliDel(labels Labels) {
@@ -134,7 +146,9 @@ func FirInc(labels Labels, fir uint32) {
 	//	return
 	//}
 	if lobbySessionTrackMetric != nil {
-		lobbySessionTrackMetric.tracks.fir.With(toPromLabels(labels)).Set(float64(fir))
+		if metric, err := lobbySessionTrackMetric.tracks.fir.GetMetricWith(toPromLabels(labels)); err != nil {
+			metric.Set(float64(fir))
+		}
 	}
 }
 func FirDel(labels Labels) {
@@ -147,7 +161,9 @@ func PacketLossTotalInc(labels Labels, pkg int64) {
 	//	return
 	//}
 	if lobbySessionTrackMetric != nil {
-		lobbySessionTrackMetric.tracks.packetLossTotal.With(toPromLabels(labels)).Set(float64(pkg))
+		if metric, err := lobbySessionTrackMetric.tracks.packetLossTotal.GetMetricWith(toPromLabels(labels)); err != nil {
+			metric.Set(float64(pkg))
+		}
 	}
 }
 func PacketLossTotalDel(labels Labels) {
@@ -160,7 +176,9 @@ func PacketLossInc(labels Labels, pkg int64) {
 		return
 	}
 	if lobbySessionTrackMetric != nil {
-		lobbySessionTrackMetric.tracks.packetLoss.With(toPromLabels(labels)).Observe(float64(pkg))
+		if metric, err := lobbySessionTrackMetric.tracks.packetLoss.GetMetricWith(toPromLabels(labels)); err != nil {
+			metric.Observe(float64(pkg))
+		}
 	}
 }
 func PacketLossDel(labels Labels) {
@@ -173,7 +191,10 @@ func JitterInc(labels Labels, jitter float64) {
 	//	return
 	//}
 	if lobbySessionTrackMetric != nil {
-		lobbySessionTrackMetric.tracks.jitter.With(toPromLabels(labels)).Observe(jitter)
+		if metric, err := lobbySessionTrackMetric.tracks.jitter.GetMetricWith(toPromLabels(labels)); err != nil {
+			metric.Observe(jitter)
+		}
+
 	}
 }
 func JitterDel(labels Labels) {
@@ -187,7 +208,9 @@ func RttInc(labels Labels, rtt uint64) {
 		return
 	}
 	if lobbySessionTrackMetric != nil {
-		lobbySessionTrackMetric.tracks.rtt.With(toPromLabels(labels)).Observe(float64(rtt))
+		if metric, err := lobbySessionTrackMetric.tracks.rtt.GetMetricWith(toPromLabels(labels)); err != nil {
+			metric.Observe(float64(rtt))
+		}
 	}
 }
 func RttDel(labels Labels) {

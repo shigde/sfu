@@ -45,6 +45,36 @@ type liveStreamData struct {
 	response chan bool
 }
 
+// Lobby request data for host pipes ----------
+type hostGetPipeOfferData struct {
+	response chan *hostOfferResponse
+}
+
+type hostGetPipeAnswerData struct {
+	offer    *webrtc.SessionDescription
+	response chan *hostAnswerResponse
+}
+
+type hostSetPipeAnswerData struct {
+	answer   *webrtc.SessionDescription
+	response chan bool
+}
+
+type hostGetEgressOfferData struct {
+	response chan *hostOfferResponse
+}
+
+type hostGetIngressAnswerData struct {
+	offer    *webrtc.SessionDescription
+	response chan *hostAnswerResponse
+}
+
+type hostSetEgressAnswerData struct {
+	answer   *webrtc.SessionDescription
+	response chan bool
+}
+
+// ---------------------------------------------
 func newLobbyRequest(ctx context.Context, user uuid.UUID) *lobbyRequest {
 	errChan := make(chan error)
 	return &lobbyRequest{
@@ -110,6 +140,52 @@ func newLeaveData() *leaveData {
 	}
 }
 
+func newHostGetPipeOfferData() *hostGetPipeOfferData {
+	resChan := make(chan *hostOfferResponse)
+	return &hostGetPipeOfferData{
+		response: resChan,
+	}
+}
+
+func newHostGetPipeAnswerData(offer *webrtc.SessionDescription) *hostGetPipeAnswerData {
+	resChan := make(chan *hostAnswerResponse)
+	return &hostGetPipeAnswerData{
+		offer:    offer,
+		response: resChan,
+	}
+}
+
+func newHostSetPipeAnswerData(answer *webrtc.SessionDescription) *hostSetPipeAnswerData {
+	resChan := make(chan bool)
+	return &hostSetPipeAnswerData{
+		answer:   answer,
+		response: resChan,
+	}
+}
+
+func newHostGetEgressOfferData() *hostGetEgressOfferData {
+	resChan := make(chan *hostOfferResponse)
+	return &hostGetEgressOfferData{
+		response: resChan,
+	}
+}
+
+func newHostGetIngressAnswerData(offer *webrtc.SessionDescription) *hostGetIngressAnswerData {
+	resChan := make(chan *hostAnswerResponse)
+	return &hostGetIngressAnswerData{
+		offer:    offer,
+		response: resChan,
+	}
+}
+
+func newHostSetEgressAnswerData(answer *webrtc.SessionDescription) *hostSetEgressAnswerData {
+	resChan := make(chan bool)
+	return &hostSetEgressAnswerData{
+		answer:   answer,
+		response: resChan,
+	}
+}
+
 type createIngressEndpointResponse struct {
 	answer       *webrtc.SessionDescription
 	resource     uuid.UUID
@@ -127,5 +203,15 @@ type initEgressEndpointResponse struct {
 }
 
 type finalCreateEgressEndpointResponse struct {
+	RtpSessionId uuid.UUID
+}
+
+type hostOfferResponse struct {
+	offer        *webrtc.SessionDescription
+	RtpSessionId uuid.UUID
+}
+
+type hostAnswerResponse struct {
+	answer       *webrtc.SessionDescription
 	RtpSessionId uuid.UUID
 }

@@ -22,6 +22,12 @@ const (
 	answerEgressReq
 	closeReq
 	offerStaticEgressReq
+	offerHostIngressReq
+	offerHostEgressReq
+	answerHostEgressReq
+	offerHostRemotePipeReq
+	offerHostPipeReq
+	answerHostPipeReq
 )
 
 func newSessionRequest(ctx context.Context, sdp *webrtc.SessionDescription, reqType sessionReqType) *sessionRequest {
@@ -29,18 +35,6 @@ func newSessionRequest(ctx context.Context, sdp *webrtc.SessionDescription, reqT
 		sessionReqType: reqType,
 		reqSDP:         sdp,
 		respSDPChan:    make(chan *webrtc.SessionDescription),
-		err:            make(chan error),
-		ctx:            ctx,
-	}
-}
-
-func newInitEgressRequest(ctx context.Context) *sessionRequest {
-	return newSessionRequest(ctx, nil, initEgressReq)
-}
-
-func newCloseRequest(ctx context.Context) *sessionRequest {
-	return &sessionRequest{
-		sessionReqType: closeReq,
 		err:            make(chan error),
 		ctx:            ctx,
 	}

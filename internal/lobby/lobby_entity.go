@@ -8,17 +8,22 @@ import (
 type LobbyEntity struct {
 	LiveStreamId uuid.UUID `json:"streamId"`
 	UUID         uuid.UUID `json:"-"`
-	IsRunning    bool      `json:"isLobbyRunning"`
-	IsLive       bool      `json:"isLive"`
+	Space        string
+	IsRunning    bool   `json:"isLobbyRunning"`
+	IsLive       bool   `json:"isLive"`
+	Host         string `json:"-"`
 	gorm.Model
 }
 
-func NewLobbyEntity(streamID uuid.UUID) *LobbyEntity {
+func NewLobbyEntity(streamID uuid.UUID, space string, shigHost string) *LobbyEntity {
+
 	return &LobbyEntity{
-		LiveStreamId: streamID,
 		UUID:         uuid.New(),
 		IsRunning:    false,
 		IsLive:       false,
+		Space:        space,
+		LiveStreamId: streamID,
+		Host:         shigHost,
 	}
 }
 

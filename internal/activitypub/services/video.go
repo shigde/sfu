@@ -15,14 +15,15 @@ import (
 )
 
 type VideoService struct {
-	config        *instance.FederationConfig
-	actorService  *ActorService
-	videoRep      *models.VideoRepository
-	streamService StreamService
+	config          *instance.FederationConfig
+	actorService    *ActorService
+	instanceService *InstanceService
+	videoRep        *models.VideoRepository
+	streamService   StreamService
 }
 
-func NewVideoService(config *instance.FederationConfig, actorService *ActorService, videoRep *models.VideoRepository, streamService StreamService) *VideoService {
-	return &VideoService{config: config, actorService: actorService, videoRep: videoRep, streamService: streamService}
+func NewVideoService(config *instance.FederationConfig, actorService *ActorService, videoRep *models.VideoRepository, streamService StreamService, instanceService *InstanceService) *VideoService {
+	return &VideoService{config: config, actorService: actorService, videoRep: videoRep, instanceService: instanceService, streamService: streamService}
 }
 
 func (s *VideoService) AddVideo(ctx context.Context, announceObject vocab.ActivityStreamsObjectProperty, toFollowerIris []*url.URL) error {
@@ -173,6 +174,23 @@ func (s *VideoService) addOwnerAndChannel(ctx context.Context, owners []*url.URL
 	return nil
 }
 
+func (s *VideoService) addInstance(ctx context.Context, instanceUrl string, video *models.Video, instAct *models.Actor) {
+	if len(instanceUrl) > 0 {
+		if instanceActorIri, err := url.Parse(instanceUrl + "/federation/accounts/shig"); err == nil {
+			shigInstance, has := s.instanceService.getInstanceByActorIri(ctx, instanceActorIri)
+			if !has {
+				if actor, err := s.createActor(ctx, instanceActorIri, instAct); err == nil {
+					if shigInstance, err = s.instanceService.upsertInstanceByActor(ctx, actor); err != nil {
+						return
+					}
+				}
+			}
+			video.InstanceId = shigInstance.ID
+			video.Instance = shigInstance
+		}
+	}
+}
+
 func (s *VideoService) addGuest(ctx context.Context, guest string, video *models.Video, instAct *models.Actor) {
 	if len(guest) > 0 {
 		if accountIri, err := s.buildAccountIri(guest); err == nil {
@@ -218,6 +236,7 @@ func (s *VideoService) parseCommonUnknownProps(ctx context.Context, asVideoProps
 	video.ShigActive = videoProps.ShigActive
 
 	if videoProps.ShigActive {
+		s.addInstance(ctx, videoProps.ShigInstanceUrl, video, instAct)
 		s.addGuest(ctx, videoProps.Shig.FirstGuest, video, instAct)
 		s.addGuest(ctx, videoProps.Shig.SecondGuest, video, instAct)
 		s.addGuest(ctx, videoProps.Shig.ThirdGuest, video, instAct)

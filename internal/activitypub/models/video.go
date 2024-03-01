@@ -12,6 +12,8 @@ type Video struct {
 	Uuid            string       `gorm:"not null;index;unique;"`
 	Name            string       `gorm:""`
 	ShigActive      bool         `gorm:"not null;default:false;"`
+	InstanceId      uint         `gorm:"not null;"`
+	Instance        *Instance    `gorm:"foreignKey:InstanceId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	OwnerId         uint         `gorm:"not null;"`
 	Owner           *Actor       `gorm:"foreignKey:OwnerId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	ChannelId       uint         `gorm:"not null;"`

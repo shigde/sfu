@@ -6,12 +6,12 @@ port = 8080
 # INFO,WARN,ERROR,DEBUG
 level = "DEBUG"
 ## logfile = "stdout"
-logfile = "./mon/dev/log/sfu.log"
+logfile = "/var/log/shigde.log"
 
 [store]
 # currently only Sqlite3 supported
 name = "sqlite3"
-dataSource = "shig.db"
+dataSource = "/var/lib/shigde/shig.db"
 
 [security]
 # set list of domains allowed to request api
@@ -27,7 +27,7 @@ defaultexpiretime = 604800  # 1 week not implemented et jet
 [metric.prometheus]
 enable = true
 endpoint = "/metrics" # Endpoint where the Prometheus metrics are delivered
-port = 8091
+port = 8081
 
 [telemetry]
 enable = false
@@ -64,14 +64,10 @@ iceServer = [{ urls = ["stun:stun.l.google.com:19302"] }]
 [federation]
 enable = true
 # The domain of your public api
-domain = "stream.localhost:8080"
+domain = "localhost:8080"
 https = false
 release = "v0"
 instanceUsername = "shig"
 serverName = "shig"
 private = false
 registerToken = "this-token-must-be-changed-in-public"
-
-[[federation.trustedInstance]]
-actor = "http://remote-stream.localhost:8070/federation/accounts/shig"
-name = "shig"

@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func ParseConfig(file string) (*sfu.Config, error) {
+func ParseConfig(file string, env *sfu.Environment) (*sfu.Config, error) {
 	config := &sfu.Config{}
 
 	if _, err := os.Stat(file); err != nil {
@@ -55,11 +55,11 @@ func ParseConfig(file string) (*sfu.Config, error) {
 		return nil, err
 	}
 
-	if err := instance.ValidateFederationConfig(config.FederationConfig); err != nil {
+	if err := instance.ValidateFederationConfig(config.FederationConfig, &env.FederationEnv); err != nil {
 		return nil, err
 	}
 
-	if err := sfu.ValidateServerConfig(config.ServerConfig); err != nil {
+	if err := sfu.ValidateServerConfig(config.ServerConfig, &env.ServerEnv); err != nil {
 		return nil, err
 	}
 

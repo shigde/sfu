@@ -2,6 +2,7 @@ package lobby
 
 import (
 	"context"
+	"net/url"
 	"sync"
 	"testing"
 
@@ -15,7 +16,8 @@ func testRtpStreamLobbyRepositorySetup(t *testing.T) *lobbyRepository {
 	store := storage.NewTestStore()
 	_ = store.GetDatabase().AutoMigrate(&LobbyEntity{})
 	var engine rtpEngine
-	repository := newLobbyRepository(store, engine)
+	host, _ := url.Parse("")
+	repository := newLobbyRepository(store, engine, host, "test-key")
 
 	return repository
 }
@@ -23,25 +25,28 @@ func TestStreamLobbyRepository(t *testing.T) {
 
 	t.Run("Get not existing lobby", func(t *testing.T) {
 		repo := testRtpStreamLobbyRepositorySetup(t)
-		space, ok := repo.getLobby(uuid.New())
+		lobby, ok := repo.getLobby(uuid.New())
 		assert.False(t, ok)
-		assert.Nil(t, space)
+		assert.Nil(t, lobby)
 	})
 
 	t.Run("Create lobby", func(t *testing.T) {
 		repo := testRtpStreamLobbyRepositorySetup(t)
 		lobby, _ := repo.getOrCreateLobby(context.Background(), uuid.New(), make(chan uuid.UUID))
 		assert.NotNil(t, lobby)
+		lobby.stop()
 	})
 
 	t.Run("Create and Get lobby", func(t *testing.T) {
 		repo := testRtpStreamLobbyRepositorySetup(t)
 		id := uuid.New()
 		lobbyCreated, _ := repo.getOrCreateLobby(context.Background(), id, make(chan uuid.UUID))
+
 		assert.NotNil(t, lobbyCreated)
 		lobbyGet, ok := repo.getLobby(id)
 		assert.True(t, ok)
 		assert.Same(t, lobbyCreated, lobbyGet)
+		lobbyCreated.stop()
 	})
 
 	t.Run("Delete lobby", func(t *testing.T) {
@@ -100,5 +105,9 @@ func TestStreamLobbyRepository(t *testing.T) {
 		_, ok := repo.getLobby(id)
 		assert.False(t, ok)
 		assert.Equal(t, wantedCount, repo.Len())
+
+		for _, savedLobby := range repo.lobbies {
+			savedLobby.stop()
+		}
 	})
 }

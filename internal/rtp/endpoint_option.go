@@ -36,9 +36,21 @@ func EndpointWithNegotiationNeededListener(f func(sdp webrtc.SessionDescription)
 	}
 }
 
+func EndpointWithONNSetupTrigger(waitBeforeONNSetup <-chan struct{}) func(endpoint *Endpoint) {
+	return func(endpoint *Endpoint) {
+		endpoint.waitBeforeONNSetup = waitBeforeONNSetup
+	}
+}
+
 func EndpointWithLostConnectionListener(f func()) func(endpoint *Endpoint) {
 	return func(endpoint *Endpoint) {
 		endpoint.onLostConnection = f
+	}
+}
+
+func EndpointWithonIceStateConnectedListener(onIceStateConnected func()) func(endpoint *Endpoint) {
+	return func(endpoint *Endpoint) {
+		endpoint.onIceStateConnected = onIceStateConnected
 	}
 }
 

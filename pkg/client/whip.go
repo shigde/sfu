@@ -27,7 +27,7 @@ func NewWhip(opt ...ClientOption) *Whip {
 func (w *Whip) GetAnswer(spaceId string, streamId string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
 	body := bytes.NewBuffer([]byte(offer.SDP))
 	c := http.Client{Timeout: time.Duration(1) * time.Second}
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:8080/space/%s/stream/%s/whip", spaceId, streamId), body)
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/space/%s/stream/%s/whip", w.url.String(), spaceId, streamId), body)
 	if err != nil {
 		return nil, fmt.Errorf("requesting answer: %w", err)
 	}

@@ -56,6 +56,9 @@ func (m *mockPeerConnector) OnNegotiationNeeded(f func())                       
 func (m *mockPeerConnector) CreateOffer(_ *webrtc.OfferOptions) (webrtc.SessionDescription, error) {
 	return webrtc.SessionDescription{}, nil
 }
+func (m *mockPeerConnector) CreateAnswer(options *webrtc.AnswerOptions) (webrtc.SessionDescription, error) {
+	return webrtc.SessionDescription{}, nil
+}
 
 func (m *mockPeerConnector) Close() error {
 	return nil

@@ -3,6 +3,7 @@ package media
 import (
 	"context"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/logging"
@@ -20,12 +21,14 @@ func NewRouter(
 	liveLobbyService *stream.LiveLobbyService,
 ) *mux.Router {
 	router := mux.NewRouter()
-	//cors := handlers.CORS(
+	cors := handlers.CORS(
+		handlers.AllowedOrigins([]string{"*"}),
+	)
 	//	handlers.AllowedOrigins([]string{"http://localhost:3000/"}),
 	//	handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"}),
 	//	handlers.AllowedHeaders([]string{"X-Req-Token"}),
 	//)
-	// router.Use(cors)
+	router.Use(cors)
 	// Auth
 	router.Use(logging.LoggingMiddleware)
 	router.HandleFunc("/authenticate", getAuthenticationHandler(accountService)).Methods("POST")
@@ -47,6 +50,12 @@ func NewRouter(
 
 	// Static Stream listeners
 	router.HandleFunc("/space/{space}/stream/{id}/static/whep", auth.HttpMiddleware(securityConfig, whepStaticAnswer(streamService, liveLobbyService))).Methods("POST")
+
+	// Server to Server endpoints
+	router.HandleFunc("/space/{space}/stream/{id}/pipe", auth.HttpMiddleware(securityConfig, openPipe(streamService, liveLobbyService))).Methods("POST")
+	router.HandleFunc("/space/{space}/stream/{id}/hostingress", auth.HttpMiddleware(securityConfig, openHostIngress(streamService, liveLobbyService))).Methods("POST")
+	router.HandleFunc("/space/{space}/stream/{id}/pipe", auth.HttpMiddleware(securityConfig, closePipe(streamService, liveLobbyService))).Methods("DELETE")
+
 	return router
 }
 

@@ -26,7 +26,7 @@ func main() {
 	cli := runner.NewCli()
 	cli.Parse()
 
-	conf, err := config.ParseConfig(cli.Config)
+	conf, err := config.ParseConfig(cli.Config, config.ParseEnv())
 	if err != nil {
 		panic(err)
 	}

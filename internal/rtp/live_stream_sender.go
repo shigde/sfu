@@ -1,6 +1,7 @@
 package rtp
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -14,19 +15,22 @@ import (
 )
 
 type LiveStreamSender struct {
+	ctx          context.Context
 	mu           sync.RWMutex
 	id           uuid.UUID
 	audio, video *UdpConnection
-	quit         chan struct{}
+	stopRunning  func()
 }
 
-func NewLiveStreamSender(id uuid.UUID, quit chan struct{}) (*LiveStreamSender, error) {
+func NewLiveStreamSender(lobbyContext context.Context, id uuid.UUID) (*LiveStreamSender, error) {
+	ctx, stop := context.WithCancel(lobbyContext)
 	f := &LiveStreamSender{
-		mu:    sync.RWMutex{},
-		id:    id,
-		audio: &UdpConnection{port: 4000, payloadType: 111},
-		video: &UdpConnection{port: 4002, payloadType: 96},
-		quit:  quit,
+		ctx:         ctx,
+		mu:          sync.RWMutex{},
+		id:          id,
+		audio:       &UdpConnection{port: 4000, payloadType: 111},
+		video:       &UdpConnection{port: 4002, payloadType: 96},
+		stopRunning: stop,
 	}
 
 	go f.Run()
@@ -60,19 +64,13 @@ func (f *LiveStreamSender) Run() {
 
 	f.log("running")
 	select {
-	case <-f.quit:
+	case <-f.ctx.Done():
 	}
 	f.log("quit")
 }
 
 func (f *LiveStreamSender) Stop() {
-	select {
-	case <-f.quit:
-		return
-	default:
-		close(f.quit)
-		<-f.quit
-	}
+	f.stopRunning()
 }
 
 func (f *LiveStreamSender) connect(udp *UdpConnection, laddr *net.UDPAddr) error {
@@ -110,7 +108,7 @@ func (f *LiveStreamSender) close() error {
 func (f *LiveStreamSender) writeTrack(udp *UdpConnection, track *webrtc.TrackRemote) error {
 	for {
 		select {
-		case <-f.quit:
+		case <-f.ctx.Done():
 			f.log("stop writing because quit")
 			return nil
 		default:
@@ -182,7 +180,7 @@ func (f *LiveStreamSender) AddTrack(track webrtc.TrackLocal) {
 				PayloadType:        111,
 			},
 		}
-		binding.writeStream = newLiveStreamWriter(uuid.NewString(), f.audio, f.quit)
+		binding.writeStream = newLiveStreamWriter(f.ctx, uuid.NewString(), f.audio)
 	}
 	if track.Kind() == webrtc.RTPCodecTypeVideo {
 		//videoRTCPFeedback := []webrtc.RTCPFeedback{{"goog-remb", ""}, {"ccm", "fir"}, {"nack", ""}, {"nack", "pli"}}
@@ -199,7 +197,7 @@ func (f *LiveStreamSender) AddTrack(track webrtc.TrackLocal) {
 				PayloadType: 96,
 			},
 		}
-		binding.writeStream = newLiveStreamWriter(uuid.NewString(), f.video, f.quit)
+		binding.writeStream = newLiveStreamWriter(f.ctx, uuid.NewString(), f.video)
 	}
 
 	if _, err := track.Bind(binding); err != nil {

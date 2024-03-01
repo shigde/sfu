@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/shigde/sfu/internal/activitypub"
@@ -45,7 +46,10 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("creating webrtc engine: %w", err)
 	}
-	lobbyManager := lobby.NewLobbyManager(store, engine)
+
+	host, _ := url.Parse(config.FederationConfig.InstanceUrl.String())
+	host.Path = fmt.Sprintf("federation/accounts/%s", config.FederationConfig.InstanceUsername)
+	lobbyManager := lobby.NewLobbyManager(store, engine, host, config.FederationConfig.RegisterToken)
 
 	streamRepo := stream.NewLiveStreamRepository(store)
 	spaceRepo := stream.NewSpaceRepository(store)

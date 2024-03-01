@@ -43,6 +43,7 @@ func NewApApi(
 	actorRepo := models.NewActorRepository(config, storage)
 	followRepo := models.NewFollowRepository(config, storage)
 	videoRepo := models.NewVideoRepository(config, storage)
+	instanceRepo := models.NewInstanceRepository(config, storage)
 
 	// @TODO this is a skeleton, please use this as blueprint to clean up the source
 	// @TODO currently we follow the implementation from Owncast, which is little tricky but was faster to implement
@@ -63,7 +64,9 @@ func NewApApi(
 
 	actorService := services.NewActorService(config, actorRepo, sender)
 
-	videoService := services.NewVideoService(config, actorService, videoRepo, streamService)
+	instService := services.NewInstanceService(config, instanceRepo)
+
+	videoService := services.NewVideoService(config, actorService, videoRepo, streamService, instService)
 
 	return &ApApi{
 		config:       config,

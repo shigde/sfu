@@ -24,7 +24,7 @@ func NewWhep(opt ...ClientOption) *Whep {
 
 func (w *Whep) GetOffer(spaceId string, streamId string) (*webrtc.SessionDescription, error) {
 	c := http.Client{Timeout: time.Duration(1) * time.Second}
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:8080/space/%s/stream/%s/whep", spaceId, streamId), nil)
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/space/%s/stream/%s/whep", w.url.String(), spaceId, streamId), nil)
 	if err != nil {
 		return nil, fmt.Errorf("requesting answer: %w", err)
 	}

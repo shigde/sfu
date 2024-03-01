@@ -1,6 +1,7 @@
 package lobby
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -17,6 +18,7 @@ var (
 )
 
 type hub struct {
+	ctx           context.Context
 	LiveStreamId  uuid.UUID
 	sessionRepo   *sessionRepository
 	sender        liveStreamSender
@@ -24,15 +26,15 @@ type hub struct {
 	tracks        map[string]*rtp.TrackInfo   // trackID --> TrackInfo
 	metricNodes   map[string]metric.GraphNode // sessionId --> metric Node
 	hubMetricNode metric.GraphNode
-	quit          chan struct{}
 }
 
-func newHub(sessionRepo *sessionRepository, liveStream uuid.UUID, sender liveStreamSender, quit chan struct{}) *hub {
+func newHub(ctx context.Context, sessionRepo *sessionRepository, liveStream uuid.UUID, sender liveStreamSender) *hub {
 	tracks := make(map[string]*rtp.TrackInfo)
 	metricNodes := make(map[string]metric.GraphNode)
 	requests := make(chan *hubRequest)
 	hubMetricNode := metric.GraphNodeUpdate(metric.BuildNode(liveStream.String(), liveStream.String(), "hub"))
 	hub := &hub{
+		ctx,
 		liveStream,
 		sessionRepo,
 		sender,
@@ -40,9 +42,13 @@ func newHub(sessionRepo *sessionRepository, liveStream uuid.UUID, sender liveStr
 		tracks,
 		metricNodes,
 		hubMetricNode,
-		quit,
 	}
 	go hub.run()
+
+	go func(done <-chan struct{}, node metric.GraphNode) {
+		<-done
+		metric.GraphNodeDelete(node)
+	}(ctx.Done(), hubMetricNode)
 
 	return hub
 }
@@ -62,7 +68,7 @@ func (h *hub) run() {
 			case muteTrack:
 				h.onMuteTrack(trackEvent)
 			}
-		case <-h.quit:
+		case <-h.ctx.Done():
 			slog.Info("lobby.hub: closed hub")
 			return
 		}
@@ -73,7 +79,7 @@ func (h *hub) DispatchAddTrack(track *rtp.TrackInfo) {
 	select {
 	case h.reqChan <- &hubRequest{kind: addTrack, track: track}:
 		slog.Debug("lobby.hub: dispatch add track", "streamId", track.GetTrackLocal().StreamID(), "track", track.GetTrackLocal().ID(), "kind", track.GetTrackLocal().Kind(), "purpose", track.Purpose.ToString())
-	case <-h.quit:
+	case <-h.ctx.Done():
 		slog.Warn("lobby.hub: dispatch add track even on closed hub")
 	case <-time.After(hubDispatchTimeout):
 		slog.Error("lobby.hub: dispatch add track - interrupted because dispatch timeout")
@@ -84,7 +90,7 @@ func (h *hub) DispatchRemoveTrack(track *rtp.TrackInfo) {
 	select {
 	case h.reqChan <- &hubRequest{kind: removeTrack, track: track}:
 		slog.Debug("lobby.hub: dispatch remove track", "streamId", track.GetTrackLocal().StreamID(), "track", track.GetTrackLocal().ID(), "kind", track.GetTrackLocal().Kind(), "purpose", track.Purpose.ToString())
-	case <-h.quit:
+	case <-h.ctx.Done():
 		slog.Warn("lobby.hub: dispatch remove track even on closed hub")
 	case <-time.After(hubDispatchTimeout):
 		slog.Error("lobby.hub: dispatch remove track - interrupted because dispatch timeout")
@@ -95,7 +101,7 @@ func (h *hub) DispatchMuteTrack(track *rtp.TrackInfo) {
 	select {
 	case h.reqChan <- &hubRequest{kind: muteTrack, track: track}:
 		slog.Debug("lobby.hub: dispatch mute track", "id", track.GetId(), "purpose", track.Purpose.ToString())
-	case <-h.quit:
+	case <-h.ctx.Done():
 		slog.Warn("lobby.hub: dispatch mute track even on closed hub")
 	case <-time.After(hubDispatchTimeout):
 		slog.Error("lobby.hub: dispatch mute track - interrupted because dispatch timeout")
@@ -104,13 +110,13 @@ func (h *hub) DispatchMuteTrack(track *rtp.TrackInfo) {
 
 // getTrackList Is called from the Egress endpoints when the connection is established.
 // In ths wax the egress endpoints can receive the current tracks of the lobby
-// The session set this methode as callback to the egress endpoint
+// The session set this methode as callback to the egress egress
 func (h *hub) getTrackList(sessionId uuid.UUID, filters ...filterHubTracks) ([]*rtp.TrackInfo, error) {
 	var hubList []*rtp.TrackInfo
 	trackListChan := make(chan []*rtp.TrackInfo)
 	select {
 	case h.reqChan <- &hubRequest{kind: getTrackList, trackListChan: trackListChan}:
-	case <-h.quit:
+	case <-h.ctx.Done():
 		slog.Warn("lobby.hub: get track list on closed hub")
 		return nil, errHubAlreadyClosed
 	case <-time.After(hubDispatchTimeout):
@@ -120,7 +126,7 @@ func (h *hub) getTrackList(sessionId uuid.UUID, filters ...filterHubTracks) ([]*
 
 	select {
 	case hubList = <-trackListChan:
-	case <-h.quit:
+	case <-h.ctx.Done():
 		slog.Warn("lobby.hub: get track list on closed hub")
 	case <-time.After(hubDispatchTimeout):
 		slog.Error("lobby.hub: get track list - interrupted because dispatch timeout")
@@ -150,21 +156,6 @@ func (h *hub) getTrackList(sessionId uuid.UUID, filters ...filterHubTracks) ([]*
 		}
 	}
 	return list, nil
-}
-
-func (h *hub) stop() error {
-	slog.Info("lobby.hub: stop")
-	select {
-	case <-h.quit:
-		slog.Error("lobby.sessions: the hub was already closed")
-		return errHubAlreadyClosed
-	default:
-		close(h.quit)
-		slog.Info("lobby.hub: stopped was triggered")
-		<-h.quit
-		metric.GraphNodeDelete(h.hubMetricNode)
-	}
-	return nil
 }
 
 func (h *hub) onAddTrack(event *hubRequest) {
@@ -218,7 +209,7 @@ func (h *hub) onGetTrackList(event *hubRequest) {
 
 	select {
 	case event.trackListChan <- list:
-	case <-h.quit:
+	case <-h.ctx.Done():
 		slog.Warn("lobby.hub: onGetTrackList on closed hub")
 	case <-time.After(hubDispatchTimeout):
 		slog.Error("lobby.hub: onGetTrackList - interrupted because dispatch timeout")
@@ -239,7 +230,7 @@ func (h *hub) increaseNodeGraphStats(sessionId string, endpointType rtp.Endpoint
 	index := endpointType.ToString() + sessionId
 	metricNode, ok := h.metricNodes[index]
 	if !ok {
-		// if metric not found create the endpoint and the edge from endpoint to lobby
+		// if metric not found create the egress and the edge from egress to lobby
 		metricNode = metric.BuildNode(sessionId, h.LiveStreamId.String(), endpointType.ToString())
 		metric.GraphAddEdge(sessionId, h.LiveStreamId.String(), endpointType.ToString())
 	}

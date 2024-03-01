@@ -34,7 +34,9 @@ type Endpoint struct {
 	onChannel           func(dc *webrtc.DataChannel)
 	onEstablished       func()
 	onNegotiationNeeded func(offer webrtc.SessionDescription)
+	waitBeforeONNSetup  <-chan struct{}
 	onLostConnection    func()
+	onIceStateConnected func()
 	getCurrentTracksCbk func(sessionId uuid.UUID) ([]*TrackInfo, error)
 	initTracks          []*initTrack // deprecated
 	dispatcher          TrackDispatcher
@@ -88,6 +90,24 @@ func (c *Endpoint) GetLocalDescription(ctx context.Context) (*webrtc.SessionDesc
 }
 func (c *Endpoint) SetAnswer(sdp *webrtc.SessionDescription) error {
 	return c.peerConnection.SetRemoteDescription(*sdp)
+}
+
+func (c *Endpoint) SetNewOffer(sdp *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+
+	err := getIngressTrackSdpInfo(*sdp, uuid.MustParse(c.sessionId), c.trackSdpInfoRepository)
+
+	if err := c.peerConnection.SetRemoteDescription(*sdp); err != nil {
+		return nil, fmt.Errorf("set new offer: %w", err)
+	}
+
+	answer, err := c.peerConnection.CreateAnswer(nil)
+	if err != nil {
+		return nil, err
+	}
+	if err = c.peerConnection.SetLocalDescription(answer); err != nil {
+		return nil, err
+	}
+	return &answer, nil
 }
 
 func (c *Endpoint) SetInitComplete() {
@@ -212,7 +232,9 @@ func (c *Endpoint) doRenegotiation() {
 		return
 	case <-c.initComplete:
 	}
+
 	slog.Debug("rtp.establish_egress: sender OnNegotiationNeeded was triggered")
+
 	offer, err := c.peerConnection.CreateOffer(nil)
 	if err != nil {
 		slog.Error("rtp.establish_egress:: sender doRenegotiation", "err", err)
@@ -248,6 +270,10 @@ func (c *Endpoint) onICEConnectionStateChange(state webrtc.ICEConnectionState) {
 		if c.onLostConnection != nil {
 			c.onLostConnection()
 		}
+	}
+
+	if state == webrtc.ICEConnectionStateConnected && c.onIceStateConnected != nil {
+		c.onIceStateConnected()
 	}
 }
 
@@ -285,6 +311,7 @@ type peerConnection interface {
 	RemoveTrack(sender *webrtc.RTPSender) error
 	SignalingState() webrtc.SignalingState
 	CreateOffer(options *webrtc.OfferOptions) (webrtc.SessionDescription, error)
+	CreateAnswer(options *webrtc.AnswerOptions) (webrtc.SessionDescription, error)
 	OnICEConnectionStateChange(f func(webrtc.ICEConnectionState))
 	OnNegotiationNeeded(f func())
 	Close() error

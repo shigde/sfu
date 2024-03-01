@@ -3,6 +3,7 @@ package migration
 import (
 	"errors"
 	"fmt"
+	"net/url"
 
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
@@ -22,7 +23,7 @@ func Migrate(config *instance.FederationConfig, storage storage.Storage) error {
 		&models.Video{},
 		&models.Follow{},
 		&models.Actor{},
-		&models.Server{},
+		&models.Instance{},
 		&auth.Account{},
 		&lobby.LobbyEntity{},
 		&stream.Space{},
@@ -39,8 +40,43 @@ func Migrate(config *instance.FederationConfig, storage storage.Storage) error {
 				return fmt.Errorf("creating instance actor: %w", err)
 			}
 			db.Create(instanceActor)
+			shigInstance := models.NewInstance(instanceActor)
+			db.Create(shigInstance)
+
+			for _, inst := range config.TrustedInstances {
+				if err := buildTrustedInstanceAccount(db, inst); err != nil {
+					return err
+				}
+			}
 		}
 	}
 
+	return nil
+}
+
+func buildTrustedInstanceAccount(db *gorm.DB, trustedInstance instance.TrustedInstance) error {
+	actorIri, err := url.Parse(trustedInstance.Actor)
+	if err != nil {
+		return fmt.Errorf("migration parsing trusted instance actor id: %w", err)
+	}
+	actorId := fmt.Sprintf("%s@%s", trustedInstance.Name, actorIri.Host)
+	actor, err := models.NewTrustedInstanceActor(actorIri, trustedInstance.Name)
+	if err != nil {
+		return fmt.Errorf("migration building actor: %w", err)
+	}
+
+	db.Create(actor)
+	var savedActor models.Actor
+
+	result := db.Where("actor_iri=?", actorIri.String()).First(&savedActor)
+	if result.Error != nil {
+		return fmt.Errorf("migration loading actor: %w", result.Error)
+	}
+
+	account := auth.CreateInstanceAccount(actorId, &savedActor)
+	db.Create(account)
+
+	trInstance := models.NewInstance(&savedActor)
+	db.Create(trInstance)
 	return nil
 }

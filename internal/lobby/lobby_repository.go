@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"sync"
 
 	"github.com/google/uuid"
@@ -16,17 +17,21 @@ import (
 var errLobbyNotFound = errors.New("lobby not found")
 
 type lobbyRepository struct {
-	locker    *sync.RWMutex
-	lobbies   map[uuid.UUID]*lobby
-	store     storage.Storage
-	rtpEngine rtpEngine
+	locker           *sync.RWMutex
+	lobbies          map[uuid.UUID]*lobby
+	instanceActorUrl *url.URL
+	registerToken    string
+	store            storage.Storage
+	rtpEngine        rtpEngine
 }
 
-func newLobbyRepository(store storage.Storage, rtpEngine rtpEngine) *lobbyRepository {
+func newLobbyRepository(store storage.Storage, rtpEngine rtpEngine, hostUrl *url.URL, registerToken string) *lobbyRepository {
 	lobbies := make(map[uuid.UUID]*lobby)
 	return &lobbyRepository{
 		&sync.RWMutex{},
 		lobbies,
+		hostUrl,
+		registerToken,
 		store,
 		rtpEngine,
 	}
@@ -46,7 +51,16 @@ func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUI
 		if entity, err = r.updateLobbyEntity(ctx, entity); err != nil {
 			return nil, fmt.Errorf("updating lobby entity as running: %w", err)
 		}
-		lobby := newLobby(lobbyId, entity, r.rtpEngine, lobbyGarbageCollector)
+
+		hostSettings := newHostSettings(entity, r.instanceActorUrl, r.registerToken)
+
+		lobby := newLobby(
+			lobbyId,
+			entity,
+			r.rtpEngine,
+			lobbyGarbageCollector,
+			hostSettings,
+		)
 
 		r.lobbies[lobbyId] = lobby
 		metric.RunningLobbyInc(lobby.entity.LiveStreamId.String(), lobbyId.String())
@@ -127,4 +141,14 @@ func (r *lobbyRepository) updateLobbyEntity(ctx context.Context, lobby *LobbyEnt
 		return nil, fmt.Errorf("updating lobby %s: %w", lobby.UUID, result.Error)
 	}
 	return lobby, nil
+}
+
+func (r *lobbyRepository) lobbyIsHost(streamHostActor string) bool {
+	isHost := true
+	if r.instanceActorUrl.String() != streamHostActor {
+		isHost = false
+	}
+	slog.Debug("lobby.lobbyRepository: lobby is host", "isHost", isHost, "streamHostActor", streamHostActor, "instanceActor", r.instanceActorUrl.String())
+	return isHost
+
 }

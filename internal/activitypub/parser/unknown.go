@@ -10,11 +10,12 @@ import (
 
 type VideoPropertiesUnknown struct {
 	// OriginallyPublishedAt *time.Time
-	ShigActive      bool
 	LatencyMode     uint
 	Uuid            string
 	State           uint
+	ShigActive      bool
 	Shig            *ShigGuests
+	ShigInstanceUrl string
 	IsLiveBroadcast bool
 	PermanentLive   bool
 	LiveSaveReplay  bool
@@ -72,6 +73,10 @@ func extractShigData(props map[string]interface{}, video *VideoPropertiesUnknown
 
 	var err error
 	if video.ShigActive, err = ExcludeUnknownBool(props, "shigActive"); err != nil {
+		return nil, err
+	}
+
+	if video.ShigInstanceUrl, err = ExcludeUnknownString(props, "shigInstanceUrl"); err != nil {
 		return nil, err
 	}
 

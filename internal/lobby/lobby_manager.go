@@ -3,6 +3,7 @@ package lobby
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
@@ -26,8 +27,8 @@ type rtpEngine interface {
 	EstablishStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
 }
 
-func NewLobbyManager(storage storage.Storage, e rtpEngine) *LobbyManager {
-	lobbies := newLobbyRepository(storage, e)
+func NewLobbyManager(storage storage.Storage, e rtpEngine, hostUrl *url.URL, registerToken string) *LobbyManager {
+	lobbies := newLobbyRepository(storage, e, hostUrl, registerToken)
 	lobbyGarbageCollector := make(chan uuid.UUID)
 	go func() {
 		for id := range lobbyGarbageCollector {
@@ -240,4 +241,57 @@ func (m *LobbyManager) StopLiveStream(
 		}
 	}
 	return nil
+}
+
+func (m *LobbyManager) CreateLobbyHostPipe(ctx context.Context, lobbyId uuid.UUID, offer *webrtc.SessionDescription, instanceId uuid.UUID) (struct {
+	Answer       *webrtc.SessionDescription
+	Resource     uuid.UUID
+	RtpSessionId uuid.UUID
+}, error) {
+	var answerData struct {
+		Answer       *webrtc.SessionDescription
+		Resource     uuid.UUID
+		RtpSessionId uuid.UUID
+	}
+
+	lobby, err := m.lobbies.getOrCreateLobby(ctx, lobbyId, m.lobbyGarbageCollector)
+	if err != nil {
+		return answerData, fmt.Errorf("getting or creating lobby: %w", err)
+	}
+
+	if answer, err := lobby.hostController.onRemoteHostPipeConnectionRequest(offer, instanceId); err == nil {
+		answerData.Answer = answer
+		return answerData, nil
+	}
+	return answerData, fmt.Errorf("creating lobby host pipe connection req: %w", err)
+}
+
+func (m *LobbyManager) CreateLobbyHostIngress(_ context.Context, lobbyId uuid.UUID, offer *webrtc.SessionDescription, instanceId uuid.UUID) (struct {
+	Answer       *webrtc.SessionDescription
+	Resource     uuid.UUID
+	RtpSessionId uuid.UUID
+}, error) {
+	var answerData struct {
+		Answer       *webrtc.SessionDescription
+		Resource     uuid.UUID
+		RtpSessionId uuid.UUID
+	}
+
+	lobby, hasLobby := m.lobbies.getLobby(lobbyId)
+	if !hasLobby {
+		return answerData, errLobbyNotFound
+	}
+
+	var answer *webrtc.SessionDescription
+	var err error
+	if answer, err = lobby.hostController.onRemoteHostIngressConnectionRequest(offer, instanceId); err != nil {
+		return answerData, fmt.Errorf("creating lobby host remote ingress connection req: %w", err)
+	}
+
+	answerData.Answer = answer
+	return answerData, nil
+}
+
+func (m *LobbyManager) CloseLobbyHostPipe(ctx context.Context, lobbyId uuid.UUID, instanceId uuid.UUID) (bool, error) {
+	return m.LeaveLobby(ctx, lobbyId, instanceId)
 }
