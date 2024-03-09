@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shigde/sfu/internal/auth"
-	"github.com/shigde/sfu/internal/lobby"
 	"golang.org/x/exp/slog"
 )
 
@@ -20,9 +19,15 @@ type hostSettings struct {
 	token      string
 }
 
-func newHostSettings(streamLobby *lobby.LobbyEntity, homeInstanceActor *url.URL, token string) *hostSettings {
-	isHost := isSameShigInstance(streamLobby.Host, homeInstanceActor.String())
-	actorUrl, _ := url.Parse(streamLobby.Host)
+type host interface {
+	GetHost() string
+	GetSpace() string
+	GetLiveStreamID() string
+}
+
+func NewHostSettings(host host, homeInstanceActor *url.URL, token string) *hostSettings {
+	isHost := isSameShigInstance(host.GetHost(), homeInstanceActor.String())
+	actorUrl, _ := url.Parse(host.GetHost())
 	hostUrl, _ := url.Parse(fmt.Sprintf("%s://%s", actorUrl.Scheme, actorUrl.Host))
 
 	// @TODO read this from the activitypub.models.Instance object
@@ -37,8 +42,8 @@ func newHostSettings(streamLobby *lobby.LobbyEntity, homeInstanceActor *url.URL,
 		url:        hostUrl,
 		token:      token,
 		name:       actorId,
-		space:      streamLobby.Space,
-		stream:     streamLobby.LiveStreamId.String(),
+		space:      host.GetSpace(),
+		stream:     host.GetLiveStreamID(),
 	}
 }
 
