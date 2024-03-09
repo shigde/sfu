@@ -19,7 +19,7 @@ jobs:
         with:
           go-version: '1.21.x'
       - name: Install dependencies
-        run: go get -u all
+        run: go get -u ./...
       - name: Build
         run: go build -v ./...
       - name: Test with Go
