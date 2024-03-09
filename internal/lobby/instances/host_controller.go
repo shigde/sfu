@@ -1,4 +1,4 @@
-package lobby
+package instances
 
 import (
 	"context"
@@ -8,19 +8,21 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
+	lobby2 "github.com/shigde/sfu/internal/lobby"
+	"github.com/shigde/sfu/internal/lobby/clients"
 	"golang.org/x/exp/slog"
 )
 
 type hostController struct {
 	ctx      context.Context
 	lobbyId  uuid.UUID
-	lobby    *lobby
-	hostApi  *hostApiClient
+	lobby    *lobby2.lobby
+	hostApi  *clients.hostApiClient
 	settings *hostSettings
 }
 
-func newHostController(ctx context.Context, lobbyId uuid.UUID, lobby *lobby, settings *hostSettings) *hostController {
-	hostApi := newHostApiClient(settings.instanceId, settings.token, settings.name, settings.url)
+func newHostController(ctx context.Context, lobbyId uuid.UUID, lobby *lobby2.lobby, settings *hostSettings) *hostController {
+	hostApi := clients.newHostApiClient(settings.instanceId, settings.token, settings.name, settings.url)
 	controller := &hostController{
 		ctx:      ctx,
 		lobbyId:  lobbyId,
@@ -66,15 +68,15 @@ func (c *hostController) connectToHostPipe(instanceId uuid.UUID) error {
 	ctx, cancelReq := context.WithCancel(context.Background())
 	defer cancelReq()
 
-	request := newLobbyRequest(ctx, instanceId)
-	data := newHostGetPipeOfferData()
+	request := lobby2.newLobbyRequest(ctx, instanceId)
+	data := lobby2.newHostGetPipeOfferData()
 	request.data = data
 	go c.lobby.runRequest(request)
 
 	var answer *webrtc.SessionDescription
 	select {
 	case <-c.ctx.Done():
-		return errSessionAlreadyClosed
+		return lobby2.errSessionAlreadyClosed
 	case err := <-request.err:
 		return fmt.Errorf("requesting pipe offer: %w", err)
 	case res := <-data.response:
@@ -89,14 +91,14 @@ func (c *hostController) connectToHostPipe(instanceId uuid.UUID) error {
 func (c *hostController) onHostPipeAnswerResponse(answer *webrtc.SessionDescription, instanceId uuid.UUID) error {
 	ctx, cancelReq := context.WithCancel(context.Background())
 	defer cancelReq()
-	request := newLobbyRequest(ctx, instanceId)
-	data := newHostSetPipeAnswerData(answer)
+	request := lobby2.newLobbyRequest(ctx, instanceId)
+	data := lobby2.newHostSetPipeAnswerData(answer)
 	request.data = data
 	go c.lobby.runRequest(request)
 
 	select {
 	case <-c.ctx.Done():
-		return errSessionAlreadyClosed
+		return lobby2.errSessionAlreadyClosed
 	case err := <-request.err:
 		return fmt.Errorf("setting answer for pip connection: %w", err)
 	case connected := <-data.response:
@@ -112,15 +114,15 @@ func (c *hostController) connectToHostEgress(instanceId uuid.UUID) error {
 	ctx, cancelReq := context.WithCancel(context.Background())
 	defer cancelReq()
 
-	request := newLobbyRequest(ctx, instanceId)
-	data := newHostGetEgressOfferData()
+	request := lobby2.newLobbyRequest(ctx, instanceId)
+	data := lobby2.newHostGetEgressOfferData()
 	request.data = data
 	go c.lobby.runRequest(request)
 
 	var answer *webrtc.SessionDescription
 	select {
 	case <-c.ctx.Done():
-		return errSessionAlreadyClosed
+		return lobby2.errSessionAlreadyClosed
 	case err := <-request.err:
 		return fmt.Errorf("requesting egress offer: %w", err)
 	case res := <-data.response:
@@ -135,14 +137,14 @@ func (c *hostController) connectToHostEgress(instanceId uuid.UUID) error {
 func (c *hostController) onHostEgressAnswerResponse(answer *webrtc.SessionDescription, instanceId uuid.UUID) error {
 	ctx, cancelReq := context.WithCancel(context.Background())
 	defer cancelReq()
-	request := newLobbyRequest(ctx, instanceId)
-	data := newHostSetEgressAnswerData(answer)
+	request := lobby2.newLobbyRequest(ctx, instanceId)
+	data := lobby2.newHostSetEgressAnswerData(answer)
 	request.data = data
 	go c.lobby.runRequest(request)
 
 	select {
 	case <-c.ctx.Done():
-		return errSessionAlreadyClosed
+		return lobby2.errSessionAlreadyClosed
 	case err := <-request.err:
 		return fmt.Errorf("setting answer for pip connection: %w", err)
 	case connected := <-data.response:
@@ -158,8 +160,8 @@ func (c *hostController) onRemoteHostPipeConnectionRequest(offer *webrtc.Session
 	ctx, cancelReq := context.WithCancel(context.Background())
 	defer cancelReq()
 
-	request := newLobbyRequest(ctx, instanceId)
-	data := newHostGetPipeAnswerData(offer)
+	request := lobby2.newLobbyRequest(ctx, instanceId)
+	data := lobby2.newHostGetPipeAnswerData(offer)
 	request.data = data
 	go c.lobby.runRequest(request)
 
@@ -177,8 +179,8 @@ func (c *hostController) onRemoteHostPipeConnectionRequest(offer *webrtc.Session
 func (c *hostController) onRemoteHostIngressConnectionRequest(offer *webrtc.SessionDescription, instanceId uuid.UUID) (*webrtc.SessionDescription, error) {
 	ctx, cancelReq := context.WithCancel(context.Background())
 	defer cancelReq()
-	request := newLobbyRequest(ctx, instanceId)
-	data := newHostGetIngressAnswerData(offer)
+	request := lobby2.newLobbyRequest(ctx, instanceId)
+	data := lobby2.newHostGetIngressAnswerData(offer)
 	request.data = data
 	go c.lobby.runRequest(request)
 

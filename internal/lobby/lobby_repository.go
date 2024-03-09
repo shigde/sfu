@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/lobby/instances"
 	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/storage"
 	"golang.org/x/exp/slog"
@@ -52,7 +53,7 @@ func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUI
 			return nil, fmt.Errorf("updating lobby entity as running: %w", err)
 		}
 
-		hostSettings := newHostSettings(entity, r.instanceActorUrl, r.registerToken)
+		hostSettings := instances.newHostSettings(entity, r.instanceActorUrl, r.registerToken)
 
 		lobby := newLobby(
 			lobbyId,

@@ -1,30 +1,31 @@
-package lobby
+package sessions
 
 import (
 	"context"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/lobby"
 	"github.com/stretchr/testify/assert"
 )
 
-func testHubSetup(t *testing.T) (*hub, func()) {
+func testHubSetup(t *testing.T) (*Hub, func()) {
 	t.Helper()
-	sessions := newSessionRepository()
-	engine := newRtpEngineMock()
-	forwarder := newLiveStreamSenderMock()
+	sessions := lobby.newSessionRepository()
+	engine := lobby.newRtpEngineMock()
+	forwarder := lobby.newLiveStreamSenderMock()
 	ctx, cancel := context.WithCancel(context.Background())
 	hub := newHub(ctx, sessions, uuid.New(), forwarder)
-	s1 := newSession(uuid.New(), hub, engine, nil)
-	s2 := newSession(uuid.New(), hub, engine, nil)
+	s1 := lobby.newSession(uuid.New(), hub, engine, nil)
+	s2 := lobby.newSession(uuid.New(), hub, engine, nil)
 	sessions.Add(s1)
 	sessions.Add(s2)
 	return hub, cancel
 }
-func testHubSessionSetup(t *testing.T, hub *hub) *session {
+func testHubSessionSetup(t *testing.T, hub *Hub) *lobby.session {
 	t.Helper()
-	engine := newRtpEngineMock()
-	s := newSession(uuid.New(), hub, engine, nil)
+	engine := lobby.newRtpEngineMock()
+	s := lobby.newSession(uuid.New(), hub, engine, nil)
 	hub.sessionRepo.Add(s)
 	return s
 }

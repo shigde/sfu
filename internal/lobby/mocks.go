@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	mockedAnswer                = &webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: "--a--"}
-	mockedOffer                 = &webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: "--o--"}
+	MockedAnswer                = &webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: "--a--"}
+	MockedOffer                 = &webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: "--o--"}
 	onQuitSessionInternallyStub = func(ctx context.Context, user uuid.UUID) bool {
 		return true
 	}

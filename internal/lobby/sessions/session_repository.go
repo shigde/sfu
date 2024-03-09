@@ -1,4 +1,4 @@
-package lobby
+package sessions
 
 import (
 	"sync"
@@ -6,39 +6,39 @@ import (
 	"github.com/google/uuid"
 )
 
-type sessionRepository struct {
+type SessionRepository struct {
 	locker   *sync.RWMutex
-	sessions map[uuid.UUID]*session
+	sessions map[uuid.UUID]*Session
 }
 
-func newSessionRepository() *sessionRepository {
-	sessions := make(map[uuid.UUID]*session)
-	return &sessionRepository{
+func NewSessionRepository() *SessionRepository {
+	sessions := make(map[uuid.UUID]*Session)
+	return &SessionRepository{
 		&sync.RWMutex{},
 		sessions,
 	}
 }
 
-func (r *sessionRepository) Add(s *session) {
+func (r *SessionRepository) Add(s *Session) {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	r.sessions[s.Id] = s
 }
 
-func (r *sessionRepository) All() map[uuid.UUID]*session {
+func (r *SessionRepository) All() map[uuid.UUID]*Session {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 	return r.sessions
 }
 
-func (r *sessionRepository) FindById(id uuid.UUID) (*session, bool) {
+func (r *SessionRepository) FindById(id uuid.UUID) (*Session, bool) {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 	session, ok := r.sessions[id]
 	return session, ok
 }
 
-func (r *sessionRepository) FindByUserId(userId uuid.UUID) (*session, bool) {
+func (r *SessionRepository) FindByUserId(userId uuid.UUID) (*Session, bool) {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 
@@ -50,7 +50,7 @@ func (r *sessionRepository) FindByUserId(userId uuid.UUID) (*session, bool) {
 	return nil, false
 }
 
-func (r *sessionRepository) Delete(id uuid.UUID) bool {
+func (r *SessionRepository) Delete(id uuid.UUID) bool {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 
@@ -61,7 +61,7 @@ func (r *sessionRepository) Delete(id uuid.UUID) bool {
 	return false
 }
 
-func (r *sessionRepository) Contains(id uuid.UUID) bool {
+func (r *SessionRepository) Contains(id uuid.UUID) bool {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 
@@ -69,7 +69,7 @@ func (r *sessionRepository) Contains(id uuid.UUID) bool {
 	return ok
 }
 
-func (r *sessionRepository) Update(s *session) bool {
+func (r *SessionRepository) Update(s *Session) bool {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	if _, ok := r.sessions[s.Id]; ok {
@@ -79,13 +79,13 @@ func (r *sessionRepository) Update(s *session) bool {
 	return false
 }
 
-func (r *sessionRepository) Len() int {
+func (r *SessionRepository) Len() int {
 	r.locker.RLock()
 	defer r.locker.RUnlock()
 	return len(r.sessions)
 }
 
-func (r *sessionRepository) Iter(routine func(*session)) {
+func (r *SessionRepository) Iter(routine func(*Session)) {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 

@@ -1,4 +1,4 @@
-package lobby
+package sessions
 
 import (
 	"context"
@@ -6,19 +6,21 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
+	"github.com/shigde/sfu/internal/lobby"
+	"github.com/shigde/sfu/internal/lobby/clients"
 	"github.com/shigde/sfu/internal/logging"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/stretchr/testify/assert"
 )
 
-func testRtpSessionSetup(t *testing.T) (*session, *rtpEngineMock) {
+func testRtpSessionSetup(t *testing.T) (*lobby.session, *lobby.rtpEngineMock) {
 	t.Helper()
 	logging.SetupDebugLogger()
-	engine := mockRtpEngineForOffer(mockedAnswer)
-	forwarder := newLiveStreamSenderMock()
+	engine := lobby.mockRtpEngineForOffer(lobby.mockedAnswer)
+	forwarder := lobby.newLiveStreamSenderMock()
 	ctx, _ := context.WithCancel(context.Background())
-	hub := newHub(ctx, newSessionRepository(), uuid.New(), forwarder)
-	session := newSession(uuid.New(), hub, engine, nil)
+	hub := newHub(ctx, NewSessionRepository(), uuid.New(), forwarder)
+	session := lobby.newSession(uuid.New(), hub, engine, nil)
 	return session, engine
 }
 
@@ -27,7 +29,7 @@ func TestRtpSessionOffer(t *testing.T) {
 		var offer *webrtc.SessionDescription
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
-		req := newSessionRequest(ctx, offer, offerIngressReq)
+		req := lobby.newSessionRequest(ctx, offer, lobby.offerIngressReq)
 		session.stop()
 		go session.runRequest(req)
 
@@ -37,16 +39,16 @@ func TestRtpSessionOffer(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errSessionAlreadyClosed)
+			assert.ErrorIs(t, err, lobby.errSessionAlreadyClosed)
 		}
 	})
 
 	t.Run("offerIngressReq to session but receiver already exists", func(t *testing.T) {
 		var offer *webrtc.SessionDescription
 		session, _ := testRtpSessionSetup(t)
-		session.ingress = mockConnection(nil)
+		session.ingress = lobby.mockConnection(nil)
 
-		req := newSessionRequest(context.Background(), offer, offerIngressReq)
+		req := lobby.newSessionRequest(context.Background(), offer, lobby.offerIngressReq)
 		go session.runRequest(req)
 
 		select {
@@ -55,19 +57,19 @@ func TestRtpSessionOffer(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errReceiverInSessionAlreadyExists)
+			assert.ErrorIs(t, err, lobby.errReceiverInSessionAlreadyExists)
 		}
 	})
 
 	t.Run("offerIngressReq to session and receive an answer", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		req := newSessionRequest(context.Background(), mockedOffer, offerIngressReq)
+		req := lobby.newSessionRequest(context.Background(), lobby.mockedOffer, lobby.offerIngressReq)
 		go func() {
 			session.runRequest(req)
 		}()
 		select {
 		case res := <-req.respSDPChan:
-			assert.Equal(t, res, mockedAnswer)
+			assert.Equal(t, res, lobby.mockedAnswer)
 		case <-req.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case <-req.err:
@@ -77,11 +79,11 @@ func TestRtpSessionOffer(t *testing.T) {
 
 	t.Run("offerIngressReq to session but receive an ice gathering timeout", func(t *testing.T) {
 		session, engine := testRtpSessionSetup(t)
-		engine.conn = mockIdelConnection()
+		engine.conn = lobby.mockIdelConnection()
 
-		req := newSessionRequest(context.Background(), mockedOffer, offerIngressReq)
-		before := iceGatheringTimeout
-		iceGatheringTimeout = 0
+		req := lobby.newSessionRequest(context.Background(), lobby.mockedOffer, lobby.offerIngressReq)
+		before := lobby.iceGatheringTimeout
+		lobby.iceGatheringTimeout = 0
 		go func() {
 			session.runRequest(req)
 		}()
@@ -93,7 +95,7 @@ func TestRtpSessionOffer(t *testing.T) {
 		case err := <-req.err:
 			assert.ErrorIs(t, err, rtp.ErrIceGatheringInterruption)
 		}
-		iceGatheringTimeout = before
+		lobby.iceGatheringTimeout = before
 	})
 }
 
@@ -101,7 +103,7 @@ func TestRtpSessionStartListen(t *testing.T) {
 	t.Run("initEgressReq to session after sessions was stopped", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
-		req := newSessionRequest(ctx, nil, initEgressReq)
+		req := lobby.newSessionRequest(ctx, nil, lobby.initEgressReq)
 		session.stop()
 		go session.runRequest(req)
 
@@ -111,15 +113,15 @@ func TestRtpSessionStartListen(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errSessionAlreadyClosed)
+			assert.ErrorIs(t, err, lobby.errSessionAlreadyClosed)
 		}
 	})
 
 	t.Run("initEgressReq to session but sender already exists", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		session.egress = mockConnection(nil)
+		session.egress = lobby.mockConnection(nil)
 
-		req := newSessionRequest(context.Background(), nil, initEgressReq)
+		req := lobby.newSessionRequest(context.Background(), nil, lobby.initEgressReq)
 		go func() {
 			session.runRequest(req)
 		}()
@@ -129,13 +131,13 @@ func TestRtpSessionStartListen(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errSenderInSessionAlreadyExists)
+			assert.ErrorIs(t, err, lobby.errSenderInSessionAlreadyExists)
 		}
 	})
 
 	t.Run("initEgressReq to session and receive an offer but no receiver exists", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		req := newSessionRequest(context.Background(), nil, initEgressReq)
+		req := lobby.newSessionRequest(context.Background(), nil, lobby.initEgressReq)
 		go func() {
 			session.runRequest(req)
 		}()
@@ -146,14 +148,14 @@ func TestRtpSessionStartListen(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errNoReceiverInSession)
+			assert.ErrorIs(t, err, lobby.errNoReceiverInSession)
 		}
 	})
 
 	t.Run("initEgressReq to session and receive an offer but the signal has no messenger", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		session.ingress = mockConnection(nil)
-		req := newSessionRequest(context.Background(), nil, initEgressReq)
+		session.ingress = lobby.mockConnection(nil)
+		req := lobby.newSessionRequest(context.Background(), nil, lobby.initEgressReq)
 
 		oldTimeOut := waitingTimeOut
 		waitingTimeOut = 0
@@ -173,9 +175,9 @@ func TestRtpSessionStartListen(t *testing.T) {
 
 	t.Run("initEgressReq to session and receive an offer", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		req := newSessionRequest(context.Background(), nil, initEgressReq)
-		session.ingress = mockConnection(nil)
-		session.signal.messenger = newMockedMessenger(t)
+		req := lobby.newSessionRequest(context.Background(), nil, lobby.initEgressReq)
+		session.ingress = lobby.mockConnection(nil)
+		session.signal.messenger = clients.newMockedMessenger(t)
 		session.signal.stopWaitingForMessenger()
 
 		go func() {
@@ -183,7 +185,7 @@ func TestRtpSessionStartListen(t *testing.T) {
 		}()
 		select {
 		case res := <-req.respSDPChan:
-			assert.Equal(t, res, mockedAnswer)
+			assert.Equal(t, res, lobby.mockedAnswer)
 		case <-req.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case <-req.err:
@@ -193,15 +195,15 @@ func TestRtpSessionStartListen(t *testing.T) {
 
 	t.Run("initEgressReq to session but receive an ice gathering timeout", func(t *testing.T) {
 		session, engine := testRtpSessionSetup(t)
-		engine.conn = mockIdelConnection()
+		engine.conn = lobby.mockIdelConnection()
 
-		req := newSessionRequest(context.Background(), nil, initEgressReq)
-		session.ingress = mockConnection(nil)
-		session.signal.messenger = newMockedMessenger(t)
+		req := lobby.newSessionRequest(context.Background(), nil, lobby.initEgressReq)
+		session.ingress = lobby.mockConnection(nil)
+		session.signal.messenger = clients.newMockedMessenger(t)
 		session.signal.stopWaitingForMessenger()
 
-		before := iceGatheringTimeout
-		iceGatheringTimeout = 0
+		before := lobby.iceGatheringTimeout
+		lobby.iceGatheringTimeout = 0
 		go func() {
 			session.runRequest(req)
 		}()
@@ -213,7 +215,7 @@ func TestRtpSessionStartListen(t *testing.T) {
 		case err := <-req.err:
 			assert.ErrorIs(t, err, rtp.ErrIceGatheringInterruption)
 		}
-		iceGatheringTimeout = before
+		lobby.iceGatheringTimeout = before
 	})
 }
 
@@ -221,7 +223,7 @@ func TestRtpSessionListen(t *testing.T) {
 	t.Run("answerEgressReq to session after sessions was stopped", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
-		req := newSessionRequest(ctx, mockedAnswer, answerEgressReq)
+		req := lobby.newSessionRequest(ctx, lobby.mockedAnswer, lobby.answerEgressReq)
 		session.stop()
 		go session.runRequest(req)
 
@@ -231,13 +233,13 @@ func TestRtpSessionListen(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errSessionAlreadyClosed)
+			assert.ErrorIs(t, err, lobby.errSessionAlreadyClosed)
 		}
 	})
 
 	t.Run("answerEgressReq to session without a sending connection", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		req := newSessionRequest(context.Background(), mockedAnswer, answerEgressReq)
+		req := lobby.newSessionRequest(context.Background(), lobby.mockedAnswer, lobby.answerEgressReq)
 		go func() {
 			session.runRequest(req)
 		}()
@@ -247,18 +249,18 @@ func TestRtpSessionListen(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errNoSenderInSession)
+			assert.ErrorIs(t, err, lobby.errNoSenderInSession)
 		}
 	})
 
 	t.Run("answerEgressReq to session", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		session.ingress = mockConnection(nil)
-		session.signal.messenger = newMockedMessenger(t)
-		session.egress = mockConnection(mockedOffer)
+		session.ingress = lobby.mockConnection(nil)
+		session.signal.messenger = clients.newMockedMessenger(t)
+		session.egress = lobby.mockConnection(lobby.mockedOffer)
 		session.signal.egress = session.egress
 
-		req := newSessionRequest(context.Background(), mockedAnswer, answerEgressReq)
+		req := lobby.newSessionRequest(context.Background(), lobby.mockedAnswer, lobby.answerEgressReq)
 		go func() {
 			session.runRequest(req)
 		}()
@@ -294,7 +296,7 @@ func TestRtpSessionOfferStaticEndpoint(t *testing.T) {
 		var offer *webrtc.SessionDescription
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
-		req := newSessionRequest(ctx, offer, offerStaticEgressReq)
+		req := lobby.newSessionRequest(ctx, offer, lobby.offerStaticEgressReq)
 		session.stop()
 		go session.runRequest(req)
 
@@ -304,17 +306,17 @@ func TestRtpSessionOfferStaticEndpoint(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errSessionAlreadyClosed)
+			assert.ErrorIs(t, err, lobby.errSessionAlreadyClosed)
 		}
 	})
 
 	t.Run("offerStaticEgressReq session but receive an ice gathering timeout", func(t *testing.T) {
 		session, engine := testRtpSessionSetup(t)
-		engine.conn = mockIdelConnection()
-		before := iceGatheringTimeout
-		iceGatheringTimeout = 0
+		engine.conn = lobby.mockIdelConnection()
+		before := lobby.iceGatheringTimeout
+		lobby.iceGatheringTimeout = 0
 
-		req := newSessionRequest(context.Background(), mockedOffer, offerStaticEgressReq)
+		req := lobby.newSessionRequest(context.Background(), lobby.mockedOffer, lobby.offerStaticEgressReq)
 		go session.runRequest(req)
 
 		select {
@@ -325,18 +327,18 @@ func TestRtpSessionOfferStaticEndpoint(t *testing.T) {
 		case err := <-req.err:
 			assert.ErrorIs(t, err, rtp.ErrIceGatheringInterruption)
 		}
-		iceGatheringTimeout = before
+		lobby.iceGatheringTimeout = before
 	})
 
 	t.Run("offerStaticEgressReq session", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 
-		req := newSessionRequest(context.Background(), mockedOffer, offerStaticEgressReq)
+		req := lobby.newSessionRequest(context.Background(), lobby.mockedOffer, lobby.offerStaticEgressReq)
 		go session.runRequest(req)
 
 		select {
 		case res := <-req.respSDPChan:
-			assert.Equal(t, res, mockedAnswer)
+			assert.Equal(t, res, lobby.mockedAnswer)
 		case <-req.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case <-req.err:
@@ -349,7 +351,7 @@ func TestRtpSessionHostEgressOffer(t *testing.T) {
 		var offer *webrtc.SessionDescription
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
-		req := newSessionRequest(ctx, offer, offerHostEgressReq)
+		req := lobby.newSessionRequest(ctx, offer, lobby.offerHostEgressReq)
 		session.stop()
 		go session.runRequest(req)
 
@@ -359,16 +361,16 @@ func TestRtpSessionHostEgressOffer(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errSessionAlreadyClosed)
+			assert.ErrorIs(t, err, lobby.errSessionAlreadyClosed)
 		}
 	})
 
 	t.Run("hostOfferEgressReq to session but session already exists", func(t *testing.T) {
 		var offer *webrtc.SessionDescription
 		session, _ := testRtpSessionSetup(t)
-		session.egress = mockConnection(nil)
+		session.egress = lobby.mockConnection(nil)
 
-		req := newSessionRequest(context.Background(), offer, offerHostEgressReq)
+		req := lobby.newSessionRequest(context.Background(), offer, lobby.offerHostEgressReq)
 		go session.runRequest(req)
 
 		select {
@@ -377,19 +379,19 @@ func TestRtpSessionHostEgressOffer(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errSenderInSessionAlreadyExists)
+			assert.ErrorIs(t, err, lobby.errSenderInSessionAlreadyExists)
 		}
 	})
 
 	t.Run("offerHostEgressReq to session and receive an offer", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		req := newSessionRequest(context.Background(), nil, offerHostEgressReq)
+		req := lobby.newSessionRequest(context.Background(), nil, lobby.offerHostEgressReq)
 		go func() {
 			session.runRequest(req)
 		}()
 		select {
 		case res := <-req.respSDPChan:
-			assert.Equal(t, res, mockedAnswer)
+			assert.Equal(t, res, lobby.mockedAnswer)
 		case <-req.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case <-req.err:
@@ -399,11 +401,11 @@ func TestRtpSessionHostEgressOffer(t *testing.T) {
 
 	t.Run("offerHostEgressReq to session but receive an ice gathering timeout", func(t *testing.T) {
 		session, engine := testRtpSessionSetup(t)
-		engine.conn = mockIdelConnection()
+		engine.conn = lobby.mockIdelConnection()
 
-		req := newSessionRequest(context.Background(), nil, offerHostEgressReq)
-		before := iceGatheringTimeout
-		iceGatheringTimeout = 0
+		req := lobby.newSessionRequest(context.Background(), nil, lobby.offerHostEgressReq)
+		before := lobby.iceGatheringTimeout
+		lobby.iceGatheringTimeout = 0
 		go func() {
 			session.runRequest(req)
 		}()
@@ -415,7 +417,7 @@ func TestRtpSessionHostEgressOffer(t *testing.T) {
 		case err := <-req.err:
 			assert.ErrorIs(t, err, rtp.ErrIceGatheringInterruption)
 		}
-		iceGatheringTimeout = before
+		lobby.iceGatheringTimeout = before
 	})
 }
 
@@ -423,7 +425,7 @@ func TestRtpSessionHostEgressAnswer(t *testing.T) {
 	t.Run("answerHostEgressReq to session after sessions was stopped", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
-		req := newSessionRequest(ctx, mockedAnswer, answerHostEgressReq)
+		req := lobby.newSessionRequest(ctx, lobby.mockedAnswer, lobby.answerHostEgressReq)
 		session.stop()
 		go session.runRequest(req)
 
@@ -433,13 +435,13 @@ func TestRtpSessionHostEgressAnswer(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errSessionAlreadyClosed)
+			assert.ErrorIs(t, err, lobby.errSessionAlreadyClosed)
 		}
 	})
 
 	t.Run("answerHostEgressReq to session without a sending connection", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		req := newSessionRequest(context.Background(), mockedAnswer, answerHostEgressReq)
+		req := lobby.newSessionRequest(context.Background(), lobby.mockedAnswer, lobby.answerHostEgressReq)
 		go func() {
 			session.runRequest(req)
 		}()
@@ -449,17 +451,17 @@ func TestRtpSessionHostEgressAnswer(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errNoSenderInSession)
+			assert.ErrorIs(t, err, lobby.errNoSenderInSession)
 		}
 	})
 
 	t.Run("answerHostEgressReq without messenger", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		session.signal.messenger = newMockedMessenger(t)
-		session.egress = mockConnection(mockedOffer)
+		session.signal.messenger = clients.newMockedMessenger(t)
+		session.egress = lobby.mockConnection(lobby.mockedOffer)
 		session.signal.egress = session.egress
 
-		req := newSessionRequest(context.Background(), mockedAnswer, answerHostEgressReq)
+		req := lobby.newSessionRequest(context.Background(), lobby.mockedAnswer, lobby.answerHostEgressReq)
 		oldTimeOut := waitingTimeOut
 		waitingTimeOut = 0
 		go func() {
@@ -478,12 +480,12 @@ func TestRtpSessionHostEgressAnswer(t *testing.T) {
 
 	t.Run("answerHostEgressReq to session", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		session.signal.messenger = newMockedMessenger(t)
+		session.signal.messenger = clients.newMockedMessenger(t)
 		session.signal.stopWaitingForMessenger()
-		session.egress = mockConnection(mockedOffer)
+		session.egress = lobby.mockConnection(lobby.mockedOffer)
 		session.signal.egress = session.egress
 
-		req := newSessionRequest(context.Background(), mockedAnswer, answerHostEgressReq)
+		req := lobby.newSessionRequest(context.Background(), lobby.mockedAnswer, lobby.answerHostEgressReq)
 		go func() {
 			session.runRequest(req)
 		}()
@@ -503,7 +505,7 @@ func TestRtpSessionHostIngress(t *testing.T) {
 		var offer *webrtc.SessionDescription
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
-		req := newSessionRequest(ctx, offer, offerHostIngressReq)
+		req := lobby.newSessionRequest(ctx, offer, lobby.offerHostIngressReq)
 		session.stop()
 		go session.runRequest(req)
 
@@ -513,16 +515,16 @@ func TestRtpSessionHostIngress(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errSessionAlreadyClosed)
+			assert.ErrorIs(t, err, lobby.errSessionAlreadyClosed)
 		}
 	})
 
 	t.Run("offerHostIngressReq to session but receiver already exists", func(t *testing.T) {
 		var offer *webrtc.SessionDescription
 		session, _ := testRtpSessionSetup(t)
-		session.ingress = mockConnection(nil)
+		session.ingress = lobby.mockConnection(nil)
 
-		req := newSessionRequest(context.Background(), offer, offerHostIngressReq)
+		req := lobby.newSessionRequest(context.Background(), offer, lobby.offerHostIngressReq)
 		go session.runRequest(req)
 
 		select {
@@ -531,19 +533,19 @@ func TestRtpSessionHostIngress(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errReceiverInSessionAlreadyExists)
+			assert.ErrorIs(t, err, lobby.errReceiverInSessionAlreadyExists)
 		}
 	})
 
 	t.Run("offerHostIngressReq to session and receive an answer", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		req := newSessionRequest(context.Background(), mockedOffer, offerHostIngressReq)
+		req := lobby.newSessionRequest(context.Background(), lobby.mockedOffer, lobby.offerHostIngressReq)
 		go func() {
 			session.runRequest(req)
 		}()
 		select {
 		case res := <-req.respSDPChan:
-			assert.Equal(t, res, mockedAnswer)
+			assert.Equal(t, res, lobby.mockedAnswer)
 		case <-req.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case <-req.err:
@@ -553,11 +555,11 @@ func TestRtpSessionHostIngress(t *testing.T) {
 
 	t.Run("offerHostIngressReq to session but receive an ice gathering timeout", func(t *testing.T) {
 		session, engine := testRtpSessionSetup(t)
-		engine.conn = mockIdelConnection()
+		engine.conn = lobby.mockIdelConnection()
 
-		req := newSessionRequest(context.Background(), mockedOffer, offerHostIngressReq)
-		before := iceGatheringTimeout
-		iceGatheringTimeout = 0
+		req := lobby.newSessionRequest(context.Background(), lobby.mockedOffer, lobby.offerHostIngressReq)
+		before := lobby.iceGatheringTimeout
+		lobby.iceGatheringTimeout = 0
 		go func() {
 			session.runRequest(req)
 		}()
@@ -569,7 +571,7 @@ func TestRtpSessionHostIngress(t *testing.T) {
 		case err := <-req.err:
 			assert.ErrorIs(t, err, rtp.ErrIceGatheringInterruption)
 		}
-		iceGatheringTimeout = before
+		lobby.iceGatheringTimeout = before
 	})
 }
 
@@ -578,7 +580,7 @@ func TestRtpSessionHostPipeOffer(t *testing.T) {
 		var offer *webrtc.SessionDescription
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
-		req := newSessionRequest(ctx, offer, offerHostPipeReq)
+		req := lobby.newSessionRequest(ctx, offer, lobby.offerHostPipeReq)
 		session.stop()
 		go session.runRequest(req)
 
@@ -588,16 +590,16 @@ func TestRtpSessionHostPipeOffer(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errSessionAlreadyClosed)
+			assert.ErrorIs(t, err, lobby.errSessionAlreadyClosed)
 		}
 	})
 
 	t.Run("offerHostPipeReq to session but session already exists", func(t *testing.T) {
 		var offer *webrtc.SessionDescription
 		session, _ := testRtpSessionSetup(t)
-		session.channel = mockConnection(nil)
+		session.channel = lobby.mockConnection(nil)
 
-		req := newSessionRequest(context.Background(), offer, offerHostPipeReq)
+		req := lobby.newSessionRequest(context.Background(), offer, lobby.offerHostPipeReq)
 		go session.runRequest(req)
 
 		select {
@@ -606,19 +608,19 @@ func TestRtpSessionHostPipeOffer(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errSenderInSessionAlreadyExists)
+			assert.ErrorIs(t, err, lobby.errSenderInSessionAlreadyExists)
 		}
 	})
 
 	t.Run("offerHostPipeReq to session and receive an offer", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		req := newSessionRequest(context.Background(), nil, offerHostPipeReq)
+		req := lobby.newSessionRequest(context.Background(), nil, lobby.offerHostPipeReq)
 		go func() {
 			session.runRequest(req)
 		}()
 		select {
 		case res := <-req.respSDPChan:
-			assert.Equal(t, res, mockedAnswer)
+			assert.Equal(t, res, lobby.mockedAnswer)
 		case <-req.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case <-req.err:
@@ -628,11 +630,11 @@ func TestRtpSessionHostPipeOffer(t *testing.T) {
 
 	t.Run("offerHostPipeReq to session but receive an ice gathering timeout", func(t *testing.T) {
 		session, engine := testRtpSessionSetup(t)
-		engine.conn = mockIdelConnection()
+		engine.conn = lobby.mockIdelConnection()
 
-		req := newSessionRequest(context.Background(), nil, offerHostPipeReq)
-		before := iceGatheringTimeout
-		iceGatheringTimeout = 0
+		req := lobby.newSessionRequest(context.Background(), nil, lobby.offerHostPipeReq)
+		before := lobby.iceGatheringTimeout
+		lobby.iceGatheringTimeout = 0
 		go func() {
 			session.runRequest(req)
 		}()
@@ -644,7 +646,7 @@ func TestRtpSessionHostPipeOffer(t *testing.T) {
 		case err := <-req.err:
 			assert.ErrorIs(t, err, rtp.ErrIceGatheringInterruption)
 		}
-		iceGatheringTimeout = before
+		lobby.iceGatheringTimeout = before
 	})
 }
 
@@ -652,7 +654,7 @@ func TestRtpSessionHostPipeAnswer(t *testing.T) {
 	t.Run("answerHostPipeReq to session after sessions was stopped", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
-		req := newSessionRequest(ctx, mockedAnswer, answerHostPipeReq)
+		req := lobby.newSessionRequest(ctx, lobby.mockedAnswer, lobby.answerHostPipeReq)
 		session.stop()
 		go session.runRequest(req)
 
@@ -662,13 +664,13 @@ func TestRtpSessionHostPipeAnswer(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errSessionAlreadyClosed)
+			assert.ErrorIs(t, err, lobby.errSessionAlreadyClosed)
 		}
 	})
 
 	t.Run("answerHostPipeReq to session without a sending connection", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		req := newSessionRequest(context.Background(), mockedAnswer, answerHostPipeReq)
+		req := lobby.newSessionRequest(context.Background(), lobby.mockedAnswer, lobby.answerHostPipeReq)
 		go func() {
 			session.runRequest(req)
 		}()
@@ -678,16 +680,16 @@ func TestRtpSessionHostPipeAnswer(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errNoSenderInSession)
+			assert.ErrorIs(t, err, lobby.errNoSenderInSession)
 		}
 	})
 
 	t.Run("answerHostPipeReq to session", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		session.signal.messenger = newMockedMessenger(t)
-		session.channel = mockConnection(mockedOffer)
+		session.signal.messenger = clients.newMockedMessenger(t)
+		session.channel = lobby.mockConnection(lobby.mockedOffer)
 
-		req := newSessionRequest(context.Background(), mockedAnswer, answerHostPipeReq)
+		req := lobby.newSessionRequest(context.Background(), lobby.mockedAnswer, lobby.answerHostPipeReq)
 		go func() {
 			session.runRequest(req)
 		}()
@@ -707,7 +709,7 @@ func TestRtpSessionHostRemotePipe(t *testing.T) {
 		var offer *webrtc.SessionDescription
 		session, _ := testRtpSessionSetup(t)
 		ctx := context.Background()
-		req := newSessionRequest(ctx, offer, offerHostRemotePipeReq)
+		req := lobby.newSessionRequest(ctx, offer, lobby.offerHostRemotePipeReq)
 		session.stop()
 		go session.runRequest(req)
 
@@ -717,16 +719,16 @@ func TestRtpSessionHostRemotePipe(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errSessionAlreadyClosed)
+			assert.ErrorIs(t, err, lobby.errSessionAlreadyClosed)
 		}
 	})
 
 	t.Run("offerHostRemotePipeReq to session but channel already exists", func(t *testing.T) {
 		var offer *webrtc.SessionDescription
 		session, _ := testRtpSessionSetup(t)
-		session.channel = mockConnection(nil)
+		session.channel = lobby.mockConnection(nil)
 
-		req := newSessionRequest(context.Background(), offer, offerHostRemotePipeReq)
+		req := lobby.newSessionRequest(context.Background(), offer, lobby.offerHostRemotePipeReq)
 		go session.runRequest(req)
 
 		select {
@@ -735,19 +737,19 @@ func TestRtpSessionHostRemotePipe(t *testing.T) {
 		case <-req.ctx.Done():
 			t.Fatalf("No canceling was expected!")
 		case err := <-req.err:
-			assert.ErrorIs(t, err, errReceiverInSessionAlreadyExists)
+			assert.ErrorIs(t, err, lobby.errReceiverInSessionAlreadyExists)
 		}
 	})
 
 	t.Run("offerHostRemotePipeReq to session and receive an answer", func(t *testing.T) {
 		session, _ := testRtpSessionSetup(t)
-		req := newSessionRequest(context.Background(), mockedOffer, offerHostRemotePipeReq)
+		req := lobby.newSessionRequest(context.Background(), lobby.mockedOffer, lobby.offerHostRemotePipeReq)
 		go func() {
 			session.runRequest(req)
 		}()
 		select {
 		case res := <-req.respSDPChan:
-			assert.Equal(t, res, mockedAnswer)
+			assert.Equal(t, res, lobby.mockedAnswer)
 		case <-req.ctx.Done():
 			t.Fatalf("No cancel was expected!")
 		case <-req.err:
@@ -757,11 +759,11 @@ func TestRtpSessionHostRemotePipe(t *testing.T) {
 
 	t.Run("offerHostRemotePipeReq to session but receive an ice gathering timeout", func(t *testing.T) {
 		session, engine := testRtpSessionSetup(t)
-		engine.conn = mockIdelConnection()
+		engine.conn = lobby.mockIdelConnection()
 
-		req := newSessionRequest(context.Background(), mockedOffer, offerHostRemotePipeReq)
-		before := iceGatheringTimeout
-		iceGatheringTimeout = 0
+		req := lobby.newSessionRequest(context.Background(), lobby.mockedOffer, lobby.offerHostRemotePipeReq)
+		before := lobby.iceGatheringTimeout
+		lobby.iceGatheringTimeout = 0
 		go func() {
 			session.runRequest(req)
 		}()
@@ -773,6 +775,6 @@ func TestRtpSessionHostRemotePipe(t *testing.T) {
 		case err := <-req.err:
 			assert.ErrorIs(t, err, rtp.ErrIceGatheringInterruption)
 		}
-		iceGatheringTimeout = before
+		lobby.iceGatheringTimeout = before
 	})
 }
