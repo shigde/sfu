@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shigde/sfu/internal/lobby/instances"
+	"github.com/shigde/sfu/internal/lobby/sessions"
 	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/storage"
 	"golang.org/x/exp/slog"
@@ -23,10 +24,10 @@ type lobbyRepository struct {
 	instanceActorUrl *url.URL
 	registerToken    string
 	store            storage.Storage
-	rtpEngine        rtpEngine
+	rtpEngine        sessions.RtpEngine
 }
 
-func newLobbyRepository(store storage.Storage, rtpEngine rtpEngine, hostUrl *url.URL, registerToken string) *lobbyRepository {
+func newLobbyRepository(store storage.Storage, rtpEngine sessions.RtpEngine, hostUrl *url.URL, registerToken string) *lobbyRepository {
 	lobbies := make(map[uuid.UUID]*lobby)
 	return &lobbyRepository{
 		&sync.RWMutex{},
@@ -53,15 +54,9 @@ func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUI
 			return nil, fmt.Errorf("updating lobby entity as running: %w", err)
 		}
 
-		hostSettings := instances.newHostSettings(entity, r.instanceActorUrl, r.registerToken)
+		_ = instances.NewHostSettings(entity, r.instanceActorUrl, r.registerToken)
 
-		lobby := newLobby(
-			lobbyId,
-			entity,
-			r.rtpEngine,
-			lobbyGarbageCollector,
-			hostSettings,
-		)
+		lobby := newLobby(lobbyId, entity)
 
 		r.lobbies[lobbyId] = lobby
 		metric.RunningLobbyInc(lobby.entity.LiveStreamId.String(), lobbyId.String())
