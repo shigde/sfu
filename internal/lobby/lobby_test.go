@@ -146,6 +146,23 @@ func TestLobby(t *testing.T) {
 		ok := lobby.removeSession(uuid.New())
 		assert.False(t, ok)
 	})
+
+	t.Run("delete session if exits by garbage collector", func(t *testing.T) {
+		lobby, user := testLobbySetup(t)
+		session, foundBefore := lobby.sessions.FindByUserId(user)
+		assert.True(t, foundBefore)
+		lobby.sessionGarbageCollector <- session.Id
+		_, foundAfter := lobby.sessions.FindByUserId(user)
+		assert.False(t, foundAfter)
+	})
+
+	t.Run("delete session if not exits by garbage collector", func(t *testing.T) {
+		lobby, _ := testLobbySetup(t)
+		sessionId := uuid.New()
+		lobby.sessionGarbageCollector <- sessionId
+		_, found := lobby.sessions.FindById(sessionId)
+		assert.False(t, found)
+	})
 }
 
 type mockCmd struct {

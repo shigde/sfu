@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shigde/sfu/internal/lobby/sessions"
+	"golang.org/x/exp/slog"
 )
 
 type command interface {
@@ -28,24 +29,34 @@ type lobby struct {
 	ctx  context.Context
 	stop context.CancelFunc
 
-	entity   *LobbyEntity
-	sessions *sessions.SessionRepository
-	hub      *sessions.Hub
+	entity                  *LobbyEntity
+	hub                     *sessions.Hub
+	sessions                *sessions.SessionRepository
+	sessionGarbageCollector chan<- uuid.UUID
 }
 
 func newLobby(id uuid.UUID, entity *LobbyEntity) *lobby {
 	ctx, stop := context.WithCancel(context.Background())
 	sessRep := sessions.NewSessionRepository()
 	hub := sessions.NewHub(ctx, sessRep, entity.LiveStreamId, nil)
+	sessionGarbageCollector := make(chan uuid.UUID)
 	lobby := &lobby{
 		Id:   id,
 		ctx:  ctx,
 		stop: stop,
 
-		sessions: sessRep,
-		hub:      hub,
-		entity:   entity,
+		hub:                     hub,
+		entity:                  entity,
+		sessions:                sessRep,
+		sessionGarbageCollector: sessionGarbageCollector,
 	}
+	go func() {
+		for id := range sessionGarbageCollector {
+			if ok := lobby.sessions.Delete(id); !ok {
+				slog.Warn("session could not delete", "session id", id)
+			}
+		}
+	}()
 	return lobby
 }
 
