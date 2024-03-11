@@ -51,9 +51,16 @@ func newLobby(id uuid.UUID, entity *LobbyEntity) *lobby {
 		sessionGarbageCollector: sessionGarbageCollector,
 	}
 	go func() {
-		for id := range sessionGarbageCollector {
-			if ok := lobby.sessions.Delete(id); !ok {
-				slog.Warn("session could not delete", "session id", id)
+		for {
+			select {
+			case sessionId := <-sessionGarbageCollector:
+
+				if ok := lobby.sessions.Delete(sessionId); !ok {
+					slog.Warn("session could not delete", "session id", sessionId)
+				}
+			case <-lobby.ctx.Done():
+				slog.Debug("stop session garbage collector")
+				return
 			}
 		}
 	}()
