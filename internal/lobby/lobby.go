@@ -31,13 +31,13 @@ type lobby struct {
 	sessionGarbageCollector chan<- uuid.UUID
 }
 
-func newLobby(id uuid.UUID, entity *LobbyEntity) *lobby {
+func newLobby(entity *LobbyEntity, garbage chan<- uuid.UUID) *lobby {
 	ctx, stop := context.WithCancel(context.Background())
 	sessRep := sessions.NewSessionRepository()
 	hub := sessions.NewHub(ctx, sessRep, entity.LiveStreamId, nil)
 	sessionGarbageCollector := make(chan uuid.UUID)
 	lobby := &lobby{
-		Id:   id,
+		Id:   entity.UUID,
 		ctx:  ctx,
 		stop: stop,
 
@@ -49,10 +49,9 @@ func newLobby(id uuid.UUID, entity *LobbyEntity) *lobby {
 	go func() {
 		for {
 			select {
-			case sessionId := <-sessionGarbageCollector:
-
-				if ok := lobby.sessions.Delete(sessionId); !ok {
-					slog.Warn("session could not delete", "session id", sessionId)
+			case userId := <-sessionGarbageCollector:
+				if ok := lobby.sessions.DeleteByUser(userId); !ok {
+					slog.Warn("session could not delete", "session id", userId)
 				}
 			case <-lobby.ctx.Done():
 				slog.Debug("stop session garbage collector")

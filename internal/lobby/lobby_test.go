@@ -23,7 +23,7 @@ func testLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 		Host:         "http://localhost:1234/federation/accounts/shig-test",
 	}
 
-	lobby := newLobby(entity.UUID, entity)
+	lobby := newLobby(entity, make(chan<- uuid.UUID))
 	user := uuid.New()
 	lobby.newSession(user, nil)
 	return lobby, user
@@ -155,18 +155,18 @@ func TestLobby_removeSession(t *testing.T) {
 func TestLobby_sessionGarbageCollector(t *testing.T) {
 	t.Run("delete session if exits by garbage collector", func(t *testing.T) {
 		lobby, user := testLobbySetup(t)
-		session, foundBefore := lobby.sessions.FindByUserId(user)
+		_, foundBefore := lobby.sessions.FindByUserId(user)
 		assert.True(t, foundBefore)
-		lobby.sessionGarbageCollector <- session.Id
+		lobby.sessionGarbageCollector <- user
 		_, foundAfter := lobby.sessions.FindByUserId(user)
 		assert.False(t, foundAfter)
 	})
 
 	t.Run("delete session if not exits by garbage collector", func(t *testing.T) {
 		lobby, _ := testLobbySetup(t)
-		sessionId := uuid.New()
-		lobby.sessionGarbageCollector <- sessionId
-		_, found := lobby.sessions.FindById(sessionId)
+		userId := uuid.New()
+		lobby.sessionGarbageCollector <- userId
+		_, found := lobby.sessions.FindById(userId)
 		assert.False(t, found)
 	})
 }
