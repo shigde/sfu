@@ -23,7 +23,7 @@ func testLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 		Host:         "http://localhost:1234/federation/accounts/shig-test",
 	}
 
-	lobby := newLobby(entity, nil, make(chan<- uuid.UUID, 1))
+	lobby := newLobby(entity, nil, make(chan<- lobbyItem, 1))
 	user := uuid.New()
 	lobby.newSession(user)
 	return lobby, user
@@ -183,6 +183,9 @@ func TestLobby_sessionGarbage(t *testing.T) {
 func TestLobby_sessionSequence(t *testing.T) {
 	t.Run("stop lobby when last session deleted", func(t *testing.T) {
 		lobby, user1 := testLobbySetup(t)
+		lobbyGarbage := make(chan lobbyItem)
+		lobby.lobbyGarbage = lobbyGarbage
+
 		user2 := uuid.New()
 		user3 := uuid.New()
 		user4 := uuid.New()
@@ -199,6 +202,11 @@ func TestLobby_sessionSequence(t *testing.T) {
 		ok = lobby.removeSession(user1)
 		assert.True(t, ok)
 
+		// wait for delete trigger
+		item := <-lobbyGarbage
+		item.Done <- true
+
+		// we can not add a new session in a closed lobby
 		ok = lobby.newSession(user4)
 		assert.False(t, ok)
 		assert.Equal(t, 0, lobby.sessions.Len())

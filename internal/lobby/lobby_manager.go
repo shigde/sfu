@@ -15,25 +15,29 @@ import (
 )
 
 type LobbyManager struct {
-	lobbies               *lobbyRepository
-	lobbyGarbageCollector chan<- uuid.UUID
+	lobbies      *lobbyRepository
+	lobbyGarbage chan<- lobbyItem
 }
 
 func NewLobbyManager(storage storage.Storage, e sessions.RtpEngine, homeUrl *url.URL, registerToken string) *LobbyManager {
 	lobbyRep := newLobbyRepository(storage, e, homeUrl, registerToken)
-	lobbyGarbageCollector := make(chan uuid.UUID)
+	lobbyGarbage := make(chan lobbyItem)
+
 	go func() {
-		for id := range lobbyGarbageCollector {
-			if ok := lobbyRep.delete(context.Background(), id); !ok {
-				slog.Warn("lobby could not delete", "lobby", id)
+		// if a lobby has no sessions anymore, the lobby triggers a delete process.
+		for item := range lobbyGarbage {
+			ok := lobbyRep.delete(context.Background(), item.LobbyId)
+			if !ok {
+				slog.Warn("lobby could not delete", "lobby", item.LobbyId)
 			}
+			item.Done <- ok
 		}
 	}()
-	return &LobbyManager{lobbyRep, lobbyGarbageCollector}
+	return &LobbyManager{lobbyRep, lobbyGarbage}
 }
 
 func (m *LobbyManager) NewIngressResource(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription, option ...resources.Option) (*resources.WebRTC, error) {
-	_, err := m.lobbies.getOrCreateLobby(ctx, lobbyId, m.lobbyGarbageCollector)
+	_, err := m.lobbies.getOrCreateLobby(ctx, lobbyId, m.lobbyGarbage)
 	if err != nil {
 		return nil, fmt.Errorf("getting or creating lobby: %w", err)
 	}

@@ -20,6 +20,7 @@ var (
 	ErrSessionAlreadyExists = errors.New("session already exists")
 )
 
+// lobby, is a container for all sessions of a stream
 type lobby struct {
 	Id   uuid.UUID
 	ctx  context.Context
@@ -31,10 +32,10 @@ type lobby struct {
 	rtp            sessions.RtpEngine
 	sessionCreator chan<- sessions.Item
 	sessionGarbage chan<- sessions.Item
-	lobbyGarbage   chan<- uuid.UUID
+	lobbyGarbage   chan<- lobbyItem
 }
 
-func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, lobbyGarbage chan<- uuid.UUID) *lobby {
+func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, lobbyGarbage chan<- lobbyItem) *lobby {
 	ctx, stop := context.WithCancel(context.Background())
 	sessRep := sessions.NewSessionRepository()
 	hub := sessions.NewHub(ctx, sessRep, entity.LiveStreamId, nil)
@@ -54,10 +55,12 @@ func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, lobbyGarbage chan<- u
 		sessionCreator: sessionCreator,
 		lobbyGarbage:   lobbyGarbage,
 	}
+	// create and delete session should be sequentiell
 	go func() {
 		for {
 			select {
 			case item := <-sessionCreator:
+				// in the meantime the lobby could be closed, check again
 				select {
 				case <-lobby.ctx.Done():
 					item.Done <- false
@@ -69,14 +72,17 @@ func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, lobbyGarbage chan<- u
 				ok := lobby.sessions.DeleteByUser(item.UserId)
 				item.Done <- ok
 				if lobby.sessions.Len() == 0 {
-					lobby.stop()
+					item := newLobbyItem(lobby.Id)
 					go func() {
-						lobby.lobbyGarbage <- lobby.Id
+						lobby.lobbyGarbage <- item
 					}()
+					<-item.Done
+					// block all callers until lobby was clean up,
+					// because we want to avoid that`s callers would call more than one time to crete a session
+					lobby.stop()
 				}
-
 			case <-lobby.ctx.Done():
-				slog.Debug("stop session garbage collector")
+				slog.Debug("stop session sequencer")
 				return
 			}
 		}
@@ -108,6 +114,9 @@ func (l *lobby) removeSession(userId uuid.UUID) bool {
 	}
 }
 
+// handle, run session commands on existing sessions
+// the session could be already deleted, after the command was started.
+// But this cse is handel by the session it selves
 func (l *lobby) handle(cmd command) {
 	if session, found := l.sessions.FindByUserId(cmd.GetUserId()); found {
 		cmd.Execute(l.ctx, session)

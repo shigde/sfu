@@ -33,7 +33,7 @@ func TestLobbyRepository(t *testing.T) {
 
 	t.Run("Create lobby", func(t *testing.T) {
 		repo := testLobbyRepositorySetup(t)
-		lobby, _ := repo.getOrCreateLobby(context.Background(), uuid.New(), make(chan uuid.UUID))
+		lobby, _ := repo.getOrCreateLobby(context.Background(), uuid.New(), make(chan lobbyItem))
 		assert.NotNil(t, lobby)
 		lobby.stop()
 	})
@@ -41,7 +41,7 @@ func TestLobbyRepository(t *testing.T) {
 	t.Run("Create and Get lobby", func(t *testing.T) {
 		repo := testLobbyRepositorySetup(t)
 		id := uuid.New()
-		lobbyCreated, _ := repo.getOrCreateLobby(context.Background(), id, make(chan uuid.UUID))
+		lobbyCreated, _ := repo.getOrCreateLobby(context.Background(), id, make(chan lobbyItem))
 
 		assert.NotNil(t, lobbyCreated)
 		lobbyGet, ok := repo.getLobby(id)
@@ -53,7 +53,7 @@ func TestLobbyRepository(t *testing.T) {
 	t.Run("Delete lobby", func(t *testing.T) {
 		repo := testLobbyRepositorySetup(t)
 		id := uuid.New()
-		created, _ := repo.getOrCreateLobby(context.Background(), id, make(chan uuid.UUID))
+		created, _ := repo.getOrCreateLobby(context.Background(), id, make(chan lobbyItem))
 		assert.NotNil(t, created)
 
 		deleted := repo.delete(context.Background(), id)
@@ -77,14 +77,14 @@ func TestLobbyRepository(t *testing.T) {
 
 		for i := 0; i < wantedCount; i++ {
 			go func(id int) {
-				lobby, _ := repo.getOrCreateLobby(context.Background(), uuid.New(), make(chan uuid.UUID))
+				lobby, _ := repo.getOrCreateLobby(context.Background(), uuid.New(), make(chan lobbyItem))
 				assert.NotNil(t, lobby)
 				wg.Done()
 			}(i)
 
 			if i == createOn {
 				go func() {
-					lobby, _ := repo.getOrCreateLobby(context.Background(), id, make(chan uuid.UUID))
+					lobby, _ := repo.getOrCreateLobby(context.Background(), id, make(chan lobbyItem))
 					assert.NotNil(t, lobby)
 					close(created)
 					wg.Done()

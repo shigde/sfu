@@ -19,5 +19,8 @@ func testLobbyManagerSetup(t *testing.T) (*LobbyManager, uuid.UUID) {
 }
 
 func TestLobbyManager_NewIngressResource(t *testing.T) {
+	t.Run("command successfully", func(t *testing.T) {
+		testLobbyManagerSetup(t)
+	})
 
 }

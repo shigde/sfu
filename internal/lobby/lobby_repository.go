@@ -39,7 +39,7 @@ func newLobbyRepository(store storage.Storage, rtpEngine sessions.RtpEngine, hos
 	}
 }
 
-func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUID, lobbyGarbageCollector chan<- uuid.UUID) (*lobby, error) {
+func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUID, lobbyGarbage chan<- lobbyItem) (*lobby, error) {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 	currentLobby, ok := r.lobbies[lobbyId]
@@ -56,7 +56,7 @@ func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUI
 
 		_ = instances.NewHostSettings(entity, r.instanceActorUrl, r.registerToken)
 
-		lobby := newLobby(entity, r.rtpEngine, lobbyGarbageCollector)
+		lobby := newLobby(entity, r.rtpEngine, lobbyGarbage)
 		r.lobbies[lobbyId] = lobby
 		metric.RunningLobbyInc(lobby.entity.LiveStreamId.String(), lobbyId.String())
 		return lobby, nil
