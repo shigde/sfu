@@ -105,3 +105,16 @@ func (r *SessionRepository) Iter(routine func(*Session)) {
 		routine(session)
 	}
 }
+
+func (r *SessionRepository) DeleteByUser(user uuid.UUID) bool {
+	r.locker.Lock()
+	defer r.locker.Unlock()
+	for _, session := range r.sessions {
+		if session.user == user {
+			delete(r.sessions, session.Id)
+			return true
+		}
+	}
+
+	return false
+}

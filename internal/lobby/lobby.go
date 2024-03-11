@@ -53,6 +53,10 @@ func (l *lobby) newSession(userId uuid.UUID, rtp sessions.RtpEngine) bool {
 	return l.sessions.New(sessions.NewSession(l.ctx, userId, l.hub, rtp))
 }
 
+func (l *lobby) removeSession(userId uuid.UUID) bool {
+	return l.sessions.DeleteByUser(userId)
+}
+
 func (l *lobby) handle(cmd command) {
 	if session, found := l.sessions.FindByUserId(cmd.GetUserId()); found {
 		cmd.Execute(l.ctx, session)

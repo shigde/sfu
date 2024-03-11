@@ -134,6 +134,18 @@ func TestLobby(t *testing.T) {
 		ok := lobby.newSession(user, nil)
 		assert.False(t, ok)
 	})
+
+	t.Run("delete session if exits", func(t *testing.T) {
+		lobby, user := testLobbySetup(t)
+		ok := lobby.removeSession(user)
+		assert.True(t, ok)
+	})
+
+	t.Run("delete session if not exits", func(t *testing.T) {
+		lobby, _ := testLobbySetup(t)
+		ok := lobby.removeSession(uuid.New())
+		assert.False(t, ok)
+	})
 }
 
 type mockCmd struct {
