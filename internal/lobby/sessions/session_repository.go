@@ -19,6 +19,18 @@ func NewSessionRepository() *SessionRepository {
 	}
 }
 
+func (r *SessionRepository) New(s *Session) bool {
+	r.locker.Lock()
+	defer r.locker.Unlock()
+	for _, session := range r.sessions {
+		if session.user == s.user {
+			return false
+		}
+	}
+	r.sessions[s.Id] = s
+	return true
+}
+
 func (r *SessionRepository) Add(s *Session) {
 	r.locker.Lock()
 	defer r.locker.Unlock()

@@ -30,6 +30,7 @@ type Session struct {
 	signal        *signal
 
 	stop context.CancelFunc
+	Done <-chan struct{}
 }
 
 func NewSession(ctx context.Context, user uuid.UUID, hub *Hub, engine RtpEngine) *Session {
@@ -38,12 +39,14 @@ func NewSession(ctx context.Context, user uuid.UUID, hub *Hub, engine RtpEngine)
 	signal := newSignal(ctx, sessionId, user)
 
 	session := &Session{
-		Id:        uuid.New(),
+		Id: uuid.New(),
+
 		user:      user,
 		rtpEngine: engine,
 		hub:       hub,
 		signal:    signal,
 		stop:      cancel,
+		Done:      ctx.Done(),
 	}
 
 	// signal.onMuteCbk = session.onMuteTrack

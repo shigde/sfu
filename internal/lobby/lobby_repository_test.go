@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/lobby/sessions"
 	"github.com/shigde/sfu/internal/storage"
 	"github.com/stretchr/testify/assert"
 )
@@ -15,7 +16,7 @@ func testRtpStreamLobbyRepositorySetup(t *testing.T) *lobbyRepository {
 	t.Helper()
 	store := storage.NewTestStore()
 	_ = store.GetDatabase().AutoMigrate(&LobbyEntity{})
-	var engine rtpEngine
+	var engine sessions.RtpEngine
 	host, _ := url.Parse("")
 	repository := newLobbyRepository(store, engine, host, "test-key")
 
