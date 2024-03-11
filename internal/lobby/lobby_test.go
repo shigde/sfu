@@ -23,13 +23,13 @@ func testLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 		Host:         "http://localhost:1234/federation/accounts/shig-test",
 	}
 
-	lobby := newLobby(entity, make(chan<- uuid.UUID))
+	lobby := newLobby(entity, nil, make(chan<- uuid.UUID, 1))
 	user := uuid.New()
-	lobby.newSession(user, nil)
+	lobby.newSession(user)
 	return lobby, user
 }
 func TestLobby_handle(t *testing.T) {
-	t.Run("handle command successfully", func(t *testing.T) {
+	t.Run("command successfully", func(t *testing.T) {
 		lobby, user := testLobbySetup(t)
 		cmd := &mockCmd{
 			user: user,
@@ -45,13 +45,13 @@ func TestLobby_handle(t *testing.T) {
 		case res := <-cmd.Response:
 			assert.Equal(t, MockedAnswer, res.SDP)
 		case <-cmd.Err:
-			t.Fatalf("test fails because no error expected")
+			t.Fatalf("no error expected")
 		case <-time.After(time.Second * 3):
-			t.Fatalf("test fails because run in timeout")
+			t.Fatalf("run in timeout")
 		}
 	})
 
-	t.Run("handle, command error session not found", func(t *testing.T) {
+	t.Run("command error session not found", func(t *testing.T) {
 		lobby, _ := testLobbySetup(t)
 		cmd := &mockCmd{
 			user: uuid.New(),
@@ -61,15 +61,15 @@ func TestLobby_handle(t *testing.T) {
 
 		select {
 		case <-cmd.Response:
-			t.Fatalf("test fails because no webrtc resource expected")
+			t.Fatalf("no webrtc resource expected")
 		case err := <-cmd.Err:
 			assert.ErrorIs(t, err, ErrNoSession)
 		case <-time.After(time.Second * 3):
-			t.Fatalf("test fails because run in timeout")
+			t.Fatalf("run in timeout")
 		}
 	})
 
-	t.Run("handle command with error", func(t *testing.T) {
+	t.Run("command with error", func(t *testing.T) {
 		cmdErr := errors.New("cmd test error")
 		lobby, user := testLobbySetup(t)
 		cmd := &mockCmd{
@@ -83,15 +83,15 @@ func TestLobby_handle(t *testing.T) {
 
 		select {
 		case <-cmd.Response:
-			t.Fatalf("test fails because no webrtc resource expected")
+			t.Fatalf("no webrtc resource expected")
 		case err := <-cmd.Err:
 			assert.ErrorIs(t, err, cmdErr)
 		case <-time.After(time.Second * 3):
-			t.Fatalf("test fails because run in timeout")
+			t.Fatalf("run in timeout")
 		}
 	})
 
-	t.Run("handle command fails, because lobby context was done", func(t *testing.T) {
+	t.Run("command fails, because lobby context was done", func(t *testing.T) {
 		cmdCtxErr := errors.New("cmd context done")
 		lobby, user := testLobbySetup(t)
 		ctx, cancel := context.WithCancel(context.Background())
@@ -114,11 +114,11 @@ func TestLobby_handle(t *testing.T) {
 
 		select {
 		case <-cmd.Response:
-			t.Fatalf("test fails because no webrtc resource expected")
+			t.Fatalf("no webrtc resource expected")
 		case err := <-cmd.Err:
 			assert.ErrorIs(t, err, cmdCtxErr)
 		case <-time.After(time.Second * 3):
-			t.Fatalf("test fails because run in timeout")
+			t.Fatalf("run in timeout")
 		}
 	})
 }
@@ -127,14 +127,18 @@ func TestLobby_newSession(t *testing.T) {
 	t.Run("new session added", func(t *testing.T) {
 		lobby, _ := testLobbySetup(t)
 		user := uuid.New()
-		ok := lobby.newSession(user, nil)
+		ok := lobby.newSession(user)
 		assert.True(t, ok)
+		_, found := lobby.sessions.FindByUserId(user)
+		assert.True(t, found)
 	})
 
-	t.Run("new session not added", func(t *testing.T) {
+	t.Run("not add already existing session", func(t *testing.T) {
 		lobby, user := testLobbySetup(t)
-		ok := lobby.newSession(user, nil)
+		ok := lobby.newSession(user)
 		assert.False(t, ok)
+		_, found := lobby.sessions.FindByUserId(user)
+		assert.True(t, found)
 	})
 }
 
@@ -143,6 +147,8 @@ func TestLobby_removeSession(t *testing.T) {
 		lobby, user := testLobbySetup(t)
 		ok := lobby.removeSession(user)
 		assert.True(t, ok)
+		_, foundAfter := lobby.sessions.FindByUserId(user)
+		assert.False(t, foundAfter)
 	})
 
 	t.Run("delete session if not exits", func(t *testing.T) {
@@ -152,22 +158,56 @@ func TestLobby_removeSession(t *testing.T) {
 	})
 }
 
-func TestLobby_sessionGarbageCollector(t *testing.T) {
+func TestLobby_sessionGarbage(t *testing.T) {
 	t.Run("delete session if exits by garbage collector", func(t *testing.T) {
 		lobby, user := testLobbySetup(t)
-		_, foundBefore := lobby.sessions.FindByUserId(user)
-		assert.True(t, foundBefore)
-		lobby.sessionGarbageCollector <- user
+		item := sessions.NewItem(user)
+
+		lobby.sessionGarbage <- item
+		ok := <-item.Done
+		assert.True(t, ok)
+
 		_, foundAfter := lobby.sessions.FindByUserId(user)
 		assert.False(t, foundAfter)
 	})
 
 	t.Run("delete session if not exits by garbage collector", func(t *testing.T) {
 		lobby, _ := testLobbySetup(t)
-		userId := uuid.New()
-		lobby.sessionGarbageCollector <- userId
-		_, found := lobby.sessions.FindById(userId)
-		assert.False(t, found)
+		item := sessions.NewItem(uuid.New())
+		lobby.sessionGarbage <- item
+		ok := <-item.Done
+		assert.False(t, ok)
+	})
+}
+
+func TestLobby_sessionSequence(t *testing.T) {
+	t.Run("stop lobby when last session deleted", func(t *testing.T) {
+		lobby, user1 := testLobbySetup(t)
+		user2 := uuid.New()
+		user3 := uuid.New()
+		user4 := uuid.New()
+
+		ok := lobby.newSession(user2)
+		assert.True(t, ok)
+		ok = lobby.newSession(user3)
+		assert.True(t, ok)
+
+		ok = lobby.removeSession(user2)
+		assert.True(t, ok)
+		ok = lobby.removeSession(user3)
+		assert.True(t, ok)
+		ok = lobby.removeSession(user1)
+		assert.True(t, ok)
+
+		ok = lobby.newSession(user4)
+		assert.False(t, ok)
+		assert.Equal(t, 0, lobby.sessions.Len())
+		select {
+		case <-lobby.ctx.Done():
+			assert.True(t, true)
+		default:
+			t.Fatalf("lobby should be closed")
+		}
 	})
 }
 

@@ -25,34 +25,56 @@ type lobby struct {
 	ctx  context.Context
 	stop context.CancelFunc
 
-	entity                  *LobbyEntity
-	hub                     *sessions.Hub
-	sessions                *sessions.SessionRepository
-	sessionGarbageCollector chan<- uuid.UUID
+	entity         *LobbyEntity
+	hub            *sessions.Hub
+	sessions       *sessions.SessionRepository
+	rtp            sessions.RtpEngine
+	sessionCreator chan<- sessions.Item
+	sessionGarbage chan<- sessions.Item
+	lobbyGarbage   chan<- uuid.UUID
 }
 
-func newLobby(entity *LobbyEntity, garbage chan<- uuid.UUID) *lobby {
+func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, lobbyGarbage chan<- uuid.UUID) *lobby {
 	ctx, stop := context.WithCancel(context.Background())
 	sessRep := sessions.NewSessionRepository()
 	hub := sessions.NewHub(ctx, sessRep, entity.LiveStreamId, nil)
-	sessionGarbageCollector := make(chan uuid.UUID)
+	sessionGarbage := make(chan sessions.Item)
+	sessionCreator := make(chan sessions.Item)
+
 	lobby := &lobby{
 		Id:   entity.UUID,
 		ctx:  ctx,
 		stop: stop,
 
-		hub:                     hub,
-		entity:                  entity,
-		sessions:                sessRep,
-		sessionGarbageCollector: sessionGarbageCollector,
+		hub:            hub,
+		entity:         entity,
+		sessions:       sessRep,
+		rtp:            rtp,
+		sessionGarbage: sessionGarbage,
+		sessionCreator: sessionCreator,
+		lobbyGarbage:   lobbyGarbage,
 	}
 	go func() {
 		for {
 			select {
-			case userId := <-sessionGarbageCollector:
-				if ok := lobby.sessions.DeleteByUser(userId); !ok {
-					slog.Warn("session could not delete", "session id", userId)
+			case item := <-sessionCreator:
+				select {
+				case <-lobby.ctx.Done():
+					item.Done <- false
+				default:
+					ok := lobby.sessions.New(sessions.NewSession(lobby.ctx, item.UserId, lobby.hub, lobby.rtp))
+					item.Done <- ok
 				}
+			case item := <-sessionGarbage:
+				ok := lobby.sessions.DeleteByUser(item.UserId)
+				item.Done <- ok
+				if lobby.sessions.Len() == 0 {
+					lobby.stop()
+					go func() {
+						lobby.lobbyGarbage <- lobby.Id
+					}()
+				}
+
 			case <-lobby.ctx.Done():
 				slog.Debug("stop session garbage collector")
 				return
@@ -62,12 +84,28 @@ func newLobby(entity *LobbyEntity, garbage chan<- uuid.UUID) *lobby {
 	return lobby
 }
 
-func (l *lobby) newSession(userId uuid.UUID, rtp sessions.RtpEngine) bool {
-	return l.sessions.New(sessions.NewSession(l.ctx, userId, l.hub, rtp))
+func (l *lobby) newSession(userId uuid.UUID) bool {
+	item := sessions.NewItem(userId)
+	select {
+	case l.sessionCreator <- item:
+		ok := <-item.Done
+		return ok
+	case <-l.ctx.Done():
+		slog.Debug("can not adding session because lobby stopped")
+		return false
+	}
 }
 
 func (l *lobby) removeSession(userId uuid.UUID) bool {
-	return l.sessions.DeleteByUser(userId)
+	item := sessions.NewItem(userId)
+	select {
+	case l.sessionGarbage <- item:
+		ok := <-item.Done
+		return ok
+	case <-l.ctx.Done():
+		slog.Debug("can not remove session because lobby stopped")
+		return false
+	}
 }
 
 func (l *lobby) handle(cmd command) {
