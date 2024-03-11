@@ -57,7 +57,6 @@ func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUI
 		_ = instances.NewHostSettings(entity, r.instanceActorUrl, r.registerToken)
 
 		lobby := newLobby(lobbyId, entity)
-
 		r.lobbies[lobbyId] = lobby
 		metric.RunningLobbyInc(lobby.entity.LiveStreamId.String(), lobbyId.String())
 		return lobby, nil

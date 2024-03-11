@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testRtpStreamLobbyRepositorySetup(t *testing.T) *lobbyRepository {
+func testLobbyRepositorySetup(t *testing.T) *lobbyRepository {
 	t.Helper()
 	store := storage.NewTestStore()
 	_ = store.GetDatabase().AutoMigrate(&LobbyEntity{})
@@ -22,24 +22,24 @@ func testRtpStreamLobbyRepositorySetup(t *testing.T) *lobbyRepository {
 
 	return repository
 }
-func TestStreamLobbyRepository(t *testing.T) {
+func TestLobbyRepository(t *testing.T) {
 
 	t.Run("Get not existing lobby", func(t *testing.T) {
-		repo := testRtpStreamLobbyRepositorySetup(t)
+		repo := testLobbyRepositorySetup(t)
 		lobby, ok := repo.getLobby(uuid.New())
 		assert.False(t, ok)
 		assert.Nil(t, lobby)
 	})
 
 	t.Run("Create lobby", func(t *testing.T) {
-		repo := testRtpStreamLobbyRepositorySetup(t)
+		repo := testLobbyRepositorySetup(t)
 		lobby, _ := repo.getOrCreateLobby(context.Background(), uuid.New(), make(chan uuid.UUID))
 		assert.NotNil(t, lobby)
 		lobby.stop()
 	})
 
 	t.Run("Create and Get lobby", func(t *testing.T) {
-		repo := testRtpStreamLobbyRepositorySetup(t)
+		repo := testLobbyRepositorySetup(t)
 		id := uuid.New()
 		lobbyCreated, _ := repo.getOrCreateLobby(context.Background(), id, make(chan uuid.UUID))
 
@@ -51,7 +51,7 @@ func TestStreamLobbyRepository(t *testing.T) {
 	})
 
 	t.Run("Delete lobby", func(t *testing.T) {
-		repo := testRtpStreamLobbyRepositorySetup(t)
+		repo := testLobbyRepositorySetup(t)
 		id := uuid.New()
 		created, _ := repo.getOrCreateLobby(context.Background(), id, make(chan uuid.UUID))
 		assert.NotNil(t, created)
@@ -69,7 +69,7 @@ func TestStreamLobbyRepository(t *testing.T) {
 		createOn := 200
 		deleteOn := 500
 		id := uuid.New()
-		repo := testRtpStreamLobbyRepositorySetup(t)
+		repo := testLobbyRepositorySetup(t)
 
 		var wg sync.WaitGroup
 		wg.Add(wantedCount + 2)

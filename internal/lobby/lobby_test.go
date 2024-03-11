@@ -28,7 +28,7 @@ func testLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 	lobby.newSession(user, nil)
 	return lobby, user
 }
-func TestLobby(t *testing.T) {
+func TestLobby_handle(t *testing.T) {
 	t.Run("handle command successfully", func(t *testing.T) {
 		lobby, user := testLobbySetup(t)
 		cmd := &mockCmd{
@@ -63,7 +63,7 @@ func TestLobby(t *testing.T) {
 		case <-cmd.Response:
 			t.Fatalf("test fails because no webrtc resource expected")
 		case err := <-cmd.Err:
-			assert.ErrorIs(t, err, errNoSession)
+			assert.ErrorIs(t, err, ErrNoSession)
 		case <-time.After(time.Second * 3):
 			t.Fatalf("test fails because run in timeout")
 		}
@@ -121,7 +121,9 @@ func TestLobby(t *testing.T) {
 			t.Fatalf("test fails because run in timeout")
 		}
 	})
+}
 
+func TestLobby_newSession(t *testing.T) {
 	t.Run("new session added", func(t *testing.T) {
 		lobby, _ := testLobbySetup(t)
 		user := uuid.New()
@@ -134,7 +136,9 @@ func TestLobby(t *testing.T) {
 		ok := lobby.newSession(user, nil)
 		assert.False(t, ok)
 	})
+}
 
+func TestLobby_removeSession(t *testing.T) {
 	t.Run("delete session if exits", func(t *testing.T) {
 		lobby, user := testLobbySetup(t)
 		ok := lobby.removeSession(user)
@@ -146,7 +150,9 @@ func TestLobby(t *testing.T) {
 		ok := lobby.removeSession(uuid.New())
 		assert.False(t, ok)
 	})
+}
 
+func TestLobby_sessionGarbageCollector(t *testing.T) {
 	t.Run("delete session if exits by garbage collector", func(t *testing.T) {
 		lobby, user := testLobbySetup(t)
 		session, foundBefore := lobby.sessions.FindByUserId(user)

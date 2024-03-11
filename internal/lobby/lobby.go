@@ -3,7 +3,6 @@ package lobby
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/shigde/sfu/internal/lobby/sessions"
@@ -17,11 +16,8 @@ type command interface {
 }
 
 var (
-	errNoSession            = errors.New("no session exists")
+	ErrNoSession            = errors.New("no session exists")
 	ErrSessionAlreadyExists = errors.New("session already exists")
-	errLobbyStopped         = errors.New("error because lobby stopped")
-	errLobbyRequestTimeout  = errors.New("lobby request timeout error")
-	lobbyReqTimeout         = 10 * time.Second
 )
 
 type lobby struct {
@@ -79,5 +75,5 @@ func (l *lobby) handle(cmd command) {
 	if session, found := l.sessions.FindByUserId(cmd.GetUserId()); found {
 		cmd.Execute(l.ctx, session)
 	}
-	cmd.Fail(errNoSession)
+	cmd.Fail(ErrNoSession)
 }
