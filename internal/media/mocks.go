@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/lobby/resources"
 	"github.com/shigde/sfu/internal/rtp"
 )
 
@@ -31,6 +32,11 @@ func newTestLobbyManager() *testLobbyManager {
 	return &testLobbyManager{}
 }
 
+func (l *testLobbyManager) NewIngressResource(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ *webrtc.SessionDescription, _ ...resources.Option) (*resources.WebRTC, error) {
+	return nil, nil
+}
+
+// old API
 func (l *testLobbyManager) CreateLobbyIngressEndpoint(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Resource     uuid.UUID

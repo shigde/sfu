@@ -5,8 +5,8 @@ port = 8080
 [log]
 # INFO,WARN,ERROR,DEBUG
 level = "DEBUG"
-## logfile = "stdout"
-logfile = "./mon/dev/log/sfu.log"
+logfile = "stdout"
+##logfile = "./mon/dev/log/sfu.log"
 
 [store]
 # currently only Sqlite3 supported

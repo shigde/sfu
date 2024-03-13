@@ -9,7 +9,7 @@ import (
 	"github.com/shigde/sfu/internal/lobby/sessions"
 )
 
-type CreateIngressResourceCommand struct {
+type CreateIngressResource struct {
 	ctx      context.Context
 	user     uuid.UUID
 	sdp      *webrtc.SessionDescription
@@ -18,13 +18,25 @@ type CreateIngressResourceCommand struct {
 	Err      chan error
 }
 
-func NewCreateIngressResourceCommand(
+func (c *CreateIngressResource) GetUserId() uuid.UUID {
+	return c.user
+}
+
+func (c *CreateIngressResource) Fail(err error) {
+	select {
+	case <-c.ctx.Done():
+	default:
+		c.Err <- err
+	}
+}
+
+func NewCreateIngressResource(
 	ctx context.Context,
 	user uuid.UUID,
 	sdp *webrtc.SessionDescription,
 	option ...resources.Option,
-) *CreateIngressResourceCommand {
-	return &CreateIngressResourceCommand{
+) *CreateIngressResource {
+	return &CreateIngressResource{
 		ctx:      ctx,
 		user:     user,
 		sdp:      sdp,
@@ -33,6 +45,14 @@ func NewCreateIngressResourceCommand(
 		Err:      make(chan error),
 	}
 }
-func (c *CreateIngressResourceCommand) Execute(session *sessions.Session) {
-	// go session.do(c)
+func (c *CreateIngressResource) Execute(ctx context.Context, session *sessions.Session) {
+	answer, err := session.CreateIngressEndpoint(ctx, c.sdp)
+	if err != nil {
+		c.Fail(err)
+		return
+	}
+
+	c.Response <- &resources.WebRTC{
+		SDP: answer,
+	}
 }

@@ -65,7 +65,7 @@ func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, lobbyGarbage chan<- l
 				case <-lobby.ctx.Done():
 					item.Done <- false
 				default:
-					ok := lobby.sessions.New(sessions.NewSession(lobby.ctx, item.UserId, lobby.hub, lobby.rtp))
+					ok := lobby.sessions.New(sessions.NewSession(lobby.ctx, item.UserId, lobby.hub, lobby.rtp, sessionGarbage))
 					item.Done <- ok
 				}
 			case item := <-sessionGarbage:
