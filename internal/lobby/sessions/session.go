@@ -3,14 +3,16 @@ package sessions
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/rtp"
+	"github.com/shigde/sfu/internal/telemetry"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/exp/slog"
 )
 
@@ -70,23 +72,12 @@ func NewSession(ctx context.Context, user uuid.UUID, hub *Hub, engine RtpEngine,
 	return session
 }
 
-//func (s *Session) run(ctx context.Context) {
-//	slog.Info("lobby.sessions: run", "id", s.Id, "user", s.user)
-//	for {
-//		select {
-//		case <-ctx.Done():
-//			// @TODO Take care that's every stream is closed!
-//			slog.Info("lobby.sessions: stop running", "session id", s.Id, "user", s.user)
-//			return
-//		}
-//	}
-//}
-
 func (s *Session) CreateIngressEndpoint(ctx context.Context, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
-	ctx, span := otel.Tracer(sessionTrasser).Start(ctx, "CreateIngressEndpoint")
+	ctx, span := s.trace(ctx, "create-ingress-endpoint")
 	defer span.End()
 
 	if s.ingress != nil {
+		telemetry.RecordError(span, ErrIngressAlreadyExists)
 		return nil, ErrIngressAlreadyExists
 	}
 
@@ -97,15 +88,51 @@ func (s *Session) CreateIngressEndpoint(ctx context.Context, offer *webrtc.Sessi
 
 	endpoint, err := s.rtpEngine.EstablishIngressEndpoint(s.ctx, s.Id, s.hub.LiveStreamId, *offer, option...)
 	if err != nil {
-		return nil, fmt.Errorf("create rtp connection: %w", err)
+		return nil, telemetry.RecordErrorf(span, "create rtp connection", err)
 	}
 	s.ingress = endpoint
+
+	span.AddEvent("Wait for Local Description.")
 	ctxTimeout, cancel := context.WithTimeout(ctx, iceGatheringTimeout)
 	defer cancel()
 	answer, err := s.ingress.GetLocalDescription(ctxTimeout)
 	if err != nil {
-		return nil, fmt.Errorf("create ingress resource endpoint: %w", err)
+		return nil, telemetry.RecordErrorf(span, "create ingress resource endpoint", err)
 	}
+
+	span.AddEvent("Receive Local Description.")
+	return answer, nil
+}
+
+func (s *Session) CreateEgressEndpoint(ctx context.Context, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+	ctx, span := s.trace(ctx, "create-egress-endpoint")
+	defer span.End()
+
+	if s.ingress != nil {
+		telemetry.RecordError(span, ErrEgressAlreadyExists)
+		return nil, ErrEgressAlreadyExists
+	}
+
+	option := make([]rtp.EndpointOption, 0)
+	option = append(option, rtp.EndpointWithDataChannel(s.signal.OnIngressChannel))
+	option = append(option, rtp.EndpointWithLostConnectionListener(s.onLostConnection))
+	option = append(option, rtp.EndpointWithTrackDispatcher(s.hub))
+
+	endpoint, err := s.rtpEngine.EstablishIngressEndpoint(s.ctx, s.Id, s.hub.LiveStreamId, *offer, option...)
+	if err != nil {
+		return nil, telemetry.RecordErrorf(span, "create rtp connection", err)
+	}
+	s.ingress = endpoint
+
+	span.AddEvent("Wait for Local Description.")
+	ctxTimeout, cancel := context.WithTimeout(ctx, iceGatheringTimeout)
+	defer cancel()
+	answer, err := s.ingress.GetLocalDescription(ctxTimeout)
+	if err != nil {
+		return nil, telemetry.RecordErrorf(span, "create egress resource endpoint", err)
+	}
+
+	span.AddEvent("Receive Local Description.")
 	return answer, nil
 }
 
@@ -127,4 +154,12 @@ func (s *Session) onLostConnection() {
 			}
 		}
 	}()
+}
+
+func (s *Session) trace(ctx context.Context, spanName string) (context.Context, trace.Span) {
+	ctx, span := otel.Tracer(sessionTrasser).Start(ctx, "session-"+spanName, trace.WithAttributes(
+		attribute.String("sessionId", s.Id.String()),
+		attribute.String("userId", s.user.String()),
+	))
+	return ctx, span
 }

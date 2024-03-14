@@ -13,12 +13,12 @@ import (
 	"github.com/shigde/sfu/internal/stream"
 	"github.com/shigde/sfu/internal/telemetry"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "whip-create")
-		//ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer(tracerName).Start(ctx, "post-whip")
 		defer span.End()
 
 		w.Header().Set("Content-Type", "application/sdp")
@@ -45,7 +45,7 @@ func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 
 		user, ok := auth.PrincipalFromContext(r.Context())
 		if !ok {
-			telemetry.RecordError(span, errors.New("noe user"))
+			telemetry.RecordError(span, errors.New("no user"))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -56,6 +56,11 @@ func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 			httpError(w, "error user", http.StatusBadRequest, err)
 			return
 		}
+		// track request meta by otel
+		span.SetAttributes(
+			attribute.String("streamId", liveStream.UUID.String()),
+			attribute.String("userId", userId.String()),
+		)
 		auth.SetNewRequestToken(w, user.UUID)
 
 		answer, resourceId, err := liveService.CreateLobbyIngressEndpoint(ctx, offer, liveStream, userId)
@@ -90,7 +95,7 @@ func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 
 func whipDelete(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "whip-delete")
+		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "http-whip-delete")
 		defer span.End()
 
 		w.Header().Set("Content-Type", "application/sdp")

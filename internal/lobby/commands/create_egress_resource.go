@@ -9,14 +9,14 @@ import (
 	"github.com/shigde/sfu/internal/lobby/sessions"
 )
 
-type CreateIngressResource struct {
+type CreateEgressResource struct {
 	*command
 	sdp      *webrtc.SessionDescription
 	option   []resources.Option
 	Response chan *resources.WebRTC
 }
 
-func NewCreateIngressResource(
+func NewCreateEgressResource(
 	ctx context.Context,
 	user uuid.UUID,
 	sdp *webrtc.SessionDescription,
@@ -30,8 +30,8 @@ func NewCreateIngressResource(
 		Response: make(chan *resources.WebRTC),
 	}
 }
-func (c *CreateIngressResource) Execute(ctx context.Context, session *sessions.Session) {
-	answer, err := session.CreateIngressEndpoint(ctx, c.sdp)
+func (c *CreateEgressResource) Execute(ctx context.Context, session *sessions.Session) {
+	answer, err := session.CreateEgressEndpoint(ctx, c.sdp)
 	if err != nil {
 		c.Fail(err)
 		return

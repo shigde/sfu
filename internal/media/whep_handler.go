@@ -14,6 +14,14 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
+func whep(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, span := otel.Tracer(tracerName).Start(r.Context(), "whep-create")
+		defer span.End()
+	}
+}
+
+// old api
 func whepOffer(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "whep-offer")

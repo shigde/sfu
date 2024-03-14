@@ -57,6 +57,24 @@ func (m *LobbyManager) NewIngressResource(ctx context.Context, lobbyId uuid.UUID
 	}
 }
 
+func (m *LobbyManager) NewEgressResource(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription, option ...resources.Option) (*resources.WebRTC, error) {
+	lobby, err := m.lobbies.getOrCreateLobby(ctx, lobbyId, m.lobbyGarbage)
+	if err != nil {
+		return nil, fmt.Errorf("getting or creating lobby: %w", err)
+	}
+
+	cmd := commands.NewCreateEgressResource(ctx, user, offer)
+	go lobby.handle(cmd)
+	select {
+	case err = <-cmd.Err:
+		return nil, err
+	case res := <-cmd.Response:
+		return res, nil
+	case <-ctx.Done():
+		return nil, fmt.Errorf("time out")
+	}
+}
+
 // Old API -----------------------------------
 
 func (m *LobbyManager) CreateLobbyIngressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
