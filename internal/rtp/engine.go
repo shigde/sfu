@@ -75,6 +75,10 @@ func (e *Engine) createApi(apiOptions ...engineApiOption) (*engineApi, error) {
 	return api, nil
 }
 
+func (e *Engine) EstablishEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, endpointType EndpointType, options ...EndpointOption) (*Endpoint, error) {
+	return EstablishEndpoint(ctx, e, sessionId, liveStream, offer, endpointType, options...)
+}
+
 func (e *Engine) EstablishIngressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
 	return EstablishIngressEndpoint(ctx, e, sessionId, liveStream, offer, options...)
 }

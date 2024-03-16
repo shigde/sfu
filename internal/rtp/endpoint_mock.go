@@ -59,7 +59,8 @@ func (m *mockPeerConnector) CreateOffer(_ *webrtc.OfferOptions) (webrtc.SessionD
 func (m *mockPeerConnector) CreateAnswer(options *webrtc.AnswerOptions) (webrtc.SessionDescription, error) {
 	return webrtc.SessionDescription{}, nil
 }
-
 func (m *mockPeerConnector) Close() error {
 	return nil
 }
+func (m *mockPeerConnector) OnTrack(f func(*webrtc.TrackRemote, *webrtc.RTPReceiver)) {}
+func (m *mockPeerConnector) OnDataChannel(f func(*webrtc.DataChannel))                {}

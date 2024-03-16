@@ -36,6 +36,10 @@ func (l *testLobbyManager) NewIngressResource(_ context.Context, _ uuid.UUID, _ 
 	return nil, nil
 }
 
+func (l *testLobbyManager) NewEgressResource(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ *webrtc.SessionDescription, _ ...resources.Option) (*resources.WebRTC, error) {
+	return nil, nil
+}
+
 // old API
 func (l *testLobbyManager) CreateLobbyIngressEndpoint(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
