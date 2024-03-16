@@ -301,6 +301,11 @@ func (c *Endpoint) Destruct() error {
 	return nil
 }
 
+func (e *Endpoint) getPeerConnection() *webrtc.PeerConnection {
+	pc, _ := e.peerConnection.(*webrtc.PeerConnection)
+	return pc
+}
+
 type peerConnection interface {
 	LocalDescription() *webrtc.SessionDescription
 	SetLocalDescription(desc webrtc.SessionDescription) error
@@ -309,11 +314,13 @@ type peerConnection interface {
 	GetTransceivers() []*webrtc.RTPTransceiver
 	AddTrack(track webrtc.TrackLocal) (*webrtc.RTPSender, error)
 	RemoveTrack(sender *webrtc.RTPSender) error
+	OnTrack(f func(*webrtc.TrackRemote, *webrtc.RTPReceiver))
 	SignalingState() webrtc.SignalingState
 	CreateOffer(options *webrtc.OfferOptions) (webrtc.SessionDescription, error)
 	CreateAnswer(options *webrtc.AnswerOptions) (webrtc.SessionDescription, error)
 	OnICEConnectionStateChange(f func(webrtc.ICEConnectionState))
 	OnNegotiationNeeded(f func())
+	OnDataChannel(func(*webrtc.DataChannel))
 	Close() error
 }
 

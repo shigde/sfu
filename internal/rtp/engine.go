@@ -13,8 +13,6 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-const tracerName = "github.com/shigde/sfu/internal/engine"
-
 type Engine struct {
 	config webrtc.Configuration
 }

@@ -3,6 +3,7 @@ package sessions
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -19,6 +20,8 @@ import (
 const sessionTrasser = "github.com/shigde/sfu/internal/lobby/sessions"
 
 type RtpEngine interface {
+	EstablishEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, endpointType rtp.EndpointType, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
+
 	EstablishIngressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
 	EstablishEgressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
 	EstablishStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
@@ -73,7 +76,7 @@ func NewSession(ctx context.Context, user uuid.UUID, hub *Hub, engine RtpEngine,
 }
 
 func (s *Session) CreateIngressEndpoint(ctx context.Context, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
-	ctx, span := s.trace(ctx, "create-ingress-endpoint")
+	ctx, span := s.trace(ctx, "create_ingress_endpoint")
 	defer span.End()
 
 	if s.ingress != nil {
@@ -86,7 +89,7 @@ func (s *Session) CreateIngressEndpoint(ctx context.Context, offer *webrtc.Sessi
 	option = append(option, rtp.EndpointWithLostConnectionListener(s.onLostConnection))
 	option = append(option, rtp.EndpointWithTrackDispatcher(s.hub))
 
-	endpoint, err := s.rtpEngine.EstablishIngressEndpoint(s.ctx, s.Id, s.hub.LiveStreamId, *offer, option...)
+	endpoint, err := s.rtpEngine.EstablishEndpoint(s.ctx, s.Id, s.hub.LiveStreamId, *offer, rtp.IngressEndpoint, option...)
 	if err != nil {
 		return nil, telemetry.RecordErrorf(span, "create rtp connection", err)
 	}
@@ -108,17 +111,51 @@ func (s *Session) CreateEgressEndpoint(ctx context.Context, offer *webrtc.Sessio
 	ctx, span := s.trace(ctx, "create-egress-endpoint")
 	defer span.End()
 
-	if s.ingress != nil {
+	if s.egress != nil {
 		telemetry.RecordError(span, ErrEgressAlreadyExists)
 		return nil, ErrEgressAlreadyExists
 	}
+
+	// hmm !!!!!!
+	//if s.ingress == nil {
+	//	return nil, errNoReceiverInSession
+	//}
+
+	select {
+	case err := <-s.signal.waitForMessengerSetupFinished():
+		if err != nil {
+			return nil, fmt.Errorf("waiting for messenger: %w", err)
+		}
+	case <-s.ctx.Done():
+		return nil, errSessionAlreadyClosed
+	case <-time.After(sessionReqTimeout):
+		return nil, errSessionRequestTimeout
+	}
+
+	hub := s.hub
+	withTrackCbk := rtp.EndpointWithGetCurrentTrackCbk(func(sessionId uuid.UUID) ([]*rtp.TrackInfo, error) {
+		return hub.getTrackList(sessionId, filterForSession(sessionId))
+	})
+
+	option := make([]rtp.EndpointOption, 0)
+	option = append(option, withTrackCbk)
+	option = append(option, rtp.EndpointWithDataChannel(s.signal.OnEmptyChannel))
+	option = append(option, rtp.EndpointWithNegotiationNeededListener(s.signal.OnNegotiationNeeded))
+	option = append(option, rtp.EndpointWithLostConnectionListener(s.onLostConnection))
+
+	endpoint, err := s.rtpEngine.EstablishEgressEndpoint(s.ctx, s.Id, s.hub.LiveStreamId, option...)
+	if err != nil {
+		return nil, fmt.Errorf("create rtp connection: %w", err)
+	}
+	s.egress = endpoint
+	s.signal.addEgressEndpoint(s.egress)
 
 	option := make([]rtp.EndpointOption, 0)
 	option = append(option, rtp.EndpointWithDataChannel(s.signal.OnIngressChannel))
 	option = append(option, rtp.EndpointWithLostConnectionListener(s.onLostConnection))
 	option = append(option, rtp.EndpointWithTrackDispatcher(s.hub))
 
-	endpoint, err := s.rtpEngine.EstablishIngressEndpoint(s.ctx, s.Id, s.hub.LiveStreamId, *offer, option...)
+	endpoint, err := s.rtpEngine.EstablishEndpoint(s.ctx, s.Id, s.hub.LiveStreamId, *offer, rtp.EgressEndpoint, option...)
 	if err != nil {
 		return nil, telemetry.RecordErrorf(span, "create rtp connection", err)
 	}
@@ -157,7 +194,7 @@ func (s *Session) onLostConnection() {
 }
 
 func (s *Session) trace(ctx context.Context, spanName string) (context.Context, trace.Span) {
-	ctx, span := otel.Tracer(sessionTrasser).Start(ctx, "session-"+spanName, trace.WithAttributes(
+	ctx, span := otel.Tracer(sessionTrasser).Start(ctx, spanName, trace.WithAttributes(
 		attribute.String("sessionId", s.Id.String()),
 		attribute.String("userId", s.user.String()),
 	))
