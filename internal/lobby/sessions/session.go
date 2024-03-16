@@ -16,7 +16,7 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-const sessionTrasser = "github.com/shigde/sfu/internal/lobby/sessions"
+const sessionTracer = "github.com/shigde/sfu/internal/lobby/sessions"
 
 type RtpEngine interface {
 	EstablishEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, endpointType rtp.EndpointType, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
@@ -184,7 +184,7 @@ func (s *Session) onLostConnection() {
 }
 
 func (s *Session) trace(ctx context.Context, spanName string) (context.Context, trace.Span) {
-	ctx, span := otel.Tracer(sessionTrasser).Start(ctx, spanName, trace.WithAttributes(
+	ctx, span := otel.Tracer(sessionTracer).Start(ctx, spanName, trace.WithAttributes(
 		attribute.String("sessionId", s.Id.String()),
 		attribute.String("userId", s.user.String()),
 	))
