@@ -7,9 +7,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func RecordError(span trace.Span, err error) {
+func RecordError(span trace.Span, err error) error {
 	span.RecordError(err)
 	span.SetStatus(codes.Error, err.Error())
+	return err
 }
 
 // RecordErrorf formats according to a format specifier and returns the string as a
