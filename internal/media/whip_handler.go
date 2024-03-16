@@ -18,7 +18,7 @@ import (
 
 func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "whip-create")
+		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "whip_create")
 		defer span.End()
 
 		w.Header().Set("Content-Type", "application/sdp")
@@ -95,7 +95,7 @@ func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 
 func whipDelete(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "http-whip-delete")
+		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "whip_delete")
 		defer span.End()
 
 		w.Header().Set("Content-Type", "application/sdp")

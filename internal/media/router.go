@@ -40,8 +40,7 @@ func NewRouter(
 	router.HandleFunc("/space/setting", auth.Csrf(auth.HttpMiddleware(securityConfig, getSettings(rtpConfig)))).Methods("GET")
 	router.HandleFunc("/space/{space}/stream/{id}/whip", auth.HttpMiddleware(securityConfig, whip(streamService, liveLobbyService))).Methods("POST")
 	router.HandleFunc("/space/{space}/stream/{id}/whip", auth.TokenMiddleware(whipDelete(streamService, liveLobbyService))).Methods("DELETE")
-	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.TokenMiddleware(whepOffer(streamService, liveLobbyService))).Methods("POST")
-	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.TokenMiddleware(whepAnswer(streamService, liveLobbyService))).Methods("PATCH")
+	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.TokenMiddleware(whep(streamService, liveLobbyService))).Methods("POST")
 
 	// Lobby User Live Endpoints
 	router.HandleFunc("/space/{space}/stream/{id}/live", auth.TokenMiddleware(publishLiveStream(streamService, liveLobbyService))).Methods("POST")
