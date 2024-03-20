@@ -16,7 +16,7 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-const sessionTracer = "github.com/shigde/sfu/internal/lobby/sessions"
+const sessionTracer = telemetry.TracerName
 
 type RtpEngine interface {
 	EstablishEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, endpointType rtp.EndpointType, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
@@ -156,7 +156,7 @@ func (s *Session) CreateEgressEndpoint(ctx context.Context, offer *webrtc.Sessio
 	span.AddEvent("Wait for Local Description.")
 	ctxTimeout, cancel := context.WithTimeout(ctx, processWaitingTimeout)
 	defer cancel()
-	answer, err := s.ingress.GetLocalDescription(ctxTimeout)
+	answer, err := s.egress.GetLocalDescription(ctxTimeout)
 	if err != nil {
 		return nil, telemetry.RecordErrorf(span, "create egress resource endpoint", err)
 	}
@@ -185,7 +185,7 @@ func (s *Session) onLostConnection() {
 }
 
 func (s *Session) trace(ctx context.Context, spanName string) (context.Context, trace.Span) {
-	ctx, span := otel.Tracer(sessionTracer).Start(ctx, spanName, trace.WithAttributes(
+	ctx, span := otel.Tracer(sessionTracer).Start(ctx, "session: "+spanName, trace.WithAttributes(
 		attribute.String("sessionId", s.Id.String()),
 		attribute.String("userId", s.user.String()),
 	))

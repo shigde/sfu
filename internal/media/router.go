@@ -9,9 +9,10 @@ import (
 	"github.com/shigde/sfu/internal/logging"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/stream"
+	"github.com/shigde/sfu/internal/telemetry"
 )
 
-const tracerName = "github.com/shigde/sfu/internal/media"
+const tracerName = telemetry.TracerName
 
 func NewRouter(
 	securityConfig *auth.SecurityConfig,
@@ -48,7 +49,7 @@ func NewRouter(
 	router.HandleFunc("/space/{space}/stream/{id}/live", auth.TokenMiddleware(stopLiveStream(streamService, liveLobbyService))).Methods("DELETE")
 
 	// Static Stream listeners
-	router.HandleFunc("/space/{space}/stream/{id}/static/whep", auth.HttpMiddleware(securityConfig, whepStaticAnswer(streamService, liveLobbyService))).Methods("POST")
+	// router.HandleFunc("/space/{space}/stream/{id}/static/whep", auth.HttpMiddleware(securityConfig, whepStaticAnswer(streamService, liveLobbyService))).Methods("POST")
 
 	// Server to Server endpoints
 	router.HandleFunc("/space/{space}/stream/{id}/pipe", auth.HttpMiddleware(securityConfig, openPipe(streamService, liveLobbyService))).Methods("POST")

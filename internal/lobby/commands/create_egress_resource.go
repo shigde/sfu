@@ -21,9 +21,9 @@ func NewCreateEgressResource(
 	user uuid.UUID,
 	sdp *webrtc.SessionDescription,
 	option ...resources.Option,
-) *CreateIngressResource {
+) *CreateEgressResource {
 	command := newCommand(ctx, user)
-	return &CreateIngressResource{
+	return &CreateEgressResource{
 		command:  command,
 		sdp:      sdp,
 		option:   option,

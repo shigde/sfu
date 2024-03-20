@@ -18,26 +18,26 @@ import (
 
 func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "whip_create")
+		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "api: whip_create")
 		defer span.End()
 
 		w.Header().Set("Content-Type", "application/sdp")
 
 		if err := auth.StartSession(w, r); err != nil {
-			telemetry.RecordError(span, err)
+			_ = telemetry.RecordError(span, err)
 			httpError(w, "error", http.StatusInternalServerError, err)
 		}
 
 		liveStream, _, err := getLiveStream(r, streamService)
 		if err != nil {
-			telemetry.RecordError(span, err)
+			_ = telemetry.RecordError(span, err)
 			handleResourceError(w, err)
 			return
 		}
 
 		offer, err := getSdpPayload(w, r, webrtc.SDPTypeOffer)
 		if err != nil {
-			telemetry.RecordError(span, err)
+			_ = telemetry.RecordError(span, err)
 			w.WriteHeader(http.StatusBadRequest)
 			_, _ = w.Write([]byte(err.Error()))
 			return
@@ -45,14 +45,14 @@ func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 
 		user, ok := auth.PrincipalFromContext(r.Context())
 		if !ok {
-			telemetry.RecordError(span, errors.New("no user"))
+			_ = telemetry.RecordError(span, errors.New("no user"))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		userId, err := user.GetUuid()
 		if err != nil {
-			telemetry.RecordError(span, err)
+			_ = telemetry.RecordError(span, err)
 			httpError(w, "error user", http.StatusBadRequest, err)
 			return
 		}
@@ -66,13 +66,13 @@ func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 		answer, resourceId, err := liveService.CreateLobbyIngressEndpoint(ctx, offer, liveStream, userId)
 		if err != nil && errors.Is(err, lobby.ErrSessionAlreadyExists) {
 			w.WriteHeader(http.StatusConflict)
-			telemetry.RecordError(span, err)
+			_ = telemetry.RecordError(span, err)
 			httpError(w, "session already exists", http.StatusConflict, err)
 			return
 		}
 
 		if err != nil {
-			telemetry.RecordError(span, err)
+			_ = telemetry.RecordError(span, err)
 			httpError(w, "error build whip", http.StatusInternalServerError, err)
 			return
 		}
@@ -85,7 +85,7 @@ func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 		w.Header().Set("Location", "resource/"+resourceId)
 		contentLen, err := w.Write(response)
 		if err != nil {
-			telemetry.RecordError(span, err)
+			_ = telemetry.RecordError(span, err)
 			httpError(w, "error build response", http.StatusInternalServerError, err)
 			return
 		}
@@ -95,7 +95,7 @@ func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 
 func whipDelete(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "whip_delete")
+		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "api: whip_delete")
 		defer span.End()
 
 		w.Header().Set("Content-Type", "application/sdp")
@@ -109,27 +109,27 @@ func whipDelete(streamService *stream.LiveStreamService, liveService *stream.Liv
 			default:
 				httpError(w, "internal error", http.StatusInternalServerError, err)
 			}
-			telemetry.RecordError(span, err)
+			_ = telemetry.RecordError(span, err)
 			return
 		}
 
 		userId, err := user.GetUuid()
 		if err != nil {
-			telemetry.RecordError(span, err)
+			_ = telemetry.RecordError(span, err)
 			httpError(w, "error user", http.StatusBadRequest, err)
 			return
 		}
 
 		liveStream, _, err := getLiveStream(r, streamService)
 		if err != nil {
-			telemetry.RecordError(span, err)
+			_ = telemetry.RecordError(span, err)
 			handleResourceError(w, err)
 			return
 		}
 
 		left, err := liveService.LeaveLobby(ctx, liveStream, userId)
 		if err != nil {
-			telemetry.RecordError(span, err)
+			_ = telemetry.RecordError(span, err)
 			if errors.Is(err, stream.ErrLobbyNotActive) {
 				w.WriteHeader(http.StatusNotFound)
 				return
@@ -144,7 +144,7 @@ func whipDelete(streamService *stream.LiveStreamService, liveService *stream.Liv
 		}
 
 		if err := auth.DeleteSession(w, r); err != nil {
-			telemetry.RecordError(span, err)
+			_ = telemetry.RecordError(span, err)
 			httpError(w, "error", http.StatusInternalServerError, err)
 		}
 
