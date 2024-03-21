@@ -49,6 +49,7 @@ func newEndpoint(sessionCxt context.Context, sessionId string, liveStreamId stri
 		liveStreamId:           liveStreamId,
 		endpointType:           endpointType,
 		trackSdpInfoRepository: newTrackSdpInfoRepository(),
+		initComplete:           make(chan struct{}),
 	}
 	for _, opt := range options {
 		opt(endpoint)

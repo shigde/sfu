@@ -33,12 +33,12 @@ var (
 	ErrEgressAlreadyExists          = errors.New("egress resource already exists in session")
 	ErrNoSignalChannel              = errors.New("no signal channel connection exists in session")
 	ErrSessionProcessWaitingTimeout = errors.New("session process waiting timeout")
-	processWaitingTimeout           = 5 * time.Second
+	processWaitingTimeout           = 10 * time.Second // Ice gathering could take a long tine :-(
 )
 
 type Session struct {
-	*sync.RWMutex
 	Id       uuid.UUID
+	mutex    sync.RWMutex
 	ctx      context.Context
 	user     uuid.UUID
 	isRemote bool
@@ -60,9 +60,10 @@ func NewSession(ctx context.Context, user uuid.UUID, hub *Hub, engine RtpEngine,
 	signal := newSignal(ctx, sessionId, user)
 
 	session := &Session{
-		Id:   uuid.New(),
-		ctx:  ctx,
-		user: user,
+		Id:    uuid.New(),
+		mutex: sync.RWMutex{},
+		ctx:   ctx,
+		user:  user,
 
 		rtpEngine: engine,
 		hub:       hub,
@@ -78,6 +79,8 @@ func NewSession(ctx context.Context, user uuid.UUID, hub *Hub, engine RtpEngine,
 }
 
 func (s *Session) CreateIngressEndpoint(ctx context.Context, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	ctx, span := s.trace(ctx, "create_ingress_endpoint")
 	defer span.End()
 
@@ -109,6 +112,8 @@ func (s *Session) CreateIngressEndpoint(ctx context.Context, offer *webrtc.Sessi
 }
 
 func (s *Session) CreateEgressEndpoint(ctx context.Context, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	ctx, span := s.trace(ctx, "create_egress_endpoint")
 	defer span.End()
 
@@ -182,6 +187,30 @@ func (s *Session) onLostConnection() {
 			}
 		}
 	}()
+}
+
+func (s *Session) addTrack(trackInfo *rtp.TrackInfo) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	track := trackInfo.GetTrackLocal()
+	slog.Debug("sessions: add track", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
+	if s.egress != nil {
+		slog.Debug("sessions: add track - to egress egress", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
+		s.egress.AddTrack(trackInfo)
+	}
+}
+
+func (s *Session) removeTrack(trackInfo *rtp.TrackInfo) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	track := trackInfo.GetTrackLocal()
+	slog.Debug("sessions: remove track", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
+	if s.egress != nil {
+		slog.Debug("sessions: removeTrack - from egress egress", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
+		s.egress.RemoveTrack(trackInfo)
+	}
 }
 
 func (s *Session) trace(ctx context.Context, spanName string) (context.Context, trace.Span) {

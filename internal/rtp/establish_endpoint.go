@@ -81,12 +81,11 @@ func EstablishEndpoint(sessionCxt context.Context, e *Engine, sessionId uuid.UUI
 	if err = endpoint.peerConnection.SetLocalDescription(answer); err != nil {
 		return nil, telemetry.RecordErrorf(span, "setup answer", err)
 	}
-
+	endpoint.SetInitComplete()
 	return endpoint, nil
 }
 
 func setupOnNegotiationNeeded(sessionCxt context.Context, endpoint *Endpoint, sessionId uuid.UUID, liveStream uuid.UUID) {
-	initComplete := make(chan struct{})
 
 	// @TODO: Fix the race
 	// First we create the egress endpoint and after this we add the individual tracks.
@@ -96,11 +95,11 @@ func setupOnNegotiationNeeded(sessionCxt context.Context, endpoint *Endpoint, se
 	// This creates a race between remove and add track that I still have to think about it.
 	if endpoint.getCurrentTracksCbk != nil {
 		go func() {
-			slog.Debug("rtp.establish_egress: add tracks", "sessionId", sessionId, "liveStream", liveStream)
+			slog.Debug("rtp.establish_endpoint: add tracks", "sessionId", sessionId, "liveStream", liveStream)
 			select {
 			case <-sessionCxt.Done():
 				return
-			case <-initComplete:
+			case <-endpoint.initComplete:
 				if tracksList, err := endpoint.getCurrentTracksCbk(sessionId); err == nil {
 					for _, trackInfo := range tracksList {
 						endpoint.AddTrack(trackInfo)
@@ -109,7 +108,7 @@ func setupOnNegotiationNeeded(sessionCxt context.Context, endpoint *Endpoint, se
 			}
 		}()
 	}
-	endpoint.initComplete = initComplete
+
 	if endpoint.onNegotiationNeeded != nil {
 		slog.Debug("rtp.engine: sender: OnNegotiationNeeded setup start")
 		endpoint.peerConnection.OnNegotiationNeeded(endpoint.doRenegotiation)

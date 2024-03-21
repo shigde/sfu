@@ -178,7 +178,7 @@ func (h *Hub) onAddTrack(event *hubRequest) {
 	h.sessionRepo.Iter(func(s *Session) {
 		if filterForSession(s.Id)(event.track) {
 			slog.Debug("lobby.Hub: add egress track to session", "sessionId", s.Id, "sourceSessionId", event.track.SessionId, "streamId", event.track.GetTrackLocal().StreamID(), "track", event.track.GetTrackLocal().ID(), "kind", event.track.GetTrackLocal().Kind(), "purpose", event.track.Purpose.ToString())
-			// s.addTrack(event.track)
+			s.addTrack(event.track)
 			h.increaseNodeGraphStats(s.Id.String(), rtp.EgressEndpoint, event.track.Purpose)
 		}
 	})
@@ -201,7 +201,7 @@ func (h *Hub) onRemoveTrack(event *hubRequest) {
 	h.sessionRepo.Iter(func(s *Session) {
 		if filterForSession(s.Id)(event.track) {
 			slog.Debug("lobby.Hub: remove egress track from session", "sessionId", s.Id, "sourceSessionId", event.track.SessionId, "streamId", event.track.GetTrackLocal().StreamID(), "track", event.track.GetTrackLocal().ID(), "kind", event.track.GetTrackLocal().Kind(), "purpose", event.track.Purpose.ToString())
-			// s.removeTrack(event.track)
+			s.removeTrack(event.track)
 			h.decreaseNodeGraphStats(s.Id.String(), rtp.EgressEndpoint, event.track.Purpose)
 		}
 	})

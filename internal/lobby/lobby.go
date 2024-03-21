@@ -116,7 +116,7 @@ func (l *lobby) removeSession(userId uuid.UUID) bool {
 
 // handle, run session commands on existing sessions
 // the session could be already deleted, after the command was started.
-// But this cse is handel by the session it selves
+// But this case is handel by the session it selves
 func (l *lobby) handle(cmd command) {
 	if session, found := l.sessions.FindByUserId(cmd.GetUserId()); found {
 		cmd.Execute(l.ctx, session)
