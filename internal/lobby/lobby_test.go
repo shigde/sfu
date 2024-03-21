@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/lobby/mocks"
 	"github.com/shigde/sfu/internal/lobby/resources"
 	"github.com/shigde/sfu/internal/lobby/sessions"
 	"github.com/shigde/sfu/internal/logging"
@@ -34,7 +35,7 @@ func TestLobby_handle(t *testing.T) {
 		cmd := &mockCmd{
 			user: user,
 			f: func(ctx context.Context, s *sessions.Session) (*resources.WebRTC, error) {
-				return &resources.WebRTC{SDP: MockedAnswer}, nil
+				return &resources.WebRTC{SDP: mocks.Answer}, nil
 			},
 			Response: make(chan *resources.WebRTC),
 			Err:      make(chan error),
@@ -43,7 +44,7 @@ func TestLobby_handle(t *testing.T) {
 
 		select {
 		case res := <-cmd.Response:
-			assert.Equal(t, MockedAnswer, res.SDP)
+			assert.Equal(t, mocks.Answer, res.SDP)
 		case <-cmd.Err:
 			t.Fatalf("no error expected")
 		case <-time.After(time.Second * 3):

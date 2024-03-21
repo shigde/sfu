@@ -8,19 +8,20 @@ import (
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/lobby"
 	"github.com/shigde/sfu/internal/lobby/clients"
+	"github.com/shigde/sfu/internal/lobby/mocks"
 	"github.com/shigde/sfu/internal/logging"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/stretchr/testify/assert"
 )
 
-func testRtpSessionSetup(t *testing.T) (*lobby.session, *lobby.rtpEngineMock) {
+func testRtpSessionSetup(t *testing.T) (*Session, *mocks.RtpEngineMock) {
 	t.Helper()
 	logging.SetupDebugLogger()
-	engine := lobby.mockRtpEngineForOffer(lobby.mockedAnswer)
-	forwarder := lobby.newLiveStreamSenderMock()
+	engine := mocks.NewRtpEngineForOffer(mocks.Answer)
+	forwarder := mocks.NewLiveSender()
 	ctx, _ := context.WithCancel(context.Background())
-	hub := newHub(ctx, NewSessionRepository(), uuid.New(), forwarder)
-	session := lobby.newSession(uuid.New(), hub, engine, nil)
+	hub := NewHub(ctx, NewSessionRepository(), uuid.New(), forwarder)
+	session := NewSession(ctx, uuid.New(), hub, engine, nil)
 	return session, engine
 }
 

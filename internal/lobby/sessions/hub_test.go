@@ -5,27 +5,27 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/shigde/sfu/internal/lobby"
+	"github.com/shigde/sfu/internal/lobby/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
 func testHubSetup(t *testing.T) (*Hub, func()) {
 	t.Helper()
-	sessions := lobby.newSessionRepository()
-	engine := lobby.newRtpEngineMock()
-	forwarder := lobby.newLiveStreamSenderMock()
+	sessions := NewSessionRepository()
+	engine := mocks.NewRtpEngine()
+	forwarder := mocks.NewLiveSender()
 	ctx, cancel := context.WithCancel(context.Background())
-	hub := newHub(ctx, sessions, uuid.New(), forwarder)
-	s1 := lobby.newSession(uuid.New(), hub, engine, nil)
-	s2 := lobby.newSession(uuid.New(), hub, engine, nil)
+	hub := NewHub(ctx, sessions, uuid.New(), forwarder)
+	s1 := NewSession(ctx, uuid.New(), hub, engine, nil)
+	s2 := NewSession(ctx, uuid.New(), hub, engine, nil)
 	sessions.Add(s1)
 	sessions.Add(s2)
 	return hub, cancel
 }
-func testHubSessionSetup(t *testing.T, hub *Hub) *lobby.session {
+func testHubSessionSetup(t *testing.T, hub *Hub) *Session {
 	t.Helper()
-	engine := lobby.newRtpEngineMock()
-	s := lobby.newSession(uuid.New(), hub, engine, nil)
+	engine := mocks.NewRtpEngine()
+	s := NewSession(hub.ctx, uuid.New(), hub, engine, nil)
 	hub.sessionRepo.Add(s)
 	return s
 }
