@@ -99,7 +99,7 @@ func (m *Messenger) sendSDP(sdp *webrtc.SessionDescription, id uint32, number ui
 	return id, nil
 }
 
-func (m *Messenger) sendMute(mute *message.Mute) error {
+func (m *Messenger) SendMute(mute *message.Mute) error {
 	channelMsg := &message.ChannelMsg{
 		Id:   0,
 		Type: message.MuteMsg,

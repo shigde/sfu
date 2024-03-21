@@ -178,8 +178,11 @@ func (h *Hub) onAddTrack(event *hubRequest) {
 	h.sessionRepo.Iter(func(s *Session) {
 		if filterForSession(s.Id)(event.track) {
 			slog.Debug("lobby.Hub: add egress track to session", "sessionId", s.Id, "sourceSessionId", event.track.SessionId, "streamId", event.track.GetTrackLocal().StreamID(), "track", event.track.GetTrackLocal().ID(), "kind", event.track.GetTrackLocal().Kind(), "purpose", event.track.Purpose.ToString())
-			s.addTrack(event.track)
-			h.increaseNodeGraphStats(s.Id.String(), rtp.EgressEndpoint, event.track.Purpose)
+			go func(session *Session) {
+				// If a session has just been created, this call blocks for seconds.
+				// This is because the ice gathering sometimes takes seconds. That's why we don't block the call
+				session.addTrack(event.track)
+			}(s)
 		}
 	})
 }
@@ -201,8 +204,12 @@ func (h *Hub) onRemoveTrack(event *hubRequest) {
 	h.sessionRepo.Iter(func(s *Session) {
 		if filterForSession(s.Id)(event.track) {
 			slog.Debug("lobby.Hub: remove egress track from session", "sessionId", s.Id, "sourceSessionId", event.track.SessionId, "streamId", event.track.GetTrackLocal().StreamID(), "track", event.track.GetTrackLocal().ID(), "kind", event.track.GetTrackLocal().Kind(), "purpose", event.track.Purpose.ToString())
-			s.removeTrack(event.track)
-			h.decreaseNodeGraphStats(s.Id.String(), rtp.EgressEndpoint, event.track.Purpose)
+			go func(session *Session) {
+				// If a session has just been created, this call blocks for seconds.
+				// This is because the ice gathering sometimes takes seconds. That's why we don't block the call
+				session.removeTrack(event.track)
+				h.decreaseNodeGraphStats(s.Id.String(), rtp.EgressEndpoint, event.track.Purpose)
+			}(s)
 		}
 	})
 }
@@ -227,7 +234,11 @@ func (h *Hub) onMuteTrack(event *hubRequest) {
 	h.sessionRepo.Iter(func(s *Session) {
 		if filterForSession(s.Id)(event.track) {
 			slog.Debug("lobby.Hub: mute egress track from session", "sessionId", s.Id, "sourceSessionId", event.track.SessionId, event.track.Purpose.ToString())
-			// s.sendMuteTrack(event.track)
+			go func(session *Session) {
+				// If a session has just been created, this call blocks for seconds.
+				// This is because the ice gathering sometimes takes seconds. That's why we don't block the call
+				session.muteTrack(event.track)
+			}(s)
 		}
 	})
 }

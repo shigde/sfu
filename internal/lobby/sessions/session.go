@@ -10,6 +10,7 @@ import (
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/telemetry"
+	"github.com/shigde/sfu/pkg/message"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -72,8 +73,7 @@ func NewSession(ctx context.Context, user uuid.UUID, hub *Hub, engine RtpEngine,
 		garbage:   garbage,
 	}
 
-	// signal.onMuteCbk = session.onMuteTrack
-	//go session.run(ctx)
+	signal.onMuteCbk = session.onMuteTrack
 
 	return session
 }
@@ -210,6 +210,27 @@ func (s *Session) removeTrack(trackInfo *rtp.TrackInfo) {
 	if s.egress != nil {
 		slog.Debug("sessions: removeTrack - from egress egress", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
 		s.egress.RemoveTrack(trackInfo)
+	}
+}
+
+func (s *Session) muteTrack(trackInfo *rtp.TrackInfo) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	if s.egress == nil {
+		return
+	}
+
+	if egressInfo, ok := s.egress.SetEgressMute(trackInfo.GetId(), trackInfo.GetMute()); ok {
+		_ = s.signal.messenger.SendMute(&message.Mute{
+			Mid:  egressInfo.GetEgressMid(),
+			Mute: egressInfo.GetMute(),
+		})
+	}
+}
+
+func (s *Session) onMuteTrack(mute *message.Mute) {
+	if trackInfo, ok := s.ingress.SetIngressMute(mute.Mid, mute.Mute); ok {
+		go s.hub.DispatchMuteTrack(trackInfo)
 	}
 }
 
