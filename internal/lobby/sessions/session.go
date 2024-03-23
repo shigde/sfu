@@ -30,6 +30,7 @@ var (
 	ErrNoSignalChannel              = errors.New("no signal channel connection exists in session")
 	ErrSessionProcessWaitingTimeout = errors.New("session process waiting timeout")
 	processWaitingTimeout           = 10 * time.Second // Ice gathering could take a long tine :-(
+
 )
 
 type Session struct {
@@ -78,6 +79,9 @@ func (s *Session) CreateIngressEndpoint(ctx context.Context, offer *webrtc.Sessi
 	defer s.mutex.Unlock()
 	ctx, span := s.trace(ctx, "create_ingress_endpoint")
 	defer span.End()
+	if s.isDone() {
+		return nil, telemetry.RecordError(span, ErrSessionAlreadyClosed)
+	}
 
 	if s.ingress != nil {
 		return nil, telemetry.RecordError(span, ErrIngressAlreadyExists)
@@ -90,7 +94,7 @@ func (s *Session) CreateIngressEndpoint(ctx context.Context, offer *webrtc.Sessi
 
 	endpoint, err := s.rtpEngine.EstablishEndpoint(s.ctx, s.Id, s.hub.LiveStreamId, *offer, rtp.IngressEndpoint, option...)
 	if err != nil {
-		return nil, telemetry.RecordErrorf(span, "create rtp connection", err)
+		return nil, telemetry.RecordErrorf(span, "create rtp endpoint", err)
 	}
 	s.ingress = endpoint
 
@@ -99,7 +103,7 @@ func (s *Session) CreateIngressEndpoint(ctx context.Context, offer *webrtc.Sessi
 	defer cancel()
 	answer, err := s.ingress.GetLocalDescription(ctxTimeout)
 	if err != nil {
-		return nil, telemetry.RecordErrorf(span, "create ingress resource endpoint", err)
+		return nil, telemetry.RecordErrorf(span, "create ingress answer resource", err)
 	}
 
 	span.AddEvent("Receive Local Description.")
@@ -111,6 +115,9 @@ func (s *Session) CreateEgressEndpoint(ctx context.Context, offer *webrtc.Sessio
 	defer s.mutex.Unlock()
 	ctx, span := s.trace(ctx, "create_egress_endpoint")
 	defer span.End()
+	if s.isDone() {
+		return nil, telemetry.RecordError(span, ErrSessionAlreadyClosed)
+	}
 
 	if s.egress != nil {
 		return nil, telemetry.RecordError(span, ErrEgressAlreadyExists)
@@ -148,9 +155,10 @@ func (s *Session) CreateEgressEndpoint(ctx context.Context, offer *webrtc.Sessio
 
 	endpoint, err := s.rtpEngine.EstablishEndpoint(s.ctx, s.Id, s.hub.LiveStreamId, *offer, rtp.EgressEndpoint, option...)
 	if err != nil {
-		return nil, telemetry.RecordErrorf(span, "create rtp connection", err)
+		return nil, telemetry.RecordErrorf(span, "create rtp endpoint", err)
 	}
 	s.egress = endpoint
+	// @TODO: The signaling should be independent of ingress and egress
 	s.signal.addEgressEndpoint(s.egress)
 
 	span.AddEvent("Wait for Local Description.")
@@ -158,7 +166,7 @@ func (s *Session) CreateEgressEndpoint(ctx context.Context, offer *webrtc.Sessio
 	defer cancel()
 	answer, err := s.egress.GetLocalDescription(ctxTimeout)
 	if err != nil {
-		return nil, telemetry.RecordErrorf(span, "create egress resource endpoint", err)
+		return nil, telemetry.RecordErrorf(span, "create egress answer resource", err)
 	}
 	span.AddEvent("Receive Local Description.")
 	return answer, nil
@@ -226,6 +234,15 @@ func (s *Session) muteTrack(trackInfo *rtp.TrackInfo) {
 func (s *Session) onMuteTrack(mute *message.Mute) {
 	if trackInfo, ok := s.ingress.SetIngressMute(mute.Mid, mute.Mute); ok {
 		go s.hub.DispatchMuteTrack(trackInfo)
+	}
+}
+
+func (s *Session) isDone() bool {
+	select {
+	case <-s.ctx.Done():
+		return true
+	default:
+		return false
 	}
 }
 

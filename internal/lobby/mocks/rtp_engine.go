@@ -17,8 +17,8 @@ var (
 )
 
 type RtpEngineMock struct {
-	conn *rtp.Endpoint
-	err  error
+	Conn *rtp.Endpoint
+	Err  error
 }
 
 func NewRtpEngine() *RtpEngineMock {
@@ -27,10 +27,10 @@ func NewRtpEngine() *RtpEngineMock {
 
 func NewRtpEngineForOffer(answer *webrtc.SessionDescription) *RtpEngineMock {
 	engine := NewRtpEngine()
-	engine.conn = NewEndpoint(answer)
+	engine.Conn = NewEndpoint(answer)
 	return engine
 }
 
 func (e *RtpEngineMock) EstablishEndpoint(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ webrtc.SessionDescription, _ rtp.EndpointType, _ ...rtp.EndpointOption) (*rtp.Endpoint, error) {
-	return e.conn, e.err
+	return e.Conn, e.Err
 }
