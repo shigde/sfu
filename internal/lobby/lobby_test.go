@@ -10,13 +10,12 @@ import (
 	"github.com/shigde/sfu/internal/lobby/mocks"
 	"github.com/shigde/sfu/internal/lobby/resources"
 	"github.com/shigde/sfu/internal/lobby/sessions"
-	"github.com/shigde/sfu/internal/logging"
 	"github.com/stretchr/testify/assert"
 )
 
 func testLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 	t.Helper()
-	logging.SetupDebugLogger()
+	//logging.SetupDebugLogger()
 	entity := &LobbyEntity{
 		UUID:         uuid.New(),
 		LiveStreamId: uuid.New(),
@@ -80,6 +79,7 @@ func TestLobby_handle(t *testing.T) {
 			},
 			Err: make(chan error),
 		}
+
 		go lobby.handle(cmd)
 
 		select {

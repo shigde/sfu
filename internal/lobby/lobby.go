@@ -3,6 +3,7 @@ package lobby
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/shigde/sfu/internal/lobby/sessions"
@@ -99,6 +100,8 @@ func (l *lobby) newSession(userId uuid.UUID) bool {
 	case <-l.ctx.Done():
 		slog.Debug("can not adding session because lobby stopped")
 		return false
+	case <-time.After(1 * time.Second):
+		return false
 	}
 }
 
@@ -110,6 +113,8 @@ func (l *lobby) removeSession(userId uuid.UUID) bool {
 		return ok
 	case <-l.ctx.Done():
 		slog.Debug("can not remove session because lobby stopped")
+		return false
+	case <-time.After(10 * time.Second):
 		return false
 	}
 }
