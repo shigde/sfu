@@ -25,7 +25,7 @@ func (s *LiveLobbyService) CreateLobbyIngressEndpoint(ctx context.Context, sdp *
 	if err != nil {
 		return nil, "---", fmt.Errorf("accessing lobby: %w", err)
 	}
-	return resource.SDP, "---", nil
+	return resource.SDP, resource.Id, nil
 }
 
 func (s *LiveLobbyService) CreateLobbyEgressEndpoint(ctx context.Context, sdp *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, string, error) {
@@ -33,7 +33,7 @@ func (s *LiveLobbyService) CreateLobbyEgressEndpoint(ctx context.Context, sdp *w
 	if err != nil {
 		return nil, "---", fmt.Errorf("accessing lobby: %w", err)
 	}
-	return resource.SDP, "---", nil
+	return resource.SDP, resource.Id, nil
 }
 
 // Old api

@@ -15,7 +15,7 @@ func testLobbyManagerSetup(t *testing.T) (*LobbyManager, uuid.UUID) {
 	t.Helper()
 	homeUrl, _ := url.Parse("http://localhost:1234/")
 	registerToken := "federation_registration_token"
-	rtp := mocks.NewRtpEngine()
+	rtp := mocks.NewRtpEngineForOffer(mocks.Answer)
 	manager := NewLobbyManager(storage.NewTestStore(), rtp, homeUrl, registerToken)
 	lobby, _ := testLobbySetup(t)
 	manager.lobbies.lobbies[lobby.Id] = lobby

@@ -41,6 +41,7 @@ func (c *CreateIngressResource) Execute(ctx context.Context, session *sessions.S
 	case <-c.ctx.Done():
 	default:
 		c.Response <- &resources.WebRTC{
+			Id:  session.Id.String(),
 			SDP: answer,
 		}
 	}

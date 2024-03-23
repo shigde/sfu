@@ -22,7 +22,7 @@ func TestGetAllStreamsReq(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// And: Body contains 1 product
-	wanted := fmt.Sprintf(`[{"uuid":"%s","user":"%s"}]%s`, liveStream.UUID, liveStream.User, "\n")
+	wanted := fmt.Sprintf(`[{"uuid":"%s","title":"%s","user":"%s"}]%s`, liveStream.UUID, liveStream.Title, liveStream.User, "\n")
 	assert.Equal(t, wanted, rr.Body.String())
 }
 
@@ -38,7 +38,7 @@ func TestGetStreamReq(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// And: Body contains 1 product
-	wanted := fmt.Sprintf(`{"uuid":"%s","user":"%s"}%s`, liveStream.UUID, liveStream.User, "\n")
+	wanted := fmt.Sprintf(`{"uuid":"%s","title":"%s","user":"%s"}%s`, liveStream.UUID, liveStream.Title, liveStream.User, "\n")
 	assert.Equal(t, wanted, rr.Body.String())
 }
 

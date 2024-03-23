@@ -6,8 +6,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/shigde/sfu/internal/activitypub/models"
 	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/lobby"
+	"github.com/shigde/sfu/internal/media/mocks"
 	"github.com/shigde/sfu/internal/storage"
 	"github.com/shigde/sfu/internal/stream"
 )
@@ -15,7 +17,7 @@ import (
 func testRouterSetup(t *testing.T) (*testHelper, *stream.Space, *stream.LiveStream, *auth.Account, string) {
 	t.Helper()
 
-	lobbyManager := newTestLobbyManager()
+	lobbyManager := mocks.NewLobbyManager()
 	store := storage.NewTestStore()
 	_ = store.GetDatabase().AutoMigrate(&stream.LiveStream{}, &stream.Space{}, &auth.Account{})
 
@@ -25,7 +27,7 @@ func testRouterSetup(t *testing.T) (*testHelper, *stream.Space, *stream.LiveStre
 
 	liveStreamService := stream.NewLiveStreamService(streamRepo, spaceRepo)
 	liveLobbyService := stream.NewLiveLobbyService(store, lobbyManager)
-	accountService := auth.NewAccountService(accountRepo, "test-token", securityConfig)
+	accountService := auth.NewAccountService(accountRepo, "test-token", mocks.SecurityConfig)
 
 	account := &auth.Account{}
 	account.UUID = uuid.NewString()
@@ -40,6 +42,8 @@ func testRouterSetup(t *testing.T) (*testHelper, *stream.Space, *stream.LiveStre
 
 	liveStream := &stream.LiveStream{}
 	liveStream.UUID = uuid.New()
+	liveStream.Title = "TestStream"
+	liveStream.Video = &models.Video{Name: "TestStream"}
 	liveStream.User = "testUser@test.de"
 	liveStream.Account = account
 	liveStream.AccountId = account.ID
@@ -49,11 +53,11 @@ func testRouterSetup(t *testing.T) (*testHelper, *stream.Space, *stream.LiveStre
 
 	_, _ = streamRepo.Add(context.Background(), liveStream)
 
-	bearer, _ := auth.CreateJWTToken(account.UUID, securityConfig.JWT)
+	bearer, _ := auth.CreateJWTToken(account.UUID, mocks.SecurityConfig.JWT)
 	bearer = "Bearer " + bearer
 
 	th := &testHelper{}
-	th.router = NewRouter(securityConfig, rtpConfig, accountService, liveStreamService, liveLobbyService)
+	th.router = NewRouter(mocks.SecurityConfig, mocks.RtpConfig, accountService, liveStreamService, liveLobbyService)
 	th.liveStreamRepo = streamRepo
 	return th, space, liveStream, account, bearer
 }

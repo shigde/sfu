@@ -41,6 +41,7 @@ func (c *CreateEgressResource) Execute(ctx context.Context, session *sessions.Se
 	case <-c.ctx.Done():
 	default:
 		c.Response <- &resources.WebRTC{
+			Id:  session.Id.String(),
 			SDP: answer,
 		}
 	}
