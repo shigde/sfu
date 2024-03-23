@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
-	"github.com/shigde/sfu/internal/lobby"
+	"github.com/shigde/sfu/internal/lobby/mocks"
 	"github.com/shigde/sfu/pkg/message"
 	"github.com/stretchr/testify/assert"
 )
@@ -27,7 +27,7 @@ func testMessengerSetup(t *testing.T) (*Messenger, *senderMock, *msgObserverMock
 func TestMessenger(t *testing.T) {
 	t.Run("send Offer", func(t *testing.T) {
 		m, sender, _ := testMessengerSetup(t)
-		_, _ = m.SendOffer(lobby.MockedOffer, 2)
+		_, _ = m.SendOffer(mocks.Offer, 2)
 		assert.Equal(t, rawOffer, <-sender.testSendData)
 	})
 
@@ -47,7 +47,7 @@ func TestMessenger(t *testing.T) {
 		sender.updateOnmessageListener(webrtc.DataChannelMessage{Data: rawAnswer})
 		wg.Wait()
 
-		assert.Equal(t, lobby.MockedAnswer, answer)
+		assert.Equal(t, mocks.Answer, answer)
 		assert.Equal(t, uint32(3), index)
 	})
 }
