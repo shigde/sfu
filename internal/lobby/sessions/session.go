@@ -20,7 +20,7 @@ import (
 const sessionTracer = telemetry.TracerName
 
 type RtpEngine interface {
-	EstablishEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, endpointType rtp.EndpointType, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
+	EstablishEndpoint(ctx context.Context, sessionCtx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, endpointType rtp.EndpointType, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
 }
 
 var (
@@ -92,7 +92,7 @@ func (s *Session) CreateIngressEndpoint(ctx context.Context, offer *webrtc.Sessi
 	option = append(option, rtp.EndpointWithLostConnectionListener(s.onLostConnection))
 	option = append(option, rtp.EndpointWithTrackDispatcher(s.hub))
 
-	endpoint, err := s.rtpEngine.EstablishEndpoint(s.ctx, s.Id, s.hub.LiveStreamId, *offer, rtp.IngressEndpoint, option...)
+	endpoint, err := s.rtpEngine.EstablishEndpoint(ctx, s.ctx, s.Id, s.hub.LiveStreamId, *offer, rtp.IngressEndpoint, option...)
 	if err != nil {
 		return nil, telemetry.RecordErrorf(span, "create rtp endpoint", err)
 	}
@@ -153,7 +153,7 @@ func (s *Session) CreateEgressEndpoint(ctx context.Context, offer *webrtc.Sessio
 	option = append(option, rtp.EndpointWithNegotiationNeededListener(s.signal.OnNegotiationNeeded))
 	option = append(option, rtp.EndpointWithLostConnectionListener(s.onLostConnection))
 
-	endpoint, err := s.rtpEngine.EstablishEndpoint(s.ctx, s.Id, s.hub.LiveStreamId, *offer, rtp.EgressEndpoint, option...)
+	endpoint, err := s.rtpEngine.EstablishEndpoint(ctx, s.ctx, s.Id, s.hub.LiveStreamId, *offer, rtp.EgressEndpoint, option...)
 	if err != nil {
 		return nil, telemetry.RecordErrorf(span, "create rtp endpoint", err)
 	}

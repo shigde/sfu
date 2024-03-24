@@ -13,8 +13,8 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-func EstablishEndpoint(sessionCxt context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, endpointType EndpointType, options ...EndpointOption) (*Endpoint, error) {
-	_, span := newTraceSpan(sessionCxt, "establish_endpoint", sessionId.String(), liveStream.String())
+func EstablishEndpoint(ctx context.Context, sessionCxt context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, endpointType EndpointType, options ...EndpointOption) (*Endpoint, error) {
+	_, span := newTraceSpan(ctx, "establish_endpoint", sessionId.String(), liveStream.String())
 	defer span.End()
 	metric.GraphNodeUpdate(metric.BuildNode(sessionId.String(), liveStream.String(), endpointType.ToString()))
 
