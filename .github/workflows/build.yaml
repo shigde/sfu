@@ -18,10 +18,8 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.21.x'
-      - name: Install dependencies
-        run: go get -u ./...
       - name: Build
-        run: go build -v ./...
+        run: make build
       - name: Test with Go
         run: go test -json > TestResults-${{ matrix.go-version }}.json
       - name: Upload Go test results
