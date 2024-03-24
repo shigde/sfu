@@ -21,9 +21,4 @@ jobs:
       - name: Build
         run: make build
       - name: Test with Go
-        run: make test-git
-      - name: Upload Go test results
-        uses: actions/upload-artifact@v4
-        with:
-          name: Go-results
-          path: TestResults.json
+        uses: robherley/go-test-action@v0.2.0
