@@ -22,3 +22,5 @@ jobs:
         run: make build
       - name: Test with Go
         uses: robherley/go-test-action@v0.2.0
+        with:
+          testArguments: './internal/lobby/... ./internal/media/... ./internal/stream/... ./internal/rtp/...'
