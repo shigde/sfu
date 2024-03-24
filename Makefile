@@ -54,6 +54,13 @@ test: go_init
 		-coverprofile=cover.out -covermode=atomic \
 		-v -race ${GO_TESTPKGS}
 
+test-git: go_init
+	go test \
+		-json > TestResults.json \
+		-timeout 240s \
+		-coverprofile=cover.out -covermode=atomic \
+		-v -race ${GO_TESTPKGS}
+
 monitor:
 	docker-compose -f ./mon/dev/docker-compose.yml up -d
 

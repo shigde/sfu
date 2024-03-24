@@ -21,9 +21,9 @@ jobs:
       - name: Build
         run: make build
       - name: Test with Go
-        run: make test
+        run: make test-git
       - name: Upload Go test results
         uses: actions/upload-artifact@v4
         with:
-          name: Go-results-${{ matrix.go-version }}
-          path: TestResults-${{ matrix.go-version }}.json
+          name: Go-results
+          path: TestResults.json
