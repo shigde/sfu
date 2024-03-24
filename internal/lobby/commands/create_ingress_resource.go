@@ -10,10 +10,10 @@ import (
 )
 
 type CreateIngressResource struct {
-	*command
+	*Command
 	sdp      *webrtc.SessionDescription
 	option   []resources.Option
-	Response chan *resources.WebRTC
+	Response *resources.WebRTC
 }
 
 func NewCreateIngressResource(
@@ -22,27 +22,24 @@ func NewCreateIngressResource(
 	sdp *webrtc.SessionDescription,
 	option ...resources.Option,
 ) *CreateIngressResource {
-	command := newCommand(ctx, user)
+	command := NewCommand(ctx, user)
 	return &CreateIngressResource{
-		command:  command,
+		Command:  command,
 		sdp:      sdp,
 		option:   option,
-		Response: make(chan *resources.WebRTC),
+		Response: nil,
 	}
 }
-func (c *CreateIngressResource) Execute(ctx context.Context, session *sessions.Session) {
-	answer, err := session.CreateIngressEndpoint(ctx, c.sdp)
+func (c *CreateIngressResource) Execute(session *sessions.Session) {
+	answer, err := session.CreateIngressEndpoint(c.ParentCtx, c.sdp)
 	if err != nil {
-		c.Fail(err)
+		c.SetError(err)
 		return
 	}
 
-	select {
-	case <-c.ctx.Done():
-	default:
-		c.Response <- &resources.WebRTC{
-			Id:  session.Id.String(),
-			SDP: answer,
-		}
+	c.Response = &resources.WebRTC{
+		Id:  session.Id.String(),
+		SDP: answer,
 	}
+	c.SetDone()
 }

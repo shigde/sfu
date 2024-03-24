@@ -2,34 +2,49 @@ package commands
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 )
 
-type command struct {
-	ctx  context.Context
-	user uuid.UUID
-	Err  chan error
+type Command struct {
+	ParentCtx context.Context
+	user      uuid.UUID
+	Err       error
+	done      chan struct{}
 }
 
-func newCommand(
-	ctx context.Context,
-	user uuid.UUID,
-) *command {
-	return &command{
-		ctx:  ctx,
-		user: user,
-		Err:  make(chan error),
+func NewCommand(ctx context.Context, user uuid.UUID) *Command {
+	return &Command{
+		ParentCtx: ctx,
+		user:      user,
+		Err:       nil,
+		done:      make(chan struct{}),
 	}
 }
-func (c *command) GetUserId() uuid.UUID {
+func (c *Command) GetUserId() uuid.UUID {
 	return c.user
 }
 
-func (c *command) Fail(err error) {
+func (c *Command) SetError(err error) {
 	select {
-	case <-c.ctx.Done():
+	case <-c.done:
 	default:
-		c.Err <- err
+		if c.Err != nil {
+			err = fmt.Errorf("%w: %w", c.Err, err)
+		}
+		c.Err = err
+		c.SetDone()
 	}
+}
+
+func (c *Command) SetDone() {
+	select {
+	case <-c.done:
+	default:
+		close(c.done)
+	}
+}
+func (c *Command) Done() <-chan struct{} {
+	return c.done
 }

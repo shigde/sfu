@@ -37,39 +37,37 @@ func NewLobbyManager(storage storage.Storage, e sessions.RtpEngine, homeUrl *url
 }
 
 func (m *LobbyManager) NewIngressResource(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription, option ...resources.Option) (*resources.WebRTC, error) {
-	lobby, err := m.lobbies.getOrCreateLobby(ctx, lobbyId, m.lobbyGarbage)
+	lobbyObj, err := m.lobbies.getOrCreateLobby(ctx, lobbyId, m.lobbyGarbage)
 	if err != nil {
 		return nil, fmt.Errorf("getting or creating lobby: %w", err)
 	}
-	if ok := lobby.newSession(user); !ok {
+	if ok := lobbyObj.newSession(user); !ok {
 		return nil, fmt.Errorf("creating new session: %w", err)
 	}
 
 	cmd := commands.NewCreateIngressResource(ctx, user, offer)
-	go lobby.handle(cmd)
+	lobbyObj.runCommand(cmd)
+
 	select {
-	case err = <-cmd.Err:
-		return nil, err
-	case res := <-cmd.Response:
-		return res, nil
+	case <-cmd.Done():
+		return cmd.Response, cmd.Err
 	case <-ctx.Done():
 		return nil, fmt.Errorf("time out")
 	}
 }
 
 func (m *LobbyManager) NewEgressResource(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription, option ...resources.Option) (*resources.WebRTC, error) {
-	lobby, err := m.lobbies.getOrCreateLobby(ctx, lobbyId, m.lobbyGarbage)
+	lobbyObj, err := m.lobbies.getOrCreateLobby(ctx, lobbyId, m.lobbyGarbage)
 	if err != nil {
 		return nil, fmt.Errorf("getting or creating lobby: %w", err)
 	}
 
 	cmd := commands.NewCreateEgressResource(ctx, user, offer)
-	go lobby.handle(cmd)
+	lobbyObj.runCommand(cmd)
+
 	select {
-	case err = <-cmd.Err:
-		return nil, err
-	case res := <-cmd.Response:
-		return res, nil
+	case <-cmd.Done():
+		return cmd.Response, cmd.Err
 	case <-ctx.Done():
 		return nil, fmt.Errorf("time out")
 	}

@@ -10,39 +10,31 @@ import (
 )
 
 type CreateEgressResource struct {
-	*command
+	*Command
 	sdp      *webrtc.SessionDescription
 	option   []resources.Option
-	Response chan *resources.WebRTC
+	Response *resources.WebRTC
 }
 
-func NewCreateEgressResource(
-	ctx context.Context,
-	user uuid.UUID,
-	sdp *webrtc.SessionDescription,
-	option ...resources.Option,
-) *CreateEgressResource {
-	command := newCommand(ctx, user)
+func NewCreateEgressResource(ctx context.Context, user uuid.UUID, sdp *webrtc.SessionDescription, option ...resources.Option) *CreateEgressResource {
+	command := NewCommand(ctx, user)
 	return &CreateEgressResource{
-		command:  command,
+		Command:  command,
 		sdp:      sdp,
 		option:   option,
-		Response: make(chan *resources.WebRTC),
+		Response: nil,
 	}
 }
-func (c *CreateEgressResource) Execute(ctx context.Context, session *sessions.Session) {
-	answer, err := session.CreateEgressEndpoint(ctx, c.sdp)
+func (c *CreateEgressResource) Execute(session *sessions.Session) {
+	answer, err := session.CreateEgressEndpoint(c.ParentCtx, c.sdp)
 	if err != nil {
-		c.Fail(err)
+		c.SetError(err)
 		return
 	}
 
-	select {
-	case <-c.ctx.Done():
-	default:
-		c.Response <- &resources.WebRTC{
-			Id:  session.Id.String(),
-			SDP: answer,
-		}
+	c.Response = &resources.WebRTC{
+		Id:  session.Id.String(),
+		SDP: answer,
 	}
+	c.SetDone()
 }

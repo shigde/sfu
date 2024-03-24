@@ -12,13 +12,14 @@ import (
 
 type command interface {
 	GetUserId() uuid.UUID
-	Execute(ctx context.Context, session *sessions.Session)
-	Fail(err error)
+	Execute(session *sessions.Session)
+	SetError(err error)
 }
 
 var (
 	ErrNoSession            = errors.New("no session exists")
 	ErrSessionAlreadyExists = errors.New("session already exists")
+	ErrLobbyClosed          = errors.New("lobby already closed")
 )
 
 // lobby, is a container for all sessions of a stream
@@ -34,6 +35,7 @@ type lobby struct {
 	sessionCreator chan<- sessions.Item
 	sessionGarbage chan<- sessions.Item
 	lobbyGarbage   chan<- lobbyItem
+	cmdRunner      chan<- command
 }
 
 func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, lobbyGarbage chan<- lobbyItem) *lobby {
@@ -42,6 +44,7 @@ func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, lobbyGarbage chan<- l
 	hub := sessions.NewHub(ctx, sessRep, entity.LiveStreamId, nil)
 	sessionGarbage := make(chan sessions.Item)
 	sessionCreator := make(chan sessions.Item)
+	cmdRunner := make(chan command)
 
 	lobby := &lobby{
 		Id:   entity.UUID,
@@ -55,8 +58,9 @@ func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, lobbyGarbage chan<- l
 		sessionGarbage: sessionGarbage,
 		sessionCreator: sessionCreator,
 		lobbyGarbage:   lobbyGarbage,
+		cmdRunner:      cmdRunner,
 	}
-	// create and delete session should be sequentiell
+	// session handling should be sequentiell to avoid data races in group state
 	go func() {
 		for {
 			select {
@@ -82,6 +86,15 @@ func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, lobbyGarbage chan<- l
 					// because we want to avoid that`s callers would call more than one time to crete a session
 					lobby.stop()
 				}
+			case cmd := <-cmdRunner:
+				// in the meantime the lobby could be closed, check again
+				select {
+				case <-lobby.ctx.Done():
+					cmd.SetError(ErrLobbyClosed)
+				default:
+					lobby.handle(cmd)
+				}
+			// wenn der getriggert wird können die anderen überlaufen :-(
 			case <-lobby.ctx.Done():
 				slog.Debug("stop session sequencer")
 				return
@@ -119,12 +132,18 @@ func (l *lobby) removeSession(userId uuid.UUID) bool {
 	}
 }
 
+func (l *lobby) runCommand(cmd command) {
+	select {
+	case l.cmdRunner <- cmd:
+	case <-l.ctx.Done():
+		cmd.SetError(ErrLobbyClosed)
+	}
+}
+
 // handle, run session commands on existing sessions
-// the session could be already deleted, after the command was started.
-// But this case is handel by the session it selves
 func (l *lobby) handle(cmd command) {
 	if session, found := l.sessions.FindByUserId(cmd.GetUserId()); found {
-		cmd.Execute(l.ctx, session)
+		cmd.Execute(session)
 	}
-	cmd.Fail(ErrNoSession)
+	cmd.SetError(ErrNoSession)
 }

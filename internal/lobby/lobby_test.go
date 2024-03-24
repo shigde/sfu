@@ -7,15 +7,17 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/lobby/commands"
 	"github.com/shigde/sfu/internal/lobby/mocks"
 	"github.com/shigde/sfu/internal/lobby/resources"
 	"github.com/shigde/sfu/internal/lobby/sessions"
+	"github.com/shigde/sfu/internal/logging"
 	"github.com/stretchr/testify/assert"
 )
 
 func testLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 	t.Helper()
-	//logging.SetupDebugLogger()
+	logging.SetupDebugLogger()
 	entity := &LobbyEntity{
 		UUID:         uuid.New(),
 		LiveStreamId: uuid.New(),
@@ -31,21 +33,16 @@ func testLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 func TestLobby_handle(t *testing.T) {
 	t.Run("command successfully", func(t *testing.T) {
 		lobby, user := testLobbySetup(t)
-		cmd := &mockCmd{
-			user: user,
-			f: func(ctx context.Context, s *sessions.Session) (*resources.WebRTC, error) {
-				return &resources.WebRTC{SDP: mocks.Answer}, nil
-			},
-			Response: make(chan *resources.WebRTC),
-			Err:      make(chan error),
+		cmd := newCmdMock(context.Background(), user)
+		cmd.f = func(ctx context.Context, s *sessions.Session) (*resources.WebRTC, error) {
+			return &resources.WebRTC{SDP: mocks.Answer}, nil
 		}
-		go lobby.handle(cmd)
+		lobby.runCommand(cmd)
 
 		select {
-		case res := <-cmd.Response:
-			assert.Equal(t, mocks.Answer, res.SDP)
-		case <-cmd.Err:
-			t.Fatalf("no error expected")
+		case <-cmd.Done():
+			assert.Equal(t, mocks.Answer, cmd.Response.SDP)
+			assert.NoError(t, cmd.Err)
 		case <-time.After(time.Second * 3):
 			t.Fatalf("run in timeout")
 		}
@@ -53,17 +50,13 @@ func TestLobby_handle(t *testing.T) {
 
 	t.Run("command error session not found", func(t *testing.T) {
 		lobby, _ := testLobbySetup(t)
-		cmd := &mockCmd{
-			user: uuid.New(),
-			Err:  make(chan error),
-		}
-		go lobby.handle(cmd)
+		cmd := newCmdMock(context.Background(), uuid.New())
+		lobby.runCommand(cmd)
 
 		select {
-		case <-cmd.Response:
-			t.Fatalf("no webrtc resource expected")
-		case err := <-cmd.Err:
-			assert.ErrorIs(t, err, ErrNoSession)
+		case <-cmd.Done():
+			assert.Nil(t, cmd.Response)
+			assert.ErrorIs(t, cmd.Err, ErrNoSession)
 		case <-time.After(time.Second * 3):
 			t.Fatalf("run in timeout")
 		}
@@ -72,52 +65,34 @@ func TestLobby_handle(t *testing.T) {
 	t.Run("command with error", func(t *testing.T) {
 		cmdErr := errors.New("cmd test error")
 		lobby, user := testLobbySetup(t)
-		cmd := &mockCmd{
-			user: user,
-			f: func(ctx context.Context, s *sessions.Session) (*resources.WebRTC, error) {
-				return nil, cmdErr
-			},
-			Err: make(chan error),
+		cmd := newCmdMock(context.Background(), user)
+		cmd.f = func(ctx context.Context, s *sessions.Session) (*resources.WebRTC, error) {
+			return nil, cmdErr
 		}
-
-		go lobby.handle(cmd)
+		lobby.runCommand(cmd)
 
 		select {
-		case <-cmd.Response:
-			t.Fatalf("no webrtc resource expected")
-		case err := <-cmd.Err:
-			assert.ErrorIs(t, err, cmdErr)
+		case <-cmd.Done():
+			assert.Nil(t, cmd.Response)
+			assert.ErrorIs(t, cmd.Err, cmdErr)
 		case <-time.After(time.Second * 3):
 			t.Fatalf("run in timeout")
 		}
 	})
 
 	t.Run("command fails, because lobby context was done", func(t *testing.T) {
-		cmdCtxErr := errors.New("cmd context done")
 		lobby, user := testLobbySetup(t)
-		ctx, cancel := context.WithCancel(context.Background())
-		lobby.ctx = ctx
-		cmd := &mockCmd{
-			user: user,
-			f: func(paramCtx context.Context, s *sessions.Session) (*resources.WebRTC, error) {
-				select {
-				case <-paramCtx.Done():
-					return nil, cmdCtxErr
-				default:
-					return nil, nil
-				}
-			},
-			Err:      make(chan error),
-			Response: make(chan *resources.WebRTC),
+		cmd := newCmdMock(context.Background(), user)
+		cmd.f = func(ctx context.Context, s *sessions.Session) (*resources.WebRTC, error) {
+			return nil, nil
 		}
-		cancel()
-		go lobby.handle(cmd)
+		lobby.stop()
+		lobby.runCommand(cmd)
 
 		select {
-		case <-cmd.Response:
-			t.Fatalf("no webrtc resource expected")
-		case err := <-cmd.Err:
-			assert.ErrorIs(t, err, cmdCtxErr)
+		case <-cmd.Done():
+			assert.Nil(t, cmd.Response)
+			assert.ErrorIs(t, cmd.Err, ErrLobbyClosed)
 		case <-time.After(time.Second * 3):
 			t.Fatalf("run in timeout")
 		}
@@ -221,26 +196,24 @@ func TestLobby_sessionSequence(t *testing.T) {
 }
 
 type mockCmd struct {
-	ctx      context.Context
-	user     uuid.UUID
-	Response chan *resources.WebRTC
-	Err      chan error
+	*commands.Command
+	Response *resources.WebRTC
 	f        func(ctx context.Context, s *sessions.Session) (*resources.WebRTC, error)
 }
 
-func (mc *mockCmd) GetUserId() uuid.UUID {
-	return mc.user
+func newCmdMock(ctx context.Context, user uuid.UUID) *mockCmd {
+	return &mockCmd{
+		Command:  commands.NewCommand(ctx, user),
+		Response: nil,
+	}
 }
 
-func (mc *mockCmd) Execute(ctx context.Context, session *sessions.Session) {
-	res, err := mc.f(ctx, session)
+func (mc *mockCmd) Execute(session *sessions.Session) {
+	res, err := mc.f(mc.ParentCtx, session)
 	if err != nil {
-		mc.Err <- err
+		mc.SetError(err)
 		return
 	}
-	mc.Response <- res
-}
-
-func (mc *mockCmd) Fail(err error) {
-	mc.Err <- err
+	mc.Response = res
+	mc.SetDone()
 }
