@@ -1,7 +1,5 @@
 package telemetry
 
-const TracerName = "github.com/shigde/sfu"
-
 type TelemetryConfig struct {
 	Enable bool `mapstructure:"enable"`
 }

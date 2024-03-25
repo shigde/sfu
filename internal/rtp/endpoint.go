@@ -208,18 +208,18 @@ func (c *Endpoint) RemoveTrack(info *TrackInfo) {
 	}
 }
 
-func (c *Endpoint) SetIngressMute(ingressMid string, mute bool) (*TrackInfo, bool) {
+func (c *Endpoint) SetIngressMute(ctx context.Context, ingressMid string, mute bool) (*TrackInfo, bool) {
 	if sdpInfo, ok := c.trackSdpInfoRepository.getTrackSdpInfoByIngressMid(ingressMid); ok {
 		sdpInfo.Mute = mute
-		return newTrackInfo(nil, *sdpInfo), true
+		return newTrackInfo(ctx, nil, *sdpInfo), true
 	}
 	return nil, false
 }
 
-func (c *Endpoint) SetEgressMute(infoId uuid.UUID, mute bool) (*TrackInfo, bool) {
+func (c *Endpoint) SetEgressMute(ctx context.Context, infoId uuid.UUID, mute bool) (*TrackInfo, bool) {
 	if sdpInfo, ok := c.trackSdpInfoRepository.Get(infoId); ok {
 		sdpInfo.Mute = mute
-		return newTrackInfo(nil, *sdpInfo), true
+		return newTrackInfo(ctx, nil, *sdpInfo), true
 	}
 	return nil, false
 }
@@ -302,8 +302,8 @@ func (c *Endpoint) Destruct() error {
 	return nil
 }
 
-func (e *Endpoint) getPeerConnection() *webrtc.PeerConnection {
-	pc, _ := e.peerConnection.(*webrtc.PeerConnection)
+func (c *Endpoint) getPeerConnection() *webrtc.PeerConnection {
+	pc, _ := c.peerConnection.(*webrtc.PeerConnection)
 	return pc
 }
 

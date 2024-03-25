@@ -39,7 +39,7 @@ func newMediaStream(sessionCxt context.Context, remoteId string, sessionId uuid.
 
 func (s *mediaStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) error {
 	slog.Debug("rtp.mediaStream: write audio track", "streamId", s.id, "remoteTrackId", track.ID(), "purpose", s.purpose.ToString())
-	ctx, span := otel.Tracer(tracerName).Start(ctx, "rtp.mediaStream: write_audio_rtp")
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "rtp.ingress: write_audio_rtp")
 	defer span.End()
 	audio, err := s.createNewAudioLocalTrack(track)
 	if err != nil {
@@ -50,12 +50,13 @@ func (s *mediaStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemo
 
 	// start local audio track
 	go func() {
-		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.audioTrack, s.audioInfo))
+		var ctx context.Context
+		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(ctx, s.audioTrack, s.audioInfo))
 
 		// blocking loop
 		err := s.audioWriter.writeRtp(track, s.audioTrack)
 
-		_, span := newTraceSpan(context.Background(), s.sessionCxt, "rtp.ingress: remove_audio_track")
+		ctx, span := newTraceSpan(context.Background(), s.sessionCxt, "rtp.ingress: remove_audio_track")
 		span.SetAttributes(
 			attribute.String("mediaStreamId", s.audioTrack.StreamID()),
 			attribute.String("track", s.audioTrack.ID()),
@@ -73,7 +74,7 @@ func (s *mediaStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemo
 }
 
 func (s *mediaStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) error {
-	slog.Debug("rtp.mediaStream: write video track", "streamId", s.id, "remoteTrackId", track.ID(), "purpose", s.purpose.ToString())
+	slog.Debug("rtp.ingress: write video track", "streamId", s.id, "remoteTrackId", track.ID(), "purpose", s.purpose.ToString())
 	_, span := otel.Tracer(tracerName).Start(ctx, "rtp.mediaStream: write_video_rtp")
 	defer span.End()
 
@@ -87,12 +88,13 @@ func (s *mediaStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemo
 
 	// start local video track
 	go func() {
-		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.videoTrack, s.videoInfo))
+		var ctx context.Context
+		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(ctx, s.videoTrack, s.videoInfo))
 
 		// blocking loop
 		err := s.videoWriter.writeRtp(track, s.videoTrack)
 
-		_, span := newTraceSpan(context.Background(), s.sessionCxt, "rtp.ingress: remove_video_track")
+		ctx, span := newTraceSpan(context.Background(), s.sessionCxt, "rtp.ingress: remove_video_track")
 		span.SetAttributes(
 			attribute.String("mediaStreamId", s.videoTrack.StreamID()),
 			attribute.String("track", s.videoTrack.ID()),

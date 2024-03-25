@@ -3,6 +3,7 @@ package sessions
 import (
 	"context"
 	"errors"
+	"strconv"
 	"sync"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/telemetry"
 	"github.com/shigde/sfu/pkg/message"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/exp/slog"
@@ -53,9 +53,7 @@ type Session struct {
 
 func NewSession(ctx context.Context, user uuid.UUID, hub *Hub, engine RtpEngine, garbage chan Item) *Session {
 	sessionId := uuid.New()
-	ctx = context.WithValue(ctx, "sessionId", sessionId)
-	ctx = context.WithValue(ctx, "liveStreamId", hub.LiveStreamId)
-	ctx = context.WithValue(ctx, "userId", user.String())
+	ctx = telemetry.ContextWithSessionValue(ctx, sessionId.String(), hub.LiveStreamId.String(), user.String())
 	ctx, cancel := context.WithCancel(ctx)
 
 	signal := newSignal(ctx, sessionId, user)
@@ -223,21 +221,49 @@ func (s *Session) removeTrack(trackInfo *rtp.TrackInfo) {
 func (s *Session) muteTrack(trackInfo *rtp.TrackInfo) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+
+	// track telemetry data
+	ctx, span := s.trace(trackInfo.Ctx, "egress_mute_track_event")
+	defer span.End()
+	// telemetry
+	span.SetAttributes(
+		attribute.String("ingress_mid", trackInfo.IngressMid),
+		attribute.String("ingress_mute", strconv.FormatBool(trackInfo.GetMute())),
+	)
+
 	if s.egress == nil {
 		return
 	}
 
-	if egressInfo, ok := s.egress.SetEgressMute(trackInfo.GetId(), trackInfo.GetMute()); ok {
+	if egressInfo, ok := s.egress.SetEgressMute(ctx, trackInfo.GetId(), trackInfo.GetMute()); ok {
+		// send event to client
 		_ = s.signal.messenger.SendMute(&message.Mute{
 			Mid:  egressInfo.GetEgressMid(),
 			Mute: egressInfo.GetMute(),
 		})
+		// telemetry
+		span.SetAttributes(
+			attribute.String("egress_mid", egressInfo.GetEgressMid()),
+			attribute.String("egress_mute", strconv.FormatBool(egressInfo.GetMute())),
+		)
+		// telemetry event
+		span.AddEvent("Send Egress Mute to Client")
 	}
 }
 
 func (s *Session) onMuteTrack(mute *message.Mute) {
-	if trackInfo, ok := s.ingress.SetIngressMute(mute.Mid, mute.Mute); ok {
+
+	// track telemetry data
+	ctx, span := s.trace(context.Background(), "ingress_mute_track_event")
+	defer span.End()
+	span.SetAttributes(
+		attribute.String("mid", mute.Mid),
+		attribute.String("mid", strconv.FormatBool(mute.Mute)),
+	)
+	if trackInfo, ok := s.ingress.SetIngressMute(ctx, mute.Mid, mute.Mute); ok {
 		go s.hub.DispatchMuteTrack(trackInfo)
+		// telemetry event
+		span.AddEvent("Dispatch Mute to Sessions")
 	}
 }
 
@@ -251,9 +277,5 @@ func (s *Session) isDone() bool {
 }
 
 func (s *Session) trace(ctx context.Context, spanName string) (context.Context, trace.Span) {
-	ctx, span := otel.Tracer(sessionTracer).Start(ctx, "session: "+spanName, trace.WithAttributes(
-		attribute.String("sessionId", s.Id.String()),
-		attribute.String("userId", s.user.String()),
-	))
-	return ctx, span
+	return telemetry.NewTraceSpan(ctx, s.ctx, "session: "+spanName)
 }
