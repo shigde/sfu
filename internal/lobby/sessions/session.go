@@ -52,12 +52,16 @@ type Session struct {
 }
 
 func NewSession(ctx context.Context, user uuid.UUID, hub *Hub, engine RtpEngine, garbage chan Item) *Session {
-	ctx, cancel := context.WithCancel(ctx)
 	sessionId := uuid.New()
+	ctx = context.WithValue(ctx, "sessionId", sessionId)
+	ctx = context.WithValue(ctx, "liveStreamId", hub.LiveStreamId)
+	ctx = context.WithValue(ctx, "userId", user.String())
+	ctx, cancel := context.WithCancel(ctx)
+
 	signal := newSignal(ctx, sessionId, user)
 
 	session := &Session{
-		Id:    uuid.New(),
+		Id:    sessionId,
 		mutex: sync.RWMutex{},
 		ctx:   ctx,
 		user:  user,

@@ -14,7 +14,7 @@ import (
 )
 
 func EstablishEndpoint(ctx context.Context, sessionCxt context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, endpointType EndpointType, options ...EndpointOption) (*Endpoint, error) {
-	_, span := newTraceSpan(ctx, "establish_endpoint", sessionId.String(), liveStream.String())
+	_, span := newTraceSpan(ctx, sessionCxt, "rtp: establish_endpoint")
 	defer span.End()
 	metric.GraphNodeUpdate(metric.BuildNode(sessionId.String(), liveStream.String(), endpointType.ToString()))
 

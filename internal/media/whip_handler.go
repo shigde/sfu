@@ -71,6 +71,8 @@ func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 			return
 		}
 
+		span.SetAttributes(attribute.String("sessionId", resourceId))
+
 		if err != nil {
 			_ = telemetry.RecordError(span, err)
 			httpError(w, "error build whip", http.StatusInternalServerError, err)

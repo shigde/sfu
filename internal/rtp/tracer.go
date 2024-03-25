@@ -11,10 +11,11 @@ import (
 
 const tracerName = telemetry.TracerName
 
-func newTraceSpan(ctx context.Context, spanName string, sessionId string, lobbyId string) (context.Context, trace.Span) {
+func newTraceSpan(ctx context.Context, sessionCxt context.Context, spanName string) (context.Context, trace.Span) {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, spanName, trace.WithAttributes(
-		attribute.String("sessionId", sessionId),
-		attribute.String("lobbyId", lobbyId),
+		attribute.String("sessionId", sessionCxt.Value("sessionId").(string)),
+		attribute.String("liveStreamId", sessionCxt.Value("liveStreamId").(string)),
+		attribute.String("userId", sessionCxt.Value("userId").(string)),
 	))
 	return ctx, span
 }

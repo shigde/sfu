@@ -13,6 +13,7 @@ import (
 	"github.com/shigde/sfu/internal/stream"
 	"github.com/shigde/sfu/internal/telemetry"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func whep(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
@@ -55,6 +56,12 @@ func whep(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 			return
 		}
 
+		// track request meta by otel
+		span.SetAttributes(
+			attribute.String("streamId", liveStream.UUID.String()),
+			attribute.String("userId", userId.String()),
+		)
+
 		answer, resourceId, err := liveService.CreateLobbyEgressEndpoint(ctx, offer, liveStream, userId)
 		if err != nil && errors.Is(err, lobby.ErrSessionAlreadyExists) {
 			w.WriteHeader(http.StatusConflict)
@@ -68,6 +75,7 @@ func whep(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 			httpError(w, "error build whep", http.StatusInternalServerError, err)
 			return
 		}
+		span.SetAttributes(attribute.String("sessionId", resourceId))
 
 		response := []byte(answer.SDP)
 		hash := md5.Sum(response)
