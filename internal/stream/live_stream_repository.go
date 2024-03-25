@@ -60,7 +60,7 @@ func (r *LiveStreamRepository) AllBySpaceIdentifier(ctx context.Context, identif
 	}()
 
 	var streams []LiveStream
-	result := tx.Joins("Space", tx.Where(&Space{Identifier: identifier})).Model(&LiveStream{}).Limit(100).Find(&streams)
+	result := tx.Preload("Video").Joins("Space", tx.Where(&Space{Identifier: identifier})).Model(&LiveStream{}).Limit(100).Find(&streams)
 
 	if result.Error != nil {
 		return nil, fmt.Errorf("fetching all streams %w", result.Error)

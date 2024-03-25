@@ -24,6 +24,12 @@ func getStreamList(streamService *stream.LiveStreamService) http.HandlerFunc {
 			return
 		}
 
+		for i, streamResource := range streams {
+			if streamResource.Video != nil {
+				streams[i].Title = streamResource.Video.Name
+			}
+		}
+
 		if err := json.NewEncoder(w).Encode(streams); err != nil {
 			httpError(w, "error reading stream list", http.StatusInternalServerError, err)
 		}
@@ -37,7 +43,10 @@ func getStream(streamService *stream.LiveStreamService) http.HandlerFunc {
 			handleResourceError(w, err)
 			return
 		}
-		streamResource.Title = streamResource.Video.Name
+
+		if streamResource.Video != nil {
+			streamResource.Title = streamResource.Video.Name
+		}
 
 		if err := json.NewEncoder(w).Encode(streamResource); err != nil {
 			httpError(w, "stream invalid", http.StatusInternalServerError, err)

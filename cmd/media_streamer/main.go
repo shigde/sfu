@@ -10,6 +10,7 @@ import (
 	"github.com/shigde/sfu/internal/runner"
 	"github.com/shigde/sfu/pkg/client"
 	"github.com/shigde/sfu/pkg/media"
+	"github.com/shigde/sfu/pkg/message"
 	"golang.org/x/exp/slog"
 )
 
@@ -97,6 +98,11 @@ type mediaObserver struct {
 	id        uuid.UUID
 	endpoint  *rtp.Connection
 	messenger *media.Messenger
+}
+
+func (o *mediaObserver) OnMute(mute *message.Mute) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func newMediaObserver(endpoint *rtp.Connection, messenger *media.Messenger) *mediaObserver {

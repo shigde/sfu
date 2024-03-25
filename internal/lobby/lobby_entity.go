@@ -30,3 +30,13 @@ func NewLobbyEntity(streamID uuid.UUID, space string, shigHost string) *LobbyEnt
 func (LobbyEntity) TableName() string {
 	return "lobbies"
 }
+
+func (e *LobbyEntity) GetHost() string {
+	return e.Host
+}
+func (e *LobbyEntity) GetSpace() string {
+	return e.Space
+}
+func (e *LobbyEntity) GetLiveStreamID() string {
+	return e.LiveStreamId.String()
+}

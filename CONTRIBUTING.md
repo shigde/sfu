@@ -19,7 +19,12 @@ Found a bug and know how to fix it? Great! Please read on.
 ## Coding style
 
 * Don't copy-paste source code. Reuse it.
-* Please follow the https://google.github.io/styleguide/go/ coding style.
+* Please follow the https://go.dev/wiki/CodeReviewComments coding style.
+* Error Propagation Strategy: https://google.github.io/styleguide/go/best-practices.html#error-handling
+
+## Architecture
+
+* Overview: 
 
 
 Thank you very much for your help.

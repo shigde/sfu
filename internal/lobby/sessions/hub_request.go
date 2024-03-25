@@ -1,4 +1,4 @@
-package lobby
+package sessions
 
 import (
 	"github.com/shigde/sfu/internal/rtp"

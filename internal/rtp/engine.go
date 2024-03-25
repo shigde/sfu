@@ -13,8 +13,6 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-const tracerName = "github.com/shigde/sfu/internal/engine"
-
 type Engine struct {
 	config webrtc.Configuration
 }
@@ -75,6 +73,10 @@ func (e *Engine) createApi(apiOptions ...engineApiOption) (*engineApi, error) {
 
 	api.API = webrtc.NewAPI(webrtc.WithMediaEngine(m), webrtc.WithInterceptorRegistry(i))
 	return api, nil
+}
+
+func (e *Engine) EstablishEndpoint(ctx context.Context, sessionCtx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, endpointType EndpointType, options ...EndpointOption) (*Endpoint, error) {
+	return EstablishEndpoint(ctx, sessionCtx, e, sessionId, liveStream, offer, endpointType, options...)
 }
 
 func (e *Engine) EstablishIngressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {

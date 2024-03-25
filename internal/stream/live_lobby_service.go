@@ -21,15 +21,22 @@ func NewLiveLobbyService(store storage, lobbyManager liveLobbyManager) *LiveLobb
 }
 
 func (s *LiveLobbyService) CreateLobbyIngressEndpoint(ctx context.Context, sdp *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, string, error) {
-	var resource string
-	resourceData, err := s.lobbyManager.CreateLobbyIngressEndpoint(ctx, stream.Lobby.UUID, userId, sdp)
+	resource, err := s.lobbyManager.NewIngressResource(ctx, stream.Lobby.UUID, userId, sdp)
 	if err != nil {
-		return nil, resource, fmt.Errorf("accessing lobby: %w", err)
+		return nil, "---", fmt.Errorf("accessing lobby: %w", err)
 	}
-	resource = resourceData.Resource.String()
-	return resourceData.Answer, resource, nil
+	return resource.SDP, resource.Id, nil
 }
 
+func (s *LiveLobbyService) CreateLobbyEgressEndpoint(ctx context.Context, sdp *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, string, error) {
+	resource, err := s.lobbyManager.NewEgressResource(ctx, stream.Lobby.UUID, userId, sdp)
+	if err != nil {
+		return nil, "---", fmt.Errorf("accessing lobby: %w", err)
+	}
+	return resource.SDP, resource.Id, nil
+}
+
+// Old api
 func (s *LiveLobbyService) InitLobbyEgressEndpoint(ctx context.Context, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, error) {
 	resourceData, err := s.lobbyManager.InitLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId)
 	if err != nil {

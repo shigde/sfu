@@ -9,9 +9,10 @@ import (
 	"github.com/shigde/sfu/internal/logging"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/stream"
+	"github.com/shigde/sfu/internal/telemetry"
 )
 
-const tracerName = "github.com/shigde/sfu/internal/media"
+const tracerName = telemetry.TracerName
 
 func NewRouter(
 	securityConfig *auth.SecurityConfig,
@@ -40,8 +41,7 @@ func NewRouter(
 	router.HandleFunc("/space/setting", auth.Csrf(auth.HttpMiddleware(securityConfig, getSettings(rtpConfig)))).Methods("GET")
 	router.HandleFunc("/space/{space}/stream/{id}/whip", auth.HttpMiddleware(securityConfig, whip(streamService, liveLobbyService))).Methods("POST")
 	router.HandleFunc("/space/{space}/stream/{id}/whip", auth.TokenMiddleware(whipDelete(streamService, liveLobbyService))).Methods("DELETE")
-	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.TokenMiddleware(whepOffer(streamService, liveLobbyService))).Methods("POST")
-	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.TokenMiddleware(whepAnswer(streamService, liveLobbyService))).Methods("PATCH")
+	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.TokenMiddleware(whep(streamService, liveLobbyService))).Methods("POST")
 
 	// Lobby User Live Endpoints
 	router.HandleFunc("/space/{space}/stream/{id}/live", auth.TokenMiddleware(publishLiveStream(streamService, liveLobbyService))).Methods("POST")
@@ -49,7 +49,7 @@ func NewRouter(
 	router.HandleFunc("/space/{space}/stream/{id}/live", auth.TokenMiddleware(stopLiveStream(streamService, liveLobbyService))).Methods("DELETE")
 
 	// Static Stream listeners
-	router.HandleFunc("/space/{space}/stream/{id}/static/whep", auth.HttpMiddleware(securityConfig, whepStaticAnswer(streamService, liveLobbyService))).Methods("POST")
+	// router.HandleFunc("/space/{space}/stream/{id}/static/whep", auth.HttpMiddleware(securityConfig, whepStaticAnswer(streamService, liveLobbyService))).Methods("POST")
 
 	// Server to Server endpoints
 	router.HandleFunc("/space/{space}/stream/{id}/pipe", auth.HttpMiddleware(securityConfig, openPipe(streamService, liveLobbyService))).Methods("POST")

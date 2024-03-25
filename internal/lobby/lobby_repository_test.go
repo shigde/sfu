@@ -7,40 +7,41 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/lobby/sessions"
 	"github.com/shigde/sfu/internal/storage"
 	"github.com/stretchr/testify/assert"
 )
 
-func testRtpStreamLobbyRepositorySetup(t *testing.T) *lobbyRepository {
+func testLobbyRepositorySetup(t *testing.T) *lobbyRepository {
 	t.Helper()
 	store := storage.NewTestStore()
 	_ = store.GetDatabase().AutoMigrate(&LobbyEntity{})
-	var engine rtpEngine
+	var engine sessions.RtpEngine
 	host, _ := url.Parse("")
 	repository := newLobbyRepository(store, engine, host, "test-key")
 
 	return repository
 }
-func TestStreamLobbyRepository(t *testing.T) {
+func TestLobbyRepository(t *testing.T) {
 
 	t.Run("Get not existing lobby", func(t *testing.T) {
-		repo := testRtpStreamLobbyRepositorySetup(t)
+		repo := testLobbyRepositorySetup(t)
 		lobby, ok := repo.getLobby(uuid.New())
 		assert.False(t, ok)
 		assert.Nil(t, lobby)
 	})
 
 	t.Run("Create lobby", func(t *testing.T) {
-		repo := testRtpStreamLobbyRepositorySetup(t)
-		lobby, _ := repo.getOrCreateLobby(context.Background(), uuid.New(), make(chan uuid.UUID))
+		repo := testLobbyRepositorySetup(t)
+		lobby, _ := repo.getOrCreateLobby(context.Background(), uuid.New(), make(chan lobbyItem))
 		assert.NotNil(t, lobby)
 		lobby.stop()
 	})
 
 	t.Run("Create and Get lobby", func(t *testing.T) {
-		repo := testRtpStreamLobbyRepositorySetup(t)
+		repo := testLobbyRepositorySetup(t)
 		id := uuid.New()
-		lobbyCreated, _ := repo.getOrCreateLobby(context.Background(), id, make(chan uuid.UUID))
+		lobbyCreated, _ := repo.getOrCreateLobby(context.Background(), id, make(chan lobbyItem))
 
 		assert.NotNil(t, lobbyCreated)
 		lobbyGet, ok := repo.getLobby(id)
@@ -50,9 +51,9 @@ func TestStreamLobbyRepository(t *testing.T) {
 	})
 
 	t.Run("Delete lobby", func(t *testing.T) {
-		repo := testRtpStreamLobbyRepositorySetup(t)
+		repo := testLobbyRepositorySetup(t)
 		id := uuid.New()
-		created, _ := repo.getOrCreateLobby(context.Background(), id, make(chan uuid.UUID))
+		created, _ := repo.getOrCreateLobby(context.Background(), id, make(chan lobbyItem))
 		assert.NotNil(t, created)
 
 		deleted := repo.delete(context.Background(), id)
@@ -68,7 +69,7 @@ func TestStreamLobbyRepository(t *testing.T) {
 		createOn := 200
 		deleteOn := 500
 		id := uuid.New()
-		repo := testRtpStreamLobbyRepositorySetup(t)
+		repo := testLobbyRepositorySetup(t)
 
 		var wg sync.WaitGroup
 		wg.Add(wantedCount + 2)
@@ -76,14 +77,14 @@ func TestStreamLobbyRepository(t *testing.T) {
 
 		for i := 0; i < wantedCount; i++ {
 			go func(id int) {
-				lobby, _ := repo.getOrCreateLobby(context.Background(), uuid.New(), make(chan uuid.UUID))
+				lobby, _ := repo.getOrCreateLobby(context.Background(), uuid.New(), make(chan lobbyItem))
 				assert.NotNil(t, lobby)
 				wg.Done()
 			}(i)
 
 			if i == createOn {
 				go func() {
-					lobby, _ := repo.getOrCreateLobby(context.Background(), id, make(chan uuid.UUID))
+					lobby, _ := repo.getOrCreateLobby(context.Background(), id, make(chan lobbyItem))
 					assert.NotNil(t, lobby)
 					close(created)
 					wg.Done()

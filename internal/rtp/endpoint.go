@@ -49,6 +49,7 @@ func newEndpoint(sessionCxt context.Context, sessionId string, liveStreamId stri
 		liveStreamId:           liveStreamId,
 		endpointType:           endpointType,
 		trackSdpInfoRepository: newTrackSdpInfoRepository(),
+		initComplete:           make(chan struct{}),
 	}
 	for _, opt := range options {
 		opt(endpoint)
@@ -207,18 +208,18 @@ func (c *Endpoint) RemoveTrack(info *TrackInfo) {
 	}
 }
 
-func (c *Endpoint) SetIngressMute(ingressMid string, mute bool) (*TrackInfo, bool) {
+func (c *Endpoint) SetIngressMute(ctx context.Context, ingressMid string, mute bool) (*TrackInfo, bool) {
 	if sdpInfo, ok := c.trackSdpInfoRepository.getTrackSdpInfoByIngressMid(ingressMid); ok {
 		sdpInfo.Mute = mute
-		return newTrackInfo(nil, *sdpInfo), true
+		return newTrackInfo(ctx, nil, *sdpInfo), true
 	}
 	return nil, false
 }
 
-func (c *Endpoint) SetEgressMute(infoId uuid.UUID, mute bool) (*TrackInfo, bool) {
+func (c *Endpoint) SetEgressMute(ctx context.Context, infoId uuid.UUID, mute bool) (*TrackInfo, bool) {
 	if sdpInfo, ok := c.trackSdpInfoRepository.Get(infoId); ok {
 		sdpInfo.Mute = mute
-		return newTrackInfo(nil, *sdpInfo), true
+		return newTrackInfo(ctx, nil, *sdpInfo), true
 	}
 	return nil, false
 }
@@ -301,6 +302,11 @@ func (c *Endpoint) Destruct() error {
 	return nil
 }
 
+func (c *Endpoint) getPeerConnection() *webrtc.PeerConnection {
+	pc, _ := c.peerConnection.(*webrtc.PeerConnection)
+	return pc
+}
+
 type peerConnection interface {
 	LocalDescription() *webrtc.SessionDescription
 	SetLocalDescription(desc webrtc.SessionDescription) error
@@ -309,11 +315,13 @@ type peerConnection interface {
 	GetTransceivers() []*webrtc.RTPTransceiver
 	AddTrack(track webrtc.TrackLocal) (*webrtc.RTPSender, error)
 	RemoveTrack(sender *webrtc.RTPSender) error
+	OnTrack(f func(*webrtc.TrackRemote, *webrtc.RTPReceiver))
 	SignalingState() webrtc.SignalingState
 	CreateOffer(options *webrtc.OfferOptions) (webrtc.SessionDescription, error)
 	CreateAnswer(options *webrtc.AnswerOptions) (webrtc.SessionDescription, error)
 	OnICEConnectionStateChange(f func(webrtc.ICEConnectionState))
 	OnNegotiationNeeded(f func())
+	OnDataChannel(func(*webrtc.DataChannel))
 	Close() error
 }
 
