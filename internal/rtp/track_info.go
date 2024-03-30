@@ -1,21 +1,17 @@
 package rtp
 
 import (
-	"context"
-
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 )
 
 type TrackInfo struct {
 	TrackSdpInfo
-	Ctx   context.Context
 	Track *webrtc.TrackLocalStaticRTP
 }
 
-func newTrackInfo(sessionCtx context.Context, track *webrtc.TrackLocalStaticRTP, sdpInfo TrackSdpInfo) *TrackInfo {
+func newTrackInfo(track *webrtc.TrackLocalStaticRTP, sdpInfo TrackSdpInfo) *TrackInfo {
 	return &TrackInfo{
-		Ctx:          sessionCtx,
 		Track:        track,
 		TrackSdpInfo: sdpInfo,
 	}

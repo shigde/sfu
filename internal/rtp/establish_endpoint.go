@@ -100,11 +100,14 @@ func setupOnNegotiationNeeded(sessionCxt context.Context, endpoint *Endpoint, se
 			case <-sessionCxt.Done():
 				return
 			case <-endpoint.initComplete:
-				if tracksList, err := endpoint.getCurrentTracksCbk(sessionId); err == nil {
+				// this is a data race with the lobby hub
+				ctx, span := newTraceSpan(context.Background(), endpoint.sessionCxt, "endpoint_negotiation_add_track")
+				if tracksList, err := endpoint.getCurrentTracksCbk(ctx, sessionId); err == nil {
 					for _, trackInfo := range tracksList {
-						endpoint.AddTrack(trackInfo)
+						endpoint.AddTrack(ctx, trackInfo)
 					}
 				}
+				span.End()
 			}
 		}()
 	}

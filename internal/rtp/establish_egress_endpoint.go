@@ -50,9 +50,9 @@ func EstablishEgressEndpoint(sessionCxt context.Context, e *Engine, sessionId uu
 			case <-sessionCxt.Done():
 				return
 			case <-initComplete:
-				if tracksList, err := endpoint.getCurrentTracksCbk(sessionId); err == nil {
+				if tracksList, err := endpoint.getCurrentTracksCbk(context.TODO(), sessionId); err == nil {
 					for _, trackInfo := range tracksList {
-						endpoint.AddTrack(trackInfo)
+						endpoint.AddTrack(context.TODO(), trackInfo)
 					}
 				}
 			}

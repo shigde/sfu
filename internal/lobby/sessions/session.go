@@ -145,8 +145,8 @@ func (s *Session) CreateEgressEndpoint(ctx context.Context, offer *webrtc.Sessio
 	// <-- end date channel setup
 
 	hub := s.hub
-	withTrackCbk := rtp.EndpointWithGetCurrentTrackCbk(func(sessionId uuid.UUID) ([]*rtp.TrackInfo, error) {
-		return hub.getTrackList(sessionId, filterForSession(sessionId))
+	withTrackCbk := rtp.EndpointWithGetCurrentTrackCbk(func(ctx context.Context, sessionId uuid.UUID) ([]*rtp.TrackInfo, error) {
+		return hub.getTrackList(ctx, sessionId, filterForSession(sessionId))
 	})
 
 	option := make([]rtp.EndpointOption, 0)
@@ -194,7 +194,7 @@ func (s *Session) onLostConnection() {
 	}()
 }
 
-func (s *Session) addTrack(trackInfo *rtp.TrackInfo) {
+func (s *Session) addTrack(ctx context.Context, trackInfo *rtp.TrackInfo) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -202,11 +202,13 @@ func (s *Session) addTrack(trackInfo *rtp.TrackInfo) {
 	slog.Debug("sessions: add track", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
 	if s.egress != nil {
 		slog.Debug("sessions: add track - to egress egress", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
-		s.egress.AddTrack(trackInfo)
+		ctx, span := s.trace(ctx, "egress_add_track")
+		s.egress.AddTrack(ctx, trackInfo)
+		span.End()
 	}
 }
 
-func (s *Session) removeTrack(trackInfo *rtp.TrackInfo) {
+func (s *Session) removeTrack(ctx context.Context, trackInfo *rtp.TrackInfo) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -214,16 +216,18 @@ func (s *Session) removeTrack(trackInfo *rtp.TrackInfo) {
 	slog.Debug("sessions: remove track", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
 	if s.egress != nil {
 		slog.Debug("sessions: removeTrack - from egress egress", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
-		s.egress.RemoveTrack(trackInfo)
+		ctx, span := s.trace(ctx, "egress_remove_track")
+		s.egress.RemoveTrack(ctx, trackInfo)
+		span.End()
 	}
 }
 
-func (s *Session) muteTrack(trackInfo *rtp.TrackInfo) {
+func (s *Session) muteTrack(ctx context.Context, trackInfo *rtp.TrackInfo) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	// track telemetry data
-	ctx, span := s.trace(trackInfo.Ctx, "egress_mute_track_event")
+	ctx, span := s.trace(ctx, "egress_mute_track_event")
 	defer span.End()
 	// telemetry
 	span.SetAttributes(
@@ -235,7 +239,7 @@ func (s *Session) muteTrack(trackInfo *rtp.TrackInfo) {
 		return
 	}
 
-	if egressInfo, ok := s.egress.SetEgressMute(ctx, trackInfo.GetId(), trackInfo.GetMute()); ok {
+	if egressInfo, ok := s.egress.SetEgressMute(trackInfo.GetId(), trackInfo.GetMute()); ok {
 		// send event to client
 		_ = s.signal.messenger.SendMute(&message.Mute{
 			Mid:  egressInfo.GetEgressMid(),
@@ -252,7 +256,6 @@ func (s *Session) muteTrack(trackInfo *rtp.TrackInfo) {
 }
 
 func (s *Session) onMuteTrack(mute *message.Mute) {
-
 	// track telemetry data
 	ctx, span := s.trace(context.Background(), "ingress_mute_track_event")
 	defer span.End()
@@ -260,8 +263,8 @@ func (s *Session) onMuteTrack(mute *message.Mute) {
 		attribute.String("mid", mute.Mid),
 		attribute.String("mid", strconv.FormatBool(mute.Mute)),
 	)
-	if trackInfo, ok := s.ingress.SetIngressMute(ctx, mute.Mid, mute.Mute); ok {
-		go s.hub.DispatchMuteTrack(trackInfo)
+	if trackInfo, ok := s.ingress.SetIngressMute(mute.Mid, mute.Mute); ok {
+		go s.hub.DispatchMuteTrack(ctx, trackInfo)
 		// telemetry event
 		span.AddEvent("Dispatch Mute to Sessions")
 	}

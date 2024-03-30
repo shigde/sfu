@@ -78,7 +78,7 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 			// stop handler goroutine because error
 			return
 		}
-		trackInfo = newTrackInfo(ctx, stream.getAudioTrack(), *trackSdpInfo)
+		trackInfo = newTrackInfo(stream.getAudioTrack(), *trackSdpInfo)
 	}
 
 	if strings.HasPrefix(remoteTrack.Codec().RTPCodecCapability.MimeType, "video") {
@@ -90,12 +90,12 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 			return
 		}
 
-		trackInfo = newTrackInfo(ctx, stream.getVideoTrack(), *trackSdpInfo)
+		trackInfo = newTrackInfo(stream.getVideoTrack(), *trackSdpInfo)
 	}
 
 	slog.Debug("rtp.receiver: info track", "streamId", trackInfo.GetTrackLocal().StreamID(), "track", trackInfo.GetTrackLocal().ID(), "kind", trackInfo.GetTrackLocal().Kind(), "purpose", trackInfo.Purpose.ToString())
 	// send track to Lobby Hub
-	r.dispatcher.DispatchAddTrack(trackInfo)
+	r.dispatcher.DispatchAddTrack(ctx, trackInfo)
 
 }
 func (r *receiver) getIngressTrackSdpInfo(ingressTrackId string) *TrackSdpInfo {

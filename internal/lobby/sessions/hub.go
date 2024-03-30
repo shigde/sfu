@@ -81,9 +81,9 @@ func (h *Hub) run() {
 	}
 }
 
-func (h *Hub) DispatchAddTrack(track *rtp.TrackInfo) {
+func (h *Hub) DispatchAddTrack(ctx context.Context, track *rtp.TrackInfo) {
 	select {
-	case h.reqChan <- &hubRequest{kind: addTrack, track: track}:
+	case h.reqChan <- &hubRequest{ctx: ctx, kind: addTrack, track: track}:
 		slog.Debug("lobby.Hub: dispatch add track", "streamId", track.GetTrackLocal().StreamID(), "track", track.GetTrackLocal().ID(), "kind", track.GetTrackLocal().Kind(), "purpose", track.Purpose.ToString())
 	case <-h.ctx.Done():
 		slog.Warn("lobby.Hub: dispatch add track even on closed Hub")
@@ -92,9 +92,9 @@ func (h *Hub) DispatchAddTrack(track *rtp.TrackInfo) {
 	}
 }
 
-func (h *Hub) DispatchRemoveTrack(track *rtp.TrackInfo) {
+func (h *Hub) DispatchRemoveTrack(ctx context.Context, track *rtp.TrackInfo) {
 	select {
-	case h.reqChan <- &hubRequest{kind: removeTrack, track: track}:
+	case h.reqChan <- &hubRequest{ctx: ctx, kind: removeTrack, track: track}:
 		slog.Debug("lobby.Hub: dispatch remove track", "streamId", track.GetTrackLocal().StreamID(), "track", track.GetTrackLocal().ID(), "kind", track.GetTrackLocal().Kind(), "purpose", track.Purpose.ToString())
 	case <-h.ctx.Done():
 		slog.Warn("lobby.Hub: dispatch remove track even on closed Hub")
@@ -103,9 +103,9 @@ func (h *Hub) DispatchRemoveTrack(track *rtp.TrackInfo) {
 	}
 }
 
-func (h *Hub) DispatchMuteTrack(track *rtp.TrackInfo) {
+func (h *Hub) DispatchMuteTrack(ctx context.Context, track *rtp.TrackInfo) {
 	select {
-	case h.reqChan <- &hubRequest{kind: muteTrack, track: track}:
+	case h.reqChan <- &hubRequest{ctx: ctx, kind: muteTrack, track: track}:
 		slog.Debug("lobby.Hub: dispatch mute track", "id", track.GetId(), "purpose", track.Purpose.ToString())
 	case <-h.ctx.Done():
 		slog.Warn("lobby.Hub: dispatch mute track even on closed Hub")
@@ -117,11 +117,11 @@ func (h *Hub) DispatchMuteTrack(track *rtp.TrackInfo) {
 // getTrackList Is called from the Egress endpoints when the connection is established.
 // In ths wax the egress endpoints can receive the current tracks of the lobby
 // The session set this methode as callback to the egress egress
-func (h *Hub) getTrackList(sessionId uuid.UUID, filters ...filterHubTracks) ([]*rtp.TrackInfo, error) {
+func (h *Hub) getTrackList(ctx context.Context, sessionId uuid.UUID, filters ...filterHubTracks) ([]*rtp.TrackInfo, error) {
 	var hubList []*rtp.TrackInfo
 	trackListChan := make(chan []*rtp.TrackInfo)
 	select {
-	case h.reqChan <- &hubRequest{kind: getTrackList, trackListChan: trackListChan}:
+	case h.reqChan <- &hubRequest{ctx: ctx, kind: getTrackList, trackListChan: trackListChan}:
 	case <-h.ctx.Done():
 		slog.Warn("lobby.Hub: get track list on closed Hub")
 		return nil, errHubAlreadyClosed
@@ -181,7 +181,7 @@ func (h *Hub) onAddTrack(event *hubRequest) {
 			go func(session *Session) {
 				// If a session has just been created, this call blocks for seconds.
 				// This is because the ice gathering sometimes takes seconds. That's why we don't block the call
-				session.addTrack(event.track)
+				session.addTrack(event.ctx, event.track)
 			}(s)
 		}
 	})
@@ -207,7 +207,7 @@ func (h *Hub) onRemoveTrack(event *hubRequest) {
 			go func(session *Session) {
 				// If a session has just been created, this call blocks for seconds.
 				// This is because the ice gathering sometimes takes seconds. That's why we don't block the call
-				session.removeTrack(event.track)
+				session.removeTrack(event.ctx, event.track)
 				h.decreaseNodeGraphStats(s.Id.String(), rtp.EgressEndpoint, event.track.Purpose)
 			}(s)
 		}
@@ -237,7 +237,7 @@ func (h *Hub) onMuteTrack(event *hubRequest) {
 			go func(session *Session) {
 				// If a session has just been created, this call blocks for seconds.
 				// This is because the ice gathering sometimes takes seconds. That's why we don't block the call
-				session.muteTrack(event.track)
+				session.muteTrack(event.ctx, event.track)
 			}(s)
 		}
 	})

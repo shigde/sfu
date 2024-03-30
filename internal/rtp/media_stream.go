@@ -51,7 +51,7 @@ func (s *mediaStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemo
 	// start local audio track
 	go func() {
 		var ctx context.Context
-		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(ctx, s.audioTrack, s.audioInfo))
+		defer s.dispatcher.DispatchRemoveTrack(ctx, newTrackInfo(s.audioTrack, s.audioInfo))
 
 		// blocking loop
 		err := s.audioWriter.writeRtp(track, s.audioTrack)
@@ -59,7 +59,7 @@ func (s *mediaStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemo
 		ctx, span := newTraceSpan(context.Background(), s.sessionCxt, "rtp.ingress: remove_audio_track")
 		span.SetAttributes(
 			attribute.String("mediaStreamId", s.audioTrack.StreamID()),
-			attribute.String("track", s.audioTrack.ID()),
+			attribute.String("localTrack", s.audioTrack.ID()),
 			attribute.String("kind", "audio"),
 			attribute.String("purpose", s.purpose.ToString()),
 		)
@@ -89,7 +89,7 @@ func (s *mediaStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemo
 	// start local video track
 	go func() {
 		var ctx context.Context
-		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(ctx, s.videoTrack, s.videoInfo))
+		defer s.dispatcher.DispatchRemoveTrack(ctx, newTrackInfo(s.videoTrack, s.videoInfo))
 
 		// blocking loop
 		err := s.videoWriter.writeRtp(track, s.videoTrack)
@@ -97,7 +97,7 @@ func (s *mediaStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemo
 		ctx, span := newTraceSpan(context.Background(), s.sessionCxt, "rtp.ingress: remove_video_track")
 		span.SetAttributes(
 			attribute.String("mediaStreamId", s.videoTrack.StreamID()),
-			attribute.String("track", s.videoTrack.ID()),
+			attribute.String("localTrack", s.videoTrack.ID()),
 			attribute.String("kind", "video"),
 			attribute.String("purpose", s.purpose.ToString()),
 		)
