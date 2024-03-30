@@ -176,13 +176,14 @@ func (h *Hub) onAddTrack(event *hubRequest) {
 
 	h.tracks[event.track.GetTrackLocal().ID()] = event.track
 	h.sessionRepo.Iter(func(s *Session) {
+		// If a session has just been created, this call blocks for seconds.
+		// This is because the ice gathering sometimes takes seconds. That's why we don't block the call
+		if !s.initComplete() {
+			return
+		}
 		if filterForSession(s.Id)(event.track) {
 			slog.Debug("lobby.Hub: add egress track to session", "sessionId", s.Id, "sourceSessionId", event.track.SessionId, "streamId", event.track.GetTrackLocal().StreamID(), "track", event.track.GetTrackLocal().ID(), "kind", event.track.GetTrackLocal().Kind(), "purpose", event.track.Purpose.ToString())
-			go func(session *Session) {
-				// If a session has just been created, this call blocks for seconds.
-				// This is because the ice gathering sometimes takes seconds. That's why we don't block the call
-				session.addTrack(event.ctx, event.track)
-			}(s)
+			s.addTrack(event.ctx, event.track)
 		}
 	})
 }
@@ -202,14 +203,15 @@ func (h *Hub) onRemoveTrack(event *hubRequest) {
 	}
 
 	h.sessionRepo.Iter(func(s *Session) {
+		// If a session has just been created, this call blocks for seconds.
+		// This is because the ice gathering sometimes takes seconds. That's why we don't block the call
+		if !s.initComplete() {
+			return
+		}
 		if filterForSession(s.Id)(event.track) {
 			slog.Debug("lobby.Hub: remove egress track from session", "sessionId", s.Id, "sourceSessionId", event.track.SessionId, "streamId", event.track.GetTrackLocal().StreamID(), "track", event.track.GetTrackLocal().ID(), "kind", event.track.GetTrackLocal().Kind(), "purpose", event.track.Purpose.ToString())
-			go func(session *Session) {
-				// If a session has just been created, this call blocks for seconds.
-				// This is because the ice gathering sometimes takes seconds. That's why we don't block the call
-				session.removeTrack(event.ctx, event.track)
-				h.decreaseNodeGraphStats(s.Id.String(), rtp.EgressEndpoint, event.track.Purpose)
-			}(s)
+			s.removeTrack(event.ctx, event.track)
+			h.decreaseNodeGraphStats(s.Id.String(), rtp.EgressEndpoint, event.track.Purpose)
 		}
 	})
 }
@@ -274,6 +276,7 @@ func filterForSession(sessionId uuid.UUID) filterHubTracks {
 		return sessionId.String() != track.GetSessionId().String()
 	}
 }
+
 func filterForNotMain() filterHubTracks {
 	return func(track *rtp.TrackInfo) bool {
 		return track.Purpose != rtp.PurposeMain

@@ -282,3 +282,10 @@ func (s *Session) isDone() bool {
 func (s *Session) trace(ctx context.Context, spanName string) (context.Context, trace.Span) {
 	return telemetry.NewTraceSpan(ctx, s.ctx, "session: "+spanName)
 }
+
+func (s *Session) initComplete() bool {
+	if s.egress != nil {
+		return s.egress.IsInitComplete()
+	}
+	return false
+}

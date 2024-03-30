@@ -125,6 +125,17 @@ func (c *Endpoint) SetInitComplete() {
 	}
 }
 
+func (c *Endpoint) IsInitComplete() bool {
+	select {
+	case <-c.initComplete:
+		return true
+	case <-c.sessionCxt.Done():
+		return false
+	default:
+		return false
+	}
+}
+
 func (c *Endpoint) hasTrack(track webrtc.TrackLocal) bool {
 	slog.Debug("rtp.connection: has Tracks")
 	rtpSenderList := c.peerConnection.GetSenders()
@@ -158,7 +169,7 @@ func (c *Endpoint) AddTrack(ctx context.Context, info *TrackInfo) {
 	purpose := info.Purpose
 	slog.Debug("rtp.endpoint: add track", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind(), "purpose", purpose)
 	if has := c.hasTrack(track); !has {
-		slog.Debug("rtp.endpoint: add track to connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind(), "purpose", purpose, "signalState", c.peerConnection.SignalingState().String())
+		slog.Debug("DDD--  rtp.endpoint: add track to connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind(), "purpose", purpose, "signalState", c.peerConnection.SignalingState().String())
 		var sender *webrtc.RTPSender
 		var err error
 
@@ -211,7 +222,7 @@ func (c *Endpoint) RemoveTrack(ctx context.Context, info *TrackInfo) {
 		span.AddEvent("Remove Track from Connection", trace.WithAttributes(
 			attribute.String("localTrack", track.ID())),
 		)
-		slog.Debug("rtp.endpoint: remove track from connection", "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind())
+		slog.Debug("DDD-- rtp.endpoint: remove track from connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
 		if err := c.peerConnection.RemoveTrack(sender); err != nil {
 			span.RecordError(err)
 			slog.Error("rtp.endpoint: remove track from connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind())
