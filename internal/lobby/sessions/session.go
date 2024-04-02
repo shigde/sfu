@@ -213,6 +213,7 @@ func (s *Session) removeTrack(ctx context.Context, trackInfo *rtp.TrackInfo) {
 	defer s.mutex.Unlock()
 
 	track := trackInfo.GetTrackLocal()
+	slog.Debug("bug-1: remove", "session", s.Id, "trackId", track.ID(), "kind", track.Kind())
 	slog.Debug("sessions: remove track", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
 	if s.egress != nil {
 		slog.Debug("sessions: removeTrack - from egress egress", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)

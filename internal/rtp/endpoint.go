@@ -169,13 +169,14 @@ func (c *Endpoint) AddTrack(ctx context.Context, info *TrackInfo) {
 	purpose := info.Purpose
 	slog.Debug("rtp.endpoint: add track", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind(), "purpose", purpose)
 	if has := c.hasTrack(track); !has {
-		slog.Debug("DDD--  rtp.endpoint: add track to connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind(), "purpose", purpose, "signalState", c.peerConnection.SignalingState().String())
+		slog.Debug("rtp.endpoint: add track to connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind(), "purpose", purpose, "signalState", c.peerConnection.SignalingState().String())
 		var sender *webrtc.RTPSender
 		var err error
 
 		span.AddEvent("Add Track to Connection", trace.WithAttributes(
 			attribute.String("localTrack", track.ID())),
 		)
+
 		if sender, err = c.peerConnection.AddTrack(track); err != nil {
 			span.RecordError(err)
 			slog.Error("rtp.endpoint: add track to connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind(), "purpose", purpose, "signalState", c.peerConnection.SignalingState().String())
@@ -216,13 +217,14 @@ func (c *Endpoint) RemoveTrack(ctx context.Context, info *TrackInfo) {
 	defer span.End()
 	track := info.GetTrackLocal()
 	slog.Debug("rtp.endpoint: remove track", "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind())
+
 	if sender, has := c.getSender(track); has {
 		c.trackSdpInfoRepository.Delete(info.GetId())
 
 		span.AddEvent("Remove Track from Connection", trace.WithAttributes(
 			attribute.String("localTrack", track.ID())),
 		)
-		slog.Debug("DDD-- rtp.endpoint: remove track from connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
+		slog.Debug("rtp.endpoint: remove track from connection", "streamId", track.StreamID(), "trackId", track.ID(), "kind", track.Kind())
 		if err := c.peerConnection.RemoveTrack(sender); err != nil {
 			span.RecordError(err)
 			slog.Error("rtp.endpoint: remove track from connection", "err", err, "streamId", track.StreamID(), "trackId", track.ID(), "purpose", track.Kind())
