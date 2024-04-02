@@ -176,27 +176,27 @@ func (s *Session) CreateEgressEndpoint(ctx context.Context, offer *webrtc.Sessio
 
 func (s *Session) onLostConnection() {
 	slog.Warn("session: connect lost connection", "sessionId", s.Id, "userId", s.user)
-	go func() {
+	go func(session *Session) {
 		select {
-		case <-s.ctx.Done():
-			slog.Debug("sessions: internally quit interrupted because session already closed", "session id", s.Id, "user", s.user)
+		case <-session.ctx.Done():
+			slog.Debug("sessions: internally quit interrupted because session already closed", "session id", session.Id, "user", session.user)
 		default:
 			item := NewItem(s.user)
 			select {
-			case s.garbage <- item:
-				s.stop()
+			case session.garbage <- item:
+				session.stop()
 				<-item.Done
-				slog.Debug("sessions: internally stop of session", "session id", s.Id, "user", s.user)
-			case <-s.ctx.Done():
-				slog.Debug("sessions: internally stop interrupted because session already closed", "session id", s.Id, "user", s.user)
+				slog.Debug("sessions: internally stop of session", "session id", session.Id, "user", session.user)
+			case <-session.ctx.Done():
+				slog.Debug("sessions: internally stop interrupted because session already closed", "session id", session.Id, "user", session.user)
 			}
 		}
-	}()
+	}(s)
 }
 
 func (s *Session) addTrack(ctx context.Context, trackInfo *rtp.TrackInfo) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 
 	track := trackInfo.GetTrackLocal()
 	slog.Debug("sessions: add track", "trackId", track.ID(), "streamId", track.StreamID(), "sessionId", s.Id, "user", s.user)
@@ -209,8 +209,8 @@ func (s *Session) addTrack(ctx context.Context, trackInfo *rtp.TrackInfo) {
 }
 
 func (s *Session) removeTrack(ctx context.Context, trackInfo *rtp.TrackInfo) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 
 	track := trackInfo.GetTrackLocal()
 	slog.Debug("bug-1: remove", "session", s.Id, "trackId", track.ID(), "kind", track.Kind())
@@ -224,8 +224,8 @@ func (s *Session) removeTrack(ctx context.Context, trackInfo *rtp.TrackInfo) {
 }
 
 func (s *Session) muteTrack(ctx context.Context, trackInfo *rtp.TrackInfo) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 
 	// track telemetry data
 	ctx, span := s.trace(ctx, "egress_mute_track_event")
@@ -285,6 +285,11 @@ func (s *Session) trace(ctx context.Context, spanName string) (context.Context, 
 }
 
 func (s *Session) initComplete() bool {
+	if looked := s.mutex.TryRLock(); !looked {
+		return false
+	}
+	defer s.mutex.RUnlock()
+
 	if s.egress != nil {
 		return s.egress.IsInitComplete()
 	}
