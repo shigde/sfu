@@ -34,14 +34,15 @@ var (
 )
 
 type Session struct {
-	Id       uuid.UUID
-	mutex    sync.RWMutex
-	ctx      context.Context
-	user     uuid.UUID
-	isRemote bool
-	hub      *Hub
+	Id    uuid.UUID
+	mutex sync.RWMutex
+	ctx   context.Context
+	user  uuid.UUID
+
+	sessionType SessionType
 
 	rtpEngine     RtpEngine
+	hub           *Hub
 	ingress       *rtp.Endpoint
 	egress        *rtp.Endpoint
 	signalChannel *rtp.Endpoint
@@ -51,7 +52,7 @@ type Session struct {
 	garbage chan<- Item
 }
 
-func NewSession(ctx context.Context, user uuid.UUID, hub *Hub, engine RtpEngine, garbage chan Item) *Session {
+func NewSession(ctx context.Context, user uuid.UUID, hub *Hub, engine RtpEngine, sType SessionType, garbage chan Item) *Session {
 	sessionId := uuid.New()
 	ctx = telemetry.ContextWithSessionValue(ctx, sessionId.String(), hub.LiveStreamId.String(), user.String())
 	ctx, cancel := context.WithCancel(ctx)
@@ -63,6 +64,8 @@ func NewSession(ctx context.Context, user uuid.UUID, hub *Hub, engine RtpEngine,
 		mutex: sync.RWMutex{},
 		ctx:   ctx,
 		user:  user,
+
+		sessionType: sType,
 
 		rtpEngine: engine,
 		hub:       hub,
@@ -278,6 +281,10 @@ func (s *Session) isDone() bool {
 	default:
 		return false
 	}
+}
+
+func (s *Session) getType() SessionType {
+	return s.sessionType
 }
 
 func (s *Session) trace(ctx context.Context, spanName string) (context.Context, trace.Span) {

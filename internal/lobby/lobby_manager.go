@@ -41,7 +41,7 @@ func (m *LobbyManager) NewIngressResource(ctx context.Context, lobbyId uuid.UUID
 	if err != nil {
 		return nil, fmt.Errorf("getting or creating lobby: %w", err)
 	}
-	if ok := lobbyObj.newSession(user); !ok {
+	if ok := lobbyObj.newSession(user, sessions.UserSession); !ok {
 		return nil, fmt.Errorf("creating new session failes")
 	}
 

@@ -16,8 +16,8 @@ func testHubSetup(t *testing.T) (*Hub, func()) {
 	forwarder := mocks.NewLiveSender()
 	ctx, cancel := context.WithCancel(context.Background())
 	hub := NewHub(ctx, sessions, uuid.New(), forwarder)
-	s1 := NewSession(ctx, uuid.New(), hub, engine, nil)
-	s2 := NewSession(ctx, uuid.New(), hub, engine, nil)
+	s1 := NewSession(ctx, uuid.New(), hub, engine, UserSession, nil)
+	s2 := NewSession(ctx, uuid.New(), hub, engine, UserSession, nil)
 	sessions.Add(s1)
 	sessions.Add(s2)
 	return hub, cancel
@@ -25,7 +25,7 @@ func testHubSetup(t *testing.T) (*Hub, func()) {
 func testHubSessionSetup(t *testing.T, hub *Hub) *Session {
 	t.Helper()
 	engine := mocks.NewRtpEngine()
-	s := NewSession(hub.ctx, uuid.New(), hub, engine, nil)
+	s := NewSession(hub.ctx, uuid.New(), hub, engine, UserSession, nil)
 	hub.sessionRepo.Add(s)
 	return s
 }

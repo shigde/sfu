@@ -22,7 +22,7 @@ func testSessionSetup(t *testing.T) (*Session, *mocks.RtpEngineMock) {
 	forwarder := mocks.NewLiveSender()
 	ctx, _ := context.WithCancel(context.Background())
 	hub := NewHub(ctx, NewSessionRepository(), uuid.New(), forwarder)
-	session := NewSession(ctx, uuid.New(), hub, engine, nil)
+	session := NewSession(ctx, uuid.New(), hub, engine, UserSession, nil)
 	return session, engine
 }
 

@@ -97,6 +97,18 @@ func (r *SessionRepository) Len() int {
 	return len(r.sessions)
 }
 
+func (r *SessionRepository) LenUserSession() int {
+	r.locker.Lock()
+	defer r.locker.Unlock()
+	count := 0
+	for _, session := range r.sessions {
+		if session.sessionType == UserSession {
+			count = count + 1
+		}
+	}
+	return count
+}
+
 func (r *SessionRepository) Iter(routine func(*Session)) {
 	r.locker.Lock()
 	defer r.locker.Unlock()

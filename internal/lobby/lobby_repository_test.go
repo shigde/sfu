@@ -14,11 +14,11 @@ import (
 
 func testLobbyRepositorySetup(t *testing.T) *lobbyRepository {
 	t.Helper()
+	homeActorIri, _ := url.Parse("http://localhost:1234/federation/accounts/shig-test")
 	store := storage.NewTestStore()
-	_ = store.GetDatabase().AutoMigrate(&LobbyEntity{})
+	_ = store.GetDatabase().AutoMigrate(&LobbyEntity{Host: homeActorIri.String()})
 	var engine sessions.RtpEngine
-	host, _ := url.Parse("")
-	repository := newLobbyRepository(store, engine, host, "test-key")
+	repository := newLobbyRepository(store, engine, homeActorIri, "test-key")
 
 	return repository
 }

@@ -3,9 +3,11 @@ package lobby
 import (
 	"context"
 	"errors"
+	"net/url"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/lobby/instances"
 	"github.com/shigde/sfu/internal/lobby/sessions"
 	"golang.org/x/exp/slog"
 )
@@ -28,37 +30,46 @@ type lobby struct {
 	ctx  context.Context
 	stop context.CancelFunc
 
-	entity         *LobbyEntity
-	hub            *sessions.Hub
-	sessions       *sessions.SessionRepository
-	rtp            sessions.RtpEngine
+	entity   *LobbyEntity
+	hub      *sessions.Hub
+	sessions *sessions.SessionRepository
+	rtp      sessions.RtpEngine
+
 	sessionCreator chan<- sessions.Item
 	sessionGarbage chan<- sessions.Item
 	lobbyGarbage   chan<- lobbyItem
 	cmdRunner      chan<- command
+
+	connector *instances.Connector
 }
 
-func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, lobbyGarbage chan<- lobbyItem) *lobby {
+func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, homeActorIri *url.URL, registerToken string, lobbyGarbage chan<- lobbyItem) *lobby {
 	ctx, stop := context.WithCancel(context.Background())
 	sessRep := sessions.NewSessionRepository()
 	hub := sessions.NewHub(ctx, sessRep, entity.LiveStreamId, nil)
+	hostActorIri, _ := url.Parse(entity.Host)
+
 	garbage := make(chan sessions.Item)
 	creator := make(chan sessions.Item)
 	runner := make(chan command)
+	connector := instances.NewConnector(ctx, *homeActorIri, *hostActorIri, entity.Space, entity.LiveStreamId.String(), registerToken)
 
 	lob := &lobby{
 		Id:   entity.UUID,
 		ctx:  ctx,
 		stop: stop,
 
-		hub:            hub,
-		entity:         entity,
-		sessions:       sessRep,
-		rtp:            rtp,
+		hub:      hub,
+		entity:   entity,
+		sessions: sessRep,
+		rtp:      rtp,
+
 		sessionGarbage: garbage,
 		sessionCreator: creator,
 		lobbyGarbage:   lobbyGarbage,
 		cmdRunner:      runner,
+
+		connector: connector,
 	}
 	// session handling should be sequentiell to avoid data races in group state
 	go func(l *lobby, sessionCreator <-chan sessions.Item, sessionGarbage chan sessions.Item, cmdRunner <-chan command) {
@@ -70,14 +81,14 @@ func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, lobbyGarbage chan<- l
 				case <-l.ctx.Done():
 					item.Done <- false
 				default:
-					session := sessions.NewSession(l.ctx, item.UserId, l.hub, l.rtp, sessionGarbage)
+					session := sessions.NewSession(l.ctx, item.UserId, l.hub, l.rtp, item.SessionType, sessionGarbage)
 					ok := l.sessions.New(session)
 					item.Done <- ok
 				}
 			case item := <-sessionGarbage:
 				ok := l.sessions.DeleteByUser(item.UserId)
 				item.Done <- ok
-				if l.sessions.Len() == 0 {
+				if l.sessions.LenUserSession() == 0 {
 					item := newLobbyItem(l.Id)
 					go func() {
 						l.lobbyGarbage <- item
@@ -102,11 +113,14 @@ func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, lobbyGarbage chan<- l
 			}
 		}
 	}(lob, creator, garbage, runner)
+
+	// lob.newSession(lob.Id, sessions.InstanceSession)
 	return lob
 }
 
-func (l *lobby) newSession(userId uuid.UUID) bool {
+func (l *lobby) newSession(userId uuid.UUID, sType sessions.SessionType) bool {
 	item := sessions.NewItem(userId)
+	item.SessionType = sType
 	select {
 	case l.sessionCreator <- item:
 		ok := <-item.Done

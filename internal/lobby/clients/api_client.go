@@ -6,38 +6,33 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/pkg/authentication"
 )
 
 type ApiClient struct {
-	instanceId uuid.UUID // not needed?
-	name       string
-	token      string
-	url        *url.URL
-	bearer     string
+	login  loginGetter
+	url    string
+	bearer string
 }
 
-func NewApiClient(id uuid.UUID, token string, name string, shigUrl *url.URL) *ApiClient {
+type loginGetter interface {
+	GetUser() *authentication.User
+}
+
+func NewApiClient(loginGetter loginGetter, shigUrl string) *ApiClient {
 	return &ApiClient{
-		instanceId: id,
-		name:       name,
-		token:      token,
-		url:        shigUrl,
+		login: loginGetter,
+		url:   shigUrl,
 	}
 }
 
 func (a *ApiClient) Login() (*authentication.Token, error) {
-	loginUrl := fmt.Sprintf("%s/authenticate", a.url.String())
-	user := &authentication.User{
-		UserId: a.name,
-		Token:  a.token,
-	}
+	loginUrl := fmt.Sprintf("%s/authenticate", a.url)
+	user := a.login.GetUser()
 	userJSON, err := json.Marshal(user)
 	if err != nil {
 		return nil, fmt.Errorf("creating json object: %w", err)
@@ -79,12 +74,12 @@ func (a *ApiClient) Login() (*authentication.Token, error) {
 }
 
 func (a *ApiClient) PostHostPipeOffer(spaceId string, streamId string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
-	requestUrl := fmt.Sprintf("%s/space/%s/stream/%s/pipe", a.url.String(), spaceId, streamId)
+	requestUrl := fmt.Sprintf("%s/space/%s/stream/%s/pipe", a.url, spaceId, streamId)
 	return a.doOfferRequest(requestUrl, offer)
 }
 
 func (a *ApiClient) PostHostIngressOffer(spaceId string, streamId string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
-	requestUrl := fmt.Sprintf("%s/space/%s/stream/%s/hostingress", a.url.String(), spaceId, streamId)
+	requestUrl := fmt.Sprintf("%s/space/%s/stream/%s/hostingress", a.url, spaceId, streamId)
 	return a.doOfferRequest(requestUrl, offer)
 }
 

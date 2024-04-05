@@ -3,6 +3,7 @@ package lobby
 import (
 	"context"
 	"errors"
+	"net/url"
 	"testing"
 	"time"
 
@@ -18,16 +19,19 @@ import (
 func testLobbySetup(t *testing.T) (*lobby, uuid.UUID) {
 	t.Helper()
 	logging.SetupDebugLogger()
+	hostActorIri, _ := url.Parse("http://localhost:1234/federation/accounts/shig-test")
+	homeActorIri, _ := url.Parse("http://localhost:1234/federation/accounts/shig-test")
+
 	entity := &LobbyEntity{
 		UUID:         uuid.New(),
 		LiveStreamId: uuid.New(),
 		Space:        "space",
-		Host:         "http://localhost:1234/federation/accounts/shig-test",
+		Host:         hostActorIri.String(),
 	}
 
-	lobby := newLobby(entity, nil, make(chan<- lobbyItem, 1))
+	lobby := newLobby(entity, nil, homeActorIri, "token", make(chan<- lobbyItem, 1))
 	user := uuid.New()
-	lobby.newSession(user)
+	lobby.newSession(user, sessions.UserSession)
 	return lobby, user
 }
 func TestLobby_handle(t *testing.T) {
@@ -103,7 +107,7 @@ func TestLobby_newSession(t *testing.T) {
 	t.Run("new session added", func(t *testing.T) {
 		lobby, _ := testLobbySetup(t)
 		user := uuid.New()
-		ok := lobby.newSession(user)
+		ok := lobby.newSession(user, sessions.UserSession)
 		assert.True(t, ok)
 		_, found := lobby.sessions.FindByUserId(user)
 		assert.True(t, found)
@@ -111,7 +115,7 @@ func TestLobby_newSession(t *testing.T) {
 
 	t.Run("not add already existing session", func(t *testing.T) {
 		lobby, user := testLobbySetup(t)
-		ok := lobby.newSession(user)
+		ok := lobby.newSession(user, sessions.UserSession)
 		assert.False(t, ok)
 		_, found := lobby.sessions.FindByUserId(user)
 		assert.True(t, found)
@@ -166,9 +170,9 @@ func TestLobby_sessionSequence(t *testing.T) {
 		user3 := uuid.New()
 		user4 := uuid.New()
 
-		ok := lobby.newSession(user2)
+		ok := lobby.newSession(user2, sessions.UserSession)
 		assert.True(t, ok)
-		ok = lobby.newSession(user3)
+		ok = lobby.newSession(user3, sessions.UserSession)
 		assert.True(t, ok)
 
 		ok = lobby.removeSession(user2)
@@ -183,7 +187,7 @@ func TestLobby_sessionSequence(t *testing.T) {
 		item.Done <- true
 
 		// we can not add a new session in a closed lobby
-		ok = lobby.newSession(user4)
+		ok = lobby.newSession(user4, sessions.UserSession)
 		assert.False(t, ok)
 		assert.Equal(t, 0, lobby.sessions.Len())
 		select {

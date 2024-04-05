@@ -19,13 +19,13 @@ type hostSettings struct {
 	token      string
 }
 
-type host interface {
+type hostx interface {
 	GetHost() string
 	GetSpace() string
 	GetLiveStreamID() string
 }
 
-func NewHostSettings(host host, homeInstanceActor *url.URL, token string) *hostSettings {
+func NewHostSettings(host hostx, homeInstanceActor *url.URL, token string) *hostSettings {
 	isHost := isSameShigInstance(host.GetHost(), homeInstanceActor.String())
 	actorUrl, _ := url.Parse(host.GetHost())
 	hostUrl, _ := url.Parse(fmt.Sprintf("%s://%s", actorUrl.Scheme, actorUrl.Host))

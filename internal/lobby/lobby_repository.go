@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/shigde/sfu/internal/lobby/instances"
 	"github.com/shigde/sfu/internal/lobby/sessions"
 	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/storage"
@@ -19,12 +18,12 @@ import (
 var errLobbyNotFound = errors.New("lobby not found")
 
 type lobbyRepository struct {
-	locker           *sync.RWMutex
-	lobbies          map[uuid.UUID]*lobby
-	instanceActorUrl *url.URL
-	registerToken    string
-	store            storage.Storage
-	rtpEngine        sessions.RtpEngine
+	locker        *sync.RWMutex
+	lobbies       map[uuid.UUID]*lobby
+	homeActorIri  *url.URL
+	registerToken string
+	store         storage.Storage
+	rtpEngine     sessions.RtpEngine
 }
 
 func newLobbyRepository(store storage.Storage, rtpEngine sessions.RtpEngine, hostUrl *url.URL, registerToken string) *lobbyRepository {
@@ -54,9 +53,7 @@ func (r *lobbyRepository) getOrCreateLobby(ctx context.Context, lobbyId uuid.UUI
 			return nil, fmt.Errorf("updating lobby entity as running: %w", err)
 		}
 
-		_ = instances.NewHostSettings(entity, r.instanceActorUrl, r.registerToken)
-
-		lobby := newLobby(entity, r.rtpEngine, lobbyGarbage)
+		lobby := newLobby(entity, r.rtpEngine, r.homeActorIri, r.registerToken, lobbyGarbage)
 		r.lobbies[lobbyId] = lobby
 		metric.RunningLobbyInc(lobby.entity.LiveStreamId.String(), lobbyId.String())
 		return lobby, nil
@@ -140,10 +137,10 @@ func (r *lobbyRepository) updateLobbyEntity(ctx context.Context, lobby *LobbyEnt
 
 func (r *lobbyRepository) lobbyIsHost(streamHostActor string) bool {
 	isHost := true
-	if r.instanceActorUrl.String() != streamHostActor {
+	if r.homeActorIri.String() != streamHostActor {
 		isHost = false
 	}
-	slog.Debug("lobby.lobbyRepository: lobby is host", "isHost", isHost, "streamHostActor", streamHostActor, "instanceActor", r.instanceActorUrl.String())
+	slog.Debug("lobby.lobbyRepository: lobby is host", "isHost", isHost, "streamHostActor", streamHostActor, "instanceActor", r.homeActorIri.String())
 	return isHost
 
 }
