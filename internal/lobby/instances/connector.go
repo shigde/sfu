@@ -2,11 +2,19 @@ package instances
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/url"
 
 	"github.com/google/uuid"
 	"github.com/shigde/sfu/internal/lobby/clients"
+	"github.com/shigde/sfu/internal/lobby/commands"
+	"github.com/shigde/sfu/internal/lobby/sessions"
 	"golang.org/x/exp/slog"
+)
+
+var (
+	LoginError = errors.New("login to remote instance failed")
 )
 
 type Connector struct {
@@ -38,24 +46,17 @@ func NewConnector(
 	}
 }
 
-func (c *Connector) Connect() {
-	slog.Debug("lobby.HostController. connect to live stream host instance", "instanceId", c.host.instanceId)
-	if _, err := c.api.Login(); err != nil {
-		slog.Error("login to remote host", "err", err)
-		return
-	}
-
-	if err := c.connectIngress(c.host.instanceId); err != nil {
-		slog.Error("lobby.HostController: connecting pipe", "err", err)
-		return
-	}
-	if err := c.connectEgress(c.host.instanceId); err != nil {
-		slog.Error("lobby.HostController: connecting ingress", "err", err)
-		return
-	}
+type command interface {
+	GetUserId() uuid.UUID
+	Execute(session *sessions.Session)
+	SetError(err error)
 }
 
-func (c *Connector) connectIngress(id uuid.UUID) error {
+func (c *Connector) BuildIngress() (*commands.Command, error) {
+	slog.Debug("lobby.HostController. connect to live stream host instance", "instanceId", c.host.instanceId)
+	if _, err := c.api.Login(); err != nil {
+		return nil, fmt.Errorf("login to remote host: %w", err)
+	}
 	// ctx, cancelReq := context.WithCancel(context.Background())
 	//	defer cancelReq()
 	//
@@ -77,9 +78,17 @@ func (c *Connector) connectIngress(id uuid.UUID) error {
 	//		}
 	//	}
 	//	return c.onHostPipeAnswerResponse(answer, instanceId)
-	return nil
+	return nil, nil
 }
 
-func (c *Connector) connectEgress(id uuid.UUID) interface{} {
-	return nil
+func (c *Connector) BuildEgress() (*commands.Command, error) {
+	return nil, nil
+}
+
+func (c *Connector) IsThisInstanceLiveSteamHost() bool {
+	return c.homeActorIri.String() == c.host.actorIri.String()
+}
+
+func (c *Connector) GetInstanceId() uuid.UUID {
+	return c.host.instanceId
 }

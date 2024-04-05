@@ -14,9 +14,14 @@ import (
 
 func testLobbyRepositorySetup(t *testing.T) *lobbyRepository {
 	t.Helper()
-	homeActorIri, _ := url.Parse("http://localhost:1234/federation/accounts/shig-test")
+
+	// When a random lobby is created, there is no entity in the store.
+	// With this, We ensure that the entity URL is the same as the lobby URL, and no connector is started.
+	// @TODO build test lobby with entity
+	homeActorIri, _ := url.Parse("")
 	store := storage.NewTestStore()
 	_ = store.GetDatabase().AutoMigrate(&LobbyEntity{Host: homeActorIri.String()})
+
 	var engine sessions.RtpEngine
 	repository := newLobbyRepository(store, engine, homeActorIri, "test-key")
 

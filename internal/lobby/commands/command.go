@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/lobby/sessions"
 )
 
 type Command struct {
@@ -47,4 +48,18 @@ func (c *Command) SetDone() {
 }
 func (c *Command) Done() <-chan struct{} {
 	return c.done
+}
+
+func (c *Command) Execute(_ *sessions.Session) {
+	panic("Execute not implemented")
+}
+
+func (c *Command) WaitForDone() error {
+	select {
+	case <-c.Done():
+		if c.Err != nil {
+			return c.Err
+		}
+	}
+	return nil
 }

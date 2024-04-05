@@ -54,7 +54,7 @@ func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, homeActorIri *url.URL
 	runner := make(chan command)
 	connector := instances.NewConnector(ctx, *homeActorIri, *hostActorIri, entity.Space, entity.LiveStreamId.String(), registerToken)
 
-	lob := &lobby{
+	lobObj := &lobby{
 		Id:   entity.UUID,
 		ctx:  ctx,
 		stop: stop,
@@ -71,7 +71,7 @@ func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, homeActorIri *url.URL
 
 		connector: connector,
 	}
-	// session handling should be sequentiell to avoid data races in group state
+	// session handling should be sequentiell to avoid races conditions in whole group state
 	go func(l *lobby, sessionCreator <-chan sessions.Item, sessionGarbage chan sessions.Item, cmdRunner <-chan command) {
 		for {
 			select {
@@ -112,10 +112,15 @@ func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, homeActorIri *url.URL
 				return
 			}
 		}
-	}(lob, creator, garbage, runner)
+	}(lobObj, creator, garbage, runner)
 
-	// lob.newSession(lob.Id, sessions.InstanceSession)
-	return lob
+	if !connector.IsThisInstanceLiveSteamHost() {
+		go func(l *lobby) {
+			l.connectToLiveStreamHostInstance()
+		}(lobObj)
+	}
+
+	return lobObj
 }
 
 func (l *lobby) newSession(userId uuid.UUID, sType sessions.SessionType) bool {
@@ -161,4 +166,33 @@ func (l *lobby) handle(cmd command) {
 		cmd.Execute(session)
 	}
 	cmd.SetError(ErrNoSession)
+}
+
+func (l *lobby) connectToLiveStreamHostInstance() {
+	if ok := l.newSession(l.connector.GetInstanceId(), sessions.InstanceSession); !ok {
+		slog.Error("no session found for instance connection")
+		return
+	}
+
+	cmdIngress, err := l.connector.BuildIngress()
+	if err != nil {
+		slog.Error("build Ingress connection", "err", err)
+		return
+	}
+	l.runCommand(cmdIngress)
+	if err = cmdIngress.WaitForDone(); err != nil {
+		slog.Error("run ingress build connection cmd", "err", err)
+		return
+	}
+
+	cmdEgress, err := l.connector.BuildEgress()
+	if err != nil {
+		slog.Error("build Egress connection", "err", err)
+		return
+	}
+	l.runCommand(cmdEgress)
+	if err = cmdEgress.WaitForDone(); err != nil {
+		slog.Error("run egress build connection cmd", "err", err)
+		return
+	}
 }
