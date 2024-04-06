@@ -10,6 +10,7 @@ import (
 
 // EstablishStaticIngressEndpoint
 // This is used from cmd line toll to start a webrtc connection in a running lobby
+// Deprecated: Because the Endpoint API is getting simpler
 func EstablishStaticIngressEndpoint(ctx context.Context, e *Engine, sendingTracks []webrtc.TrackLocal, options ...EndpointOption) (*Endpoint, error) {
 	stateHandler := newMediaStateEventHandler()
 	api, err := e.createApi()

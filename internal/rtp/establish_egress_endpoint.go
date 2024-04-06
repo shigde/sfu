@@ -13,6 +13,8 @@ import (
 	"golang.org/x/exp/slog"
 )
 
+// EstablishEgressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
 func EstablishEgressEndpoint(sessionCxt context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, options ...EndpointOption) (*Endpoint, error) {
 	metric.GraphNodeUpdate(metric.BuildNode(sessionId.String(), liveStream.String(), "egress"))
 	_, span := otel.Tracer(tracerName).Start(sessionCxt, "establish_egress_endpoint")

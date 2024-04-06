@@ -13,6 +13,8 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
+// EstablishIngressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
 func EstablishIngressEndpoint(sessionCxt context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(sessionCxt, "establish_ingress_endpoint")
 	// Add node in dashboard
