@@ -99,7 +99,8 @@ func (m *LobbyManager) StopLiveStream(
 
 // Old API -----------------------------------
 
-// CreateLobbyIngressEndpoint deprecated
+// CreateLobbyIngressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
 func (m *LobbyManager) CreateLobbyIngressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Resource     uuid.UUID
@@ -112,7 +113,8 @@ func (m *LobbyManager) CreateLobbyIngressEndpoint(ctx context.Context, lobbyId u
 	}{Answer: nil, Resource: uuid.New(), RtpSessionId: uuid.New()}, nil
 }
 
-// InitLobbyEgressEndpoint deprecated
+// InitLobbyEgressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
 func (m *LobbyManager) InitLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID) (struct {
 	Offer        *webrtc.SessionDescription
 	Active       bool
@@ -125,7 +127,8 @@ func (m *LobbyManager) InitLobbyEgressEndpoint(ctx context.Context, lobbyId uuid
 	}{Offer: nil, Active: false, RtpSessionId: uuid.New()}, nil
 }
 
-// FinalCreateLobbyEgressEndpoint deprecated
+// FinalCreateLobbyEgressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
 func (m *LobbyManager) FinalCreateLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Active       bool
@@ -138,7 +141,8 @@ func (m *LobbyManager) FinalCreateLobbyEgressEndpoint(ctx context.Context, lobby
 	}{Answer: nil, Active: false, RtpSessionId: uuid.New()}, nil
 }
 
-// CreateMainStreamLobbyEgressEndpoint deprecated
+// CreateMainStreamLobbyEgressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
 func (m *LobbyManager) CreateMainStreamLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	RtpSessionId uuid.UUID
@@ -151,7 +155,8 @@ func (m *LobbyManager) CreateMainStreamLobbyEgressEndpoint(ctx context.Context, 
 
 // Server to Server API
 
-// CreateLobbyHostPipe deprecated
+// CreateLobbyHostPipe
+// Deprecated: Because the Endpoint API is getting simpler
 func (m *LobbyManager) CreateLobbyHostPipe(ctx context.Context, u uuid.UUID, offer *webrtc.SessionDescription, instanceId uuid.UUID) (struct {
 	Answer       *webrtc.SessionDescription
 	Resource     uuid.UUID
@@ -164,7 +169,8 @@ func (m *LobbyManager) CreateLobbyHostPipe(ctx context.Context, u uuid.UUID, off
 	}{Answer: nil, Resource: uuid.New(), RtpSessionId: uuid.New()}, nil
 }
 
-// CreateLobbyHostIngress deprecated
+// CreateLobbyHostIngress
+// Deprecated: Because the Endpoint API is getting simpler
 func (m *LobbyManager) CreateLobbyHostIngress(ctx context.Context, u uuid.UUID, offer *webrtc.SessionDescription, instanceId uuid.UUID) (struct {
 	Answer       *webrtc.SessionDescription
 	Resource     uuid.UUID
@@ -177,7 +183,8 @@ func (m *LobbyManager) CreateLobbyHostIngress(ctx context.Context, u uuid.UUID, 
 	}{Answer: nil, Resource: uuid.New(), RtpSessionId: uuid.New()}, nil
 }
 
-// CloseLobbyHostPipe deprecated
+// CloseLobbyHostPipe
+// Deprecated: Because the Endpoint API is getting simpler
 func (m *LobbyManager) CloseLobbyHostPipe(ctx context.Context, u uuid.UUID, id uuid.UUID) (bool, error) {
 	return false, nil
 }

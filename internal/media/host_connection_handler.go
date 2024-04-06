@@ -15,7 +15,8 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-// openPipe deprecated
+// openPipe
+// Deprecated: Because the Endpoint API is getting simpler
 func openPipe(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "open-host-pipe")
@@ -83,7 +84,8 @@ func openPipe(streamService *stream.LiveStreamService, liveService *stream.LiveL
 	}
 }
 
-// openHostIngress deprecated
+// openHostIngress
+// Deprecated: Because the Endpoint API is getting simpler
 func openHostIngress(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "open-host-Ingress")
@@ -144,7 +146,8 @@ func openHostIngress(streamService *stream.LiveStreamService, liveService *strea
 	}
 }
 
-// closePipe deprecated
+// closePipe
+// Deprecated: Because the Endpoint API is getting simpler
 func closePipe(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := otel.Tracer(tracerName).Start(r.Context(), "close host pipe")

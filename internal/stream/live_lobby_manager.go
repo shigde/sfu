@@ -20,47 +20,54 @@ type liveLobbyManager interface {
 
 	// Deprecated API
 
-	// CreateLobbyIngressEndpoint deprecated
+	// CreateLobbyIngressEndpoint
+	// Deprecated: Because the Endpoint API is getting simpler
 	CreateLobbyIngressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 		Answer       *webrtc.SessionDescription
 		Resource     uuid.UUID
 		RtpSessionId uuid.UUID
 	}, error)
 
-	// InitLobbyEgressEndpoint deprecated
+	// InitLobbyEgressEndpoint
+	// Deprecated: Because the Endpoint API is getting simpler
 	InitLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID) (struct {
 		Offer        *webrtc.SessionDescription
 		Active       bool
 		RtpSessionId uuid.UUID
 	}, error)
 
-	// FinalCreateLobbyEgressEndpoint deprecated
+	// FinalCreateLobbyEgressEndpoint
+	// Deprecated: Because the Endpoint API is getting simpler
 	FinalCreateLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 		Answer       *webrtc.SessionDescription
 		Active       bool
 		RtpSessionId uuid.UUID
 	}, error)
 
-	// CreateMainStreamLobbyEgressEndpoint deprecated
+	// CreateMainStreamLobbyEgressEndpoint
+	// Deprecated: Because the Endpoint API is getting simpler
 	CreateMainStreamLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 		Answer       *webrtc.SessionDescription
 		RtpSessionId uuid.UUID
 	}, error)
 
-	// CreateLobbyHostPipe deprecated
+	// CreateLobbyHostPipe
+	// Deprecated: Because the Endpoint API is getting simpler
 	CreateLobbyHostPipe(ctx context.Context, u uuid.UUID, offer *webrtc.SessionDescription, instanceId uuid.UUID) (struct {
 		Answer       *webrtc.SessionDescription
 		Resource     uuid.UUID
 		RtpSessionId uuid.UUID
 	}, error)
 
-	// CreateLobbyHostIngress deprecated
+	// CreateLobbyHostIngress
+	// Deprecated: Because the Endpoint API is getting simpler
 	CreateLobbyHostIngress(ctx context.Context, u uuid.UUID, offer *webrtc.SessionDescription, instanceId uuid.UUID) (struct {
 		Answer       *webrtc.SessionDescription
 		Resource     uuid.UUID
 		RtpSessionId uuid.UUID
 	}, error)
 
-	// CloseLobbyHostPipe deprecated
+	// CloseLobbyHostPipe
+	// Deprecated: Because the Endpoint API is getting simpler
 	CloseLobbyHostPipe(ctx context.Context, u uuid.UUID, id uuid.UUID) (bool, error)
 }

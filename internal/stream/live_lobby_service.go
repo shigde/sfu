@@ -36,39 +36,6 @@ func (s *LiveLobbyService) CreateLobbyEgressEndpoint(ctx context.Context, sdp *w
 	return resource.SDP, resource.Id, nil
 }
 
-// InitLobbyEgressEndpoint deprecated
-func (s *LiveLobbyService) InitLobbyEgressEndpoint(ctx context.Context, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, error) {
-	resourceData, err := s.lobbyManager.InitLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId)
-	if err != nil {
-		return nil, fmt.Errorf("start listening lobby: %w", err)
-	}
-	if !resourceData.Active {
-		return nil, ErrLobbyNotActive
-	}
-	return resourceData.Offer, nil
-}
-
-// FinalCreateLobbyEgressEndpoint deprecated
-func (s *LiveLobbyService) FinalCreateLobbyEgressEndpoint(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (bool, error) {
-	resourceData, err := s.lobbyManager.FinalCreateLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId, offer)
-	if err != nil {
-		return false, fmt.Errorf("listening lobby: %w", err)
-	}
-	if !resourceData.Active {
-		return false, ErrLobbyNotActive
-	}
-	return resourceData.Active, nil
-}
-
-// CreateMainStreamLobbyEgressEndpoint deprecated
-func (s *LiveLobbyService) CreateMainStreamLobbyEgressEndpoint(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, error) {
-	resourceData, err := s.lobbyManager.CreateMainStreamLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId, offer)
-	if err != nil {
-		return nil, fmt.Errorf("accessing lobby: %w", err)
-	}
-	return resourceData.Answer, nil
-}
-
 func (s *LiveLobbyService) LeaveLobby(ctx context.Context, stream *LiveStream, userId uuid.UUID) (bool, error) {
 	left, err := s.lobbyManager.LeaveLobby(ctx, stream.Lobby.UUID, userId)
 	if err != nil {
@@ -91,7 +58,44 @@ func (s *LiveLobbyService) StopLiveStream(ctx context.Context, stream *LiveStrea
 	return nil
 }
 
-// CreateLobbyHostPipeConnection deprecated
+// InitLobbyEgressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
+func (s *LiveLobbyService) InitLobbyEgressEndpoint(ctx context.Context, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, error) {
+	resourceData, err := s.lobbyManager.InitLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId)
+	if err != nil {
+		return nil, fmt.Errorf("start listening lobby: %w", err)
+	}
+	if !resourceData.Active {
+		return nil, ErrLobbyNotActive
+	}
+	return resourceData.Offer, nil
+}
+
+// FinalCreateLobbyEgressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
+func (s *LiveLobbyService) FinalCreateLobbyEgressEndpoint(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (bool, error) {
+	resourceData, err := s.lobbyManager.FinalCreateLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId, offer)
+	if err != nil {
+		return false, fmt.Errorf("listening lobby: %w", err)
+	}
+	if !resourceData.Active {
+		return false, ErrLobbyNotActive
+	}
+	return resourceData.Active, nil
+}
+
+// CreateMainStreamLobbyEgressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
+func (s *LiveLobbyService) CreateMainStreamLobbyEgressEndpoint(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, error) {
+	resourceData, err := s.lobbyManager.CreateMainStreamLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId, offer)
+	if err != nil {
+		return nil, fmt.Errorf("accessing lobby: %w", err)
+	}
+	return resourceData.Answer, nil
+}
+
+// CreateLobbyHostPipeConnection
+// Deprecated: Because the Endpoint API is getting simpler
 func (s *LiveLobbyService) CreateLobbyHostPipeConnection(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, instanceId uuid.UUID) (*webrtc.SessionDescription, string, error) {
 	resourceData, err := s.lobbyManager.CreateLobbyHostPipe(ctx, stream.Lobby.UUID, offer, instanceId)
 	if err != nil {
@@ -100,7 +104,8 @@ func (s *LiveLobbyService) CreateLobbyHostPipeConnection(ctx context.Context, of
 	return resourceData.Answer, "", nil
 }
 
-// CreateLobbyHostIngressConnection deprecated
+// CreateLobbyHostIngressConnection
+// Deprecated: Because the Endpoint API is getting simpler
 func (s *LiveLobbyService) CreateLobbyHostIngressConnection(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, instanceId uuid.UUID) (*webrtc.SessionDescription, string, error) {
 	resourceData, err := s.lobbyManager.CreateLobbyHostIngress(ctx, stream.Lobby.UUID, offer, instanceId)
 	if err != nil {
@@ -109,7 +114,8 @@ func (s *LiveLobbyService) CreateLobbyHostIngressConnection(ctx context.Context,
 	return resourceData.Answer, "", nil
 }
 
-// CloseLobbyHostConnection deprecated
+// CloseLobbyHostConnection
+// Deprecated: Because the Endpoint API is getting simpler
 func (s *LiveLobbyService) CloseLobbyHostConnection(ctx context.Context, stream *LiveStream, instanceId uuid.UUID) (bool, error) {
 	left, err := s.lobbyManager.CloseLobbyHostPipe(ctx, stream.Lobby.UUID, instanceId)
 	if err != nil {
