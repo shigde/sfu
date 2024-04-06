@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/shigde/sfu/internal/lobby/instances"
+	"github.com/shigde/sfu/internal/lobby/federation"
 	"github.com/shigde/sfu/internal/lobby/sessions"
 	"golang.org/x/exp/slog"
 )
@@ -40,7 +40,7 @@ type lobby struct {
 	lobbyGarbage   chan<- lobbyItem
 	cmdRunner      chan<- command
 
-	connector *instances.Connector
+	connector *federation.Connector
 }
 
 func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, homeActorIri *url.URL, registerToken string, lobbyGarbage chan<- lobbyItem) *lobby {
@@ -52,7 +52,7 @@ func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, homeActorIri *url.URL
 	garbage := make(chan sessions.Item)
 	creator := make(chan sessions.Item)
 	runner := make(chan command)
-	connector := instances.NewConnector(ctx, *homeActorIri, *hostActorIri, entity.Space, entity.LiveStreamId.String(), registerToken)
+	connector := federation.NewConnector(ctx, *homeActorIri, *hostActorIri, entity.Space, entity.LiveStreamId.String(), registerToken)
 
 	lobObj := &lobby{
 		Id:   entity.UUID,
