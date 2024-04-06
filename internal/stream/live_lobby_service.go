@@ -36,7 +36,7 @@ func (s *LiveLobbyService) CreateLobbyEgressEndpoint(ctx context.Context, sdp *w
 	return resource.SDP, resource.Id, nil
 }
 
-// Old api
+// InitLobbyEgressEndpoint deprecated
 func (s *LiveLobbyService) InitLobbyEgressEndpoint(ctx context.Context, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, error) {
 	resourceData, err := s.lobbyManager.InitLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId)
 	if err != nil {
@@ -48,6 +48,7 @@ func (s *LiveLobbyService) InitLobbyEgressEndpoint(ctx context.Context, stream *
 	return resourceData.Offer, nil
 }
 
+// FinalCreateLobbyEgressEndpoint deprecated
 func (s *LiveLobbyService) FinalCreateLobbyEgressEndpoint(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (bool, error) {
 	resourceData, err := s.lobbyManager.FinalCreateLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId, offer)
 	if err != nil {
@@ -59,6 +60,7 @@ func (s *LiveLobbyService) FinalCreateLobbyEgressEndpoint(ctx context.Context, o
 	return resourceData.Active, nil
 }
 
+// CreateMainStreamLobbyEgressEndpoint deprecated
 func (s *LiveLobbyService) CreateMainStreamLobbyEgressEndpoint(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, userId uuid.UUID) (*webrtc.SessionDescription, error) {
 	resourceData, err := s.lobbyManager.CreateMainStreamLobbyEgressEndpoint(ctx, stream.Lobby.UUID, userId, offer)
 	if err != nil {
@@ -89,6 +91,7 @@ func (s *LiveLobbyService) StopLiveStream(ctx context.Context, stream *LiveStrea
 	return nil
 }
 
+// CreateLobbyHostPipeConnection deprecated
 func (s *LiveLobbyService) CreateLobbyHostPipeConnection(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, instanceId uuid.UUID) (*webrtc.SessionDescription, string, error) {
 	resourceData, err := s.lobbyManager.CreateLobbyHostPipe(ctx, stream.Lobby.UUID, offer, instanceId)
 	if err != nil {
@@ -97,6 +100,7 @@ func (s *LiveLobbyService) CreateLobbyHostPipeConnection(ctx context.Context, of
 	return resourceData.Answer, "", nil
 }
 
+// CreateLobbyHostIngressConnection deprecated
 func (s *LiveLobbyService) CreateLobbyHostIngressConnection(ctx context.Context, offer *webrtc.SessionDescription, stream *LiveStream, instanceId uuid.UUID) (*webrtc.SessionDescription, string, error) {
 	resourceData, err := s.lobbyManager.CreateLobbyHostIngress(ctx, stream.Lobby.UUID, offer, instanceId)
 	if err != nil {
@@ -105,6 +109,7 @@ func (s *LiveLobbyService) CreateLobbyHostIngressConnection(ctx context.Context,
 	return resourceData.Answer, "", nil
 }
 
+// CloseLobbyHostConnection deprecated
 func (s *LiveLobbyService) CloseLobbyHostConnection(ctx context.Context, stream *LiveStream, instanceId uuid.UUID) (bool, error) {
 	left, err := s.lobbyManager.CloseLobbyHostPipe(ctx, stream.Lobby.UUID, instanceId)
 	if err != nil {
