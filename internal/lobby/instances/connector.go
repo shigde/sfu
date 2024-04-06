@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/shigde/sfu/internal/lobby/clients"
 	"github.com/shigde/sfu/internal/lobby/commands"
-	"github.com/shigde/sfu/internal/lobby/sessions"
 	"golang.org/x/exp/slog"
 )
 
@@ -44,12 +43,6 @@ func NewConnector(
 		space:        space,
 		liveStream:   liveStream,
 	}
-}
-
-type command interface {
-	GetUserId() uuid.UUID
-	Execute(session *sessions.Session)
-	SetError(err error)
 }
 
 func (c *Connector) BuildIngress() (*commands.Command, error) {

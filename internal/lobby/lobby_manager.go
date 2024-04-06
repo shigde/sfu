@@ -45,7 +45,7 @@ func (m *LobbyManager) NewIngressResource(ctx context.Context, lobbyId uuid.UUID
 		return nil, fmt.Errorf("creating new session failes")
 	}
 
-	cmd := commands.NewCreateIngressResource(ctx, user, offer)
+	cmd := commands.NewAnswerUserIngress(ctx, user, offer)
 	lobbyObj.runCommand(cmd)
 
 	select {
@@ -62,7 +62,7 @@ func (m *LobbyManager) NewEgressResource(ctx context.Context, lobbyId uuid.UUID,
 		return nil, fmt.Errorf("getting or creating lobby: %w", err)
 	}
 
-	cmd := commands.NewCreateEgressResource(ctx, user, offer)
+	cmd := commands.NewAnswerUserEgress(ctx, user, offer)
 	lobbyObj.runCommand(cmd)
 
 	select {
