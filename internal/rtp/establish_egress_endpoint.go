@@ -13,9 +13,11 @@ import (
 	"golang.org/x/exp/slog"
 )
 
+// EstablishEgressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
 func EstablishEgressEndpoint(sessionCxt context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, options ...EndpointOption) (*Endpoint, error) {
 	metric.GraphNodeUpdate(metric.BuildNode(sessionId.String(), liveStream.String(), "egress"))
-	_, span := otel.Tracer(tracerName).Start(sessionCxt, "rtp:establish_egress_endpoint")
+	_, span := otel.Tracer(tracerName).Start(sessionCxt, "establish_egress_endpoint")
 	defer span.End()
 
 	endpoint := newEndpoint(sessionCxt, sessionId.String(), liveStream.String(), EgressEndpoint, options...)
@@ -50,9 +52,9 @@ func EstablishEgressEndpoint(sessionCxt context.Context, e *Engine, sessionId uu
 			case <-sessionCxt.Done():
 				return
 			case <-initComplete:
-				if tracksList, err := endpoint.getCurrentTracksCbk(sessionId); err == nil {
+				if tracksList, err := endpoint.getCurrentTracksCbk(context.TODO(), sessionId); err == nil {
 					for _, trackInfo := range tracksList {
-						endpoint.AddTrack(trackInfo)
+						endpoint.AddTrack(context.TODO(), trackInfo)
 					}
 				}
 			}

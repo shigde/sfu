@@ -7,195 +7,77 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
-	"github.com/shigde/sfu/internal/rtp"
+	"github.com/shigde/sfu/internal/lobby/commands"
+	"github.com/shigde/sfu/internal/lobby/resources"
+	"github.com/shigde/sfu/internal/lobby/sessions"
 	"github.com/shigde/sfu/internal/storage"
 	"golang.org/x/exp/slog"
 )
 
-const tracerName = "github.com/shigde/sfu/internal/lobby"
-
 type LobbyManager struct {
-	lobbies               *lobbyRepository
-	lobbyGarbageCollector chan<- uuid.UUID
+	lobbies      *lobbyRepository
+	lobbyGarbage chan<- lobbyItem
 }
 
-type rtpEngine interface {
-	EstablishIngressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
+func NewLobbyManager(storage storage.Storage, e sessions.RtpEngine, homeUrl *url.URL, registerToken string) *LobbyManager {
+	lobbyRep := newLobbyRepository(storage, e, homeUrl, registerToken)
+	lobbyGarbage := make(chan lobbyItem)
 
-	EstablishEgressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
-
-	EstablishStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
-}
-
-func NewLobbyManager(storage storage.Storage, e rtpEngine, hostUrl *url.URL, registerToken string) *LobbyManager {
-	lobbies := newLobbyRepository(storage, e, hostUrl, registerToken)
-	lobbyGarbageCollector := make(chan uuid.UUID)
 	go func() {
-		for id := range lobbyGarbageCollector {
-			if ok := lobbies.delete(context.Background(), id); !ok {
-				slog.Warn("lobby could not delete", "lobby", id)
+		// if a lobby has no sessions anymore, the lobby triggers a delete process.
+		for item := range lobbyGarbage {
+			ok := lobbyRep.delete(context.Background(), item.LobbyId)
+			if !ok {
+				slog.Warn("lobby could not delete", "lobby", item.LobbyId)
 			}
+			item.Done <- ok
 		}
 	}()
-	return &LobbyManager{lobbies, lobbyGarbageCollector}
+	return &LobbyManager{lobbyRep, lobbyGarbage}
 }
 
-func (m *LobbyManager) CreateLobbyIngressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
-	Answer       *webrtc.SessionDescription
-	Resource     uuid.UUID
-	RtpSessionId uuid.UUID
-}, error) {
-	var answerData struct {
-		Answer       *webrtc.SessionDescription
-		Resource     uuid.UUID
-		RtpSessionId uuid.UUID
-	}
-
-	lobby, err := m.lobbies.getOrCreateLobby(ctx, lobbyId, m.lobbyGarbageCollector)
+func (m *LobbyManager) NewIngressResource(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription, option ...resources.Option) (*resources.WebRTC, error) {
+	lobbyObj, err := m.lobbies.getOrCreateLobby(ctx, lobbyId, m.lobbyGarbage)
 	if err != nil {
-		return answerData, fmt.Errorf("getting or creating lobby: %w", err)
+		return nil, fmt.Errorf("getting or creating lobby: %w", err)
+	}
+	if ok := lobbyObj.newSession(user, sessions.UserSession); !ok {
+		return nil, fmt.Errorf("creating new session failes")
 	}
 
-	request := newLobbyRequest(ctx, user)
-	ingressData := newIngressEndpointData(offer)
-	request.data = ingressData
-
-	go lobby.runRequest(request)
+	cmd := commands.NewAnswerUserIngress(ctx, user, offer)
+	lobbyObj.runCommand(cmd)
 
 	select {
-	case err := <-request.err:
-		return answerData, fmt.Errorf("requesting joining lobby: %w", err)
-	case rtpResourceData := <-ingressData.response:
-		answerData.Answer = rtpResourceData.answer
-		answerData.Resource = rtpResourceData.resource
-		answerData.RtpSessionId = rtpResourceData.RtpSessionId
-		return answerData, nil
+	case <-cmd.Done():
+		return cmd.Response, cmd.Err
+	case <-ctx.Done():
+		return nil, fmt.Errorf("time out")
 	}
 }
 
-func (m *LobbyManager) InitLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID) (struct {
-	Offer        *webrtc.SessionDescription
-	Active       bool
-	RtpSessionId uuid.UUID
-}, error) {
-
-	var answerData struct {
-		Offer        *webrtc.SessionDescription
-		Active       bool
-		RtpSessionId uuid.UUID
+func (m *LobbyManager) NewEgressResource(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription, option ...resources.Option) (*resources.WebRTC, error) {
+	lobbyObj, err := m.lobbies.getOrCreateLobby(ctx, lobbyId, m.lobbyGarbage)
+	if err != nil {
+		return nil, fmt.Errorf("getting or creating lobby: %w", err)
 	}
 
-	if lobby, hasLobby := m.lobbies.getLobby(lobbyId); hasLobby {
-		request := newLobbyRequest(ctx, user)
-		egressData := newInitEgressEndpointData()
-		request.data = egressData
+	cmd := commands.NewAnswerUserEgress(ctx, user, offer)
+	lobbyObj.runCommand(cmd)
 
-		go lobby.runRequest(request)
-
-		var data struct {
-			Offer        *webrtc.SessionDescription
-			Active       bool
-			RtpSessionId uuid.UUID
-		}
-
-		select {
-		case err := <-request.err:
-			return data, fmt.Errorf("requesting listening lobby: %w", err)
-		case rtpResourceData := <-egressData.response:
-			data.Offer = rtpResourceData.offer
-			data.Active = true
-			data.RtpSessionId = rtpResourceData.RtpSessionId
-			return data, nil
-		}
+	select {
+	case <-cmd.Done():
+		return cmd.Response, cmd.Err
+	case <-ctx.Done():
+		return nil, fmt.Errorf("time out")
 	}
-	answerData.Active = false
-	return answerData, nil
-}
-
-func (m *LobbyManager) FinalCreateLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
-	Answer       *webrtc.SessionDescription
-	Active       bool
-	RtpSessionId uuid.UUID
-}, error) {
-
-	var answerData struct {
-		Answer       *webrtc.SessionDescription
-		Active       bool
-		RtpSessionId uuid.UUID
-	}
-
-	if lobby, hasLobby := m.lobbies.getLobby(lobbyId); hasLobby {
-		request := newLobbyRequest(ctx, user)
-		listenData := newFinalCreateEgressEndpointData(offer)
-		request.data = listenData
-
-		go lobby.runRequest(request)
-
-		var data struct {
-			Answer       *webrtc.SessionDescription
-			Active       bool
-			RtpSessionId uuid.UUID
-		}
-
-		select {
-		case err := <-request.err:
-			return data, fmt.Errorf("requesting listening lobby: %w", err)
-		case rtpResourceData := <-listenData.response:
-			data.Active = true
-			data.RtpSessionId = rtpResourceData.RtpSessionId
-			return data, nil
-		}
-	}
-	answerData.Active = false
-	return answerData, nil
-}
-
-func (m *LobbyManager) CreateMainStreamLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
-	Answer       *webrtc.SessionDescription
-	RtpSessionId uuid.UUID
-}, error) {
-
-	var answerData struct {
-		Answer       *webrtc.SessionDescription
-		RtpSessionId uuid.UUID
-	}
-
-	if lobby, hasLobby := m.lobbies.getLobby(lobbyId); hasLobby {
-		request := newLobbyRequest(ctx, user)
-		egressData := newMainEgressEndpointData(offer)
-		request.data = egressData
-
-		go lobby.runRequest(request)
-
-		select {
-		case err := <-request.err:
-			return answerData, fmt.Errorf("requesting joining lobby: %w", err)
-		case rtpResourceData := <-egressData.response:
-			answerData.Answer = rtpResourceData.answer
-			answerData.RtpSessionId = rtpResourceData.RtpSessionId
-			return answerData, nil
-		}
-	}
-	return answerData, errLobbyNotFound
 }
 
 func (m *LobbyManager) LeaveLobby(ctx context.Context, lobbyId uuid.UUID, userId uuid.UUID) (bool, error) {
-	if lobby, hasLobby := m.lobbies.getLobby(lobbyId); hasLobby {
-		request := newLobbyRequest(ctx, userId)
-		leaveData := newLeaveData()
-		request.data = leaveData
-
-		go lobby.runRequest(request)
-
-		select {
-		case err := <-request.err:
-			return false, err
-		case success := <-leaveData.response:
-			return success, nil
-		}
-	}
 	return false, nil
 }
+
+// Live Stream Publish API
 
 func (m *LobbyManager) StartLiveStream(
 	ctx context.Context,
@@ -204,20 +86,6 @@ func (m *LobbyManager) StartLiveStream(
 	rtmpUrl string,
 	userId uuid.UUID,
 ) error {
-	if lobby, hasLobby := m.lobbies.getLobby(lobbyId); hasLobby {
-		request := newLobbyRequest(ctx, userId)
-		startData := newLiveStreamStart(key, rtmpUrl)
-		request.data = startData
-		go lobby.runRequest(request)
-
-		select {
-		case err := <-request.err:
-			return err
-		case res := <-startData.response:
-			m.lobbies.setLobbyLive(ctx, lobbyId, res)
-			return nil
-		}
-	}
 	return nil
 }
 
@@ -226,72 +94,97 @@ func (m *LobbyManager) StopLiveStream(
 	lobbyId uuid.UUID,
 	userId uuid.UUID,
 ) error {
-	if lobby, hasLobby := m.lobbies.getLobby(lobbyId); hasLobby {
-		request := newLobbyRequest(ctx, userId)
-		stopData := newLiveStreamStop()
-		request.data = stopData
-		go lobby.runRequest(request)
-
-		select {
-		case err := <-request.err:
-			return err
-		case _ = <-stopData.response:
-			m.lobbies.setLobbyLive(ctx, lobbyId, false)
-			return nil
-		}
-	}
 	return nil
 }
 
-func (m *LobbyManager) CreateLobbyHostPipe(ctx context.Context, lobbyId uuid.UUID, offer *webrtc.SessionDescription, instanceId uuid.UUID) (struct {
+// Old API -----------------------------------
+
+// CreateLobbyIngressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
+func (m *LobbyManager) CreateLobbyIngressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
 	Answer       *webrtc.SessionDescription
 	Resource     uuid.UUID
 	RtpSessionId uuid.UUID
 }, error) {
-	var answerData struct {
+	return struct {
 		Answer       *webrtc.SessionDescription
 		Resource     uuid.UUID
 		RtpSessionId uuid.UUID
-	}
-
-	lobby, err := m.lobbies.getOrCreateLobby(ctx, lobbyId, m.lobbyGarbageCollector)
-	if err != nil {
-		return answerData, fmt.Errorf("getting or creating lobby: %w", err)
-	}
-
-	if answer, err := lobby.hostController.onRemoteHostPipeConnectionRequest(offer, instanceId); err == nil {
-		answerData.Answer = answer
-		return answerData, nil
-	}
-	return answerData, fmt.Errorf("creating lobby host pipe connection req: %w", err)
+	}{Answer: nil, Resource: uuid.New(), RtpSessionId: uuid.New()}, nil
 }
 
-func (m *LobbyManager) CreateLobbyHostIngress(_ context.Context, lobbyId uuid.UUID, offer *webrtc.SessionDescription, instanceId uuid.UUID) (struct {
+// InitLobbyEgressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
+func (m *LobbyManager) InitLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID) (struct {
+	Offer        *webrtc.SessionDescription
+	Active       bool
+	RtpSessionId uuid.UUID
+}, error) {
+	return struct {
+		Offer        *webrtc.SessionDescription
+		Active       bool
+		RtpSessionId uuid.UUID
+	}{Offer: nil, Active: false, RtpSessionId: uuid.New()}, nil
+}
+
+// FinalCreateLobbyEgressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
+func (m *LobbyManager) FinalCreateLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
+	Answer       *webrtc.SessionDescription
+	Active       bool
+	RtpSessionId uuid.UUID
+}, error) {
+	return struct {
+		Answer       *webrtc.SessionDescription
+		Active       bool
+		RtpSessionId uuid.UUID
+	}{Answer: nil, Active: false, RtpSessionId: uuid.New()}, nil
+}
+
+// CreateMainStreamLobbyEgressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
+func (m *LobbyManager) CreateMainStreamLobbyEgressEndpoint(ctx context.Context, lobbyId uuid.UUID, user uuid.UUID, offer *webrtc.SessionDescription) (struct {
+	Answer       *webrtc.SessionDescription
+	RtpSessionId uuid.UUID
+}, error) {
+	return struct {
+		Answer       *webrtc.SessionDescription
+		RtpSessionId uuid.UUID
+	}{Answer: nil, RtpSessionId: uuid.New()}, nil
+}
+
+// Server to Server API
+
+// CreateLobbyHostPipe
+// Deprecated: Because the Endpoint API is getting simpler
+func (m *LobbyManager) CreateLobbyHostPipe(ctx context.Context, u uuid.UUID, offer *webrtc.SessionDescription, instanceId uuid.UUID) (struct {
 	Answer       *webrtc.SessionDescription
 	Resource     uuid.UUID
 	RtpSessionId uuid.UUID
 }, error) {
-	var answerData struct {
+	return struct {
 		Answer       *webrtc.SessionDescription
 		Resource     uuid.UUID
 		RtpSessionId uuid.UUID
-	}
-
-	lobby, hasLobby := m.lobbies.getLobby(lobbyId)
-	if !hasLobby {
-		return answerData, errLobbyNotFound
-	}
-
-	var answer *webrtc.SessionDescription
-	var err error
-	if answer, err = lobby.hostController.onRemoteHostIngressConnectionRequest(offer, instanceId); err != nil {
-		return answerData, fmt.Errorf("creating lobby host remote ingress connection req: %w", err)
-	}
-
-	answerData.Answer = answer
-	return answerData, nil
+	}{Answer: nil, Resource: uuid.New(), RtpSessionId: uuid.New()}, nil
 }
 
-func (m *LobbyManager) CloseLobbyHostPipe(ctx context.Context, lobbyId uuid.UUID, instanceId uuid.UUID) (bool, error) {
-	return m.LeaveLobby(ctx, lobbyId, instanceId)
+// CreateLobbyHostIngress
+// Deprecated: Because the Endpoint API is getting simpler
+func (m *LobbyManager) CreateLobbyHostIngress(ctx context.Context, u uuid.UUID, offer *webrtc.SessionDescription, instanceId uuid.UUID) (struct {
+	Answer       *webrtc.SessionDescription
+	Resource     uuid.UUID
+	RtpSessionId uuid.UUID
+}, error) {
+	return struct {
+		Answer       *webrtc.SessionDescription
+		Resource     uuid.UUID
+		RtpSessionId uuid.UUID
+	}{Answer: nil, Resource: uuid.New(), RtpSessionId: uuid.New()}, nil
+}
+
+// CloseLobbyHostPipe
+// Deprecated: Because the Endpoint API is getting simpler
+func (m *LobbyManager) CloseLobbyHostPipe(ctx context.Context, u uuid.UUID, id uuid.UUID) (bool, error) {
+	return false, nil
 }

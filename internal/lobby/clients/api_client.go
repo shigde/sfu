@@ -1,4 +1,4 @@
-package lobby
+package clients
 
 import (
 	"bytes"
@@ -6,38 +6,33 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/pkg/authentication"
 )
 
-type hostApiClient struct {
-	instanceId uuid.UUID // not needed?
-	name       string
-	token      string
-	url        *url.URL
-	bearer     string
+type ApiClient struct {
+	login  loginGetter
+	url    string
+	bearer string
 }
 
-func newHostApiClient(id uuid.UUID, token string, name string, shigUrl *url.URL) *hostApiClient {
-	return &hostApiClient{
-		instanceId: id,
-		name:       name,
-		token:      token,
-		url:        shigUrl,
+type loginGetter interface {
+	GetUser() *authentication.User
+}
+
+func NewApiClient(loginGetter loginGetter, shigUrl string) *ApiClient {
+	return &ApiClient{
+		login: loginGetter,
+		url:   shigUrl,
 	}
 }
 
-func (a *hostApiClient) Login() (*authentication.Token, error) {
-	loginUrl := fmt.Sprintf("%s/authenticate", a.url.String())
-	user := &authentication.User{
-		UserId: a.name,
-		Token:  a.token,
-	}
+func (a *ApiClient) Login() (*authentication.Token, error) {
+	loginUrl := fmt.Sprintf("%s/authenticate", a.url)
+	user := a.login.GetUser()
 	userJSON, err := json.Marshal(user)
 	if err != nil {
 		return nil, fmt.Errorf("creating json object: %w", err)
@@ -78,17 +73,17 @@ func (a *hostApiClient) Login() (*authentication.Token, error) {
 	return &result, nil
 }
 
-func (a *hostApiClient) PostHostPipeOffer(spaceId string, streamId string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
-	requestUrl := fmt.Sprintf("%s/space/%s/stream/%s/pipe", a.url.String(), spaceId, streamId)
+func (a *ApiClient) PostHostPipeOffer(spaceId string, streamId string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+	requestUrl := fmt.Sprintf("%s/space/%s/stream/%s/pipe", a.url, spaceId, streamId)
 	return a.doOfferRequest(requestUrl, offer)
 }
 
-func (a *hostApiClient) PostHostIngressOffer(spaceId string, streamId string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
-	requestUrl := fmt.Sprintf("%s/space/%s/stream/%s/hostingress", a.url.String(), spaceId, streamId)
+func (a *ApiClient) PostHostIngressOffer(spaceId string, streamId string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+	requestUrl := fmt.Sprintf("%s/space/%s/stream/%s/hostingress", a.url, spaceId, streamId)
 	return a.doOfferRequest(requestUrl, offer)
 }
 
-func (a *hostApiClient) doOfferRequest(reqUrl string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+func (a *ApiClient) doOfferRequest(reqUrl string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
 	body := bytes.NewBuffer([]byte(offer.SDP))
 	c := http.Client{Timeout: time.Duration(1) * time.Second}
 	req, err := http.NewRequest("POST", reqUrl, body)
@@ -120,9 +115,9 @@ func (a *hostApiClient) doOfferRequest(reqUrl string, offer *webrtc.SessionDescr
 	return &webrtc.SessionDescription{SDP: answer, Type: webrtc.SDPTypeAnswer}, nil
 }
 
-func (a *hostApiClient) getBearer() string {
+func (a *ApiClient) getBearer() string {
 	return a.bearer
 }
-func (a *hostApiClient) setBearer(bearer string) {
+func (a *ApiClient) setBearer(bearer string) {
 	a.bearer = bearer
 }

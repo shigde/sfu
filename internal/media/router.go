@@ -9,9 +9,10 @@ import (
 	"github.com/shigde/sfu/internal/logging"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/stream"
+	"github.com/shigde/sfu/internal/telemetry"
 )
 
-const tracerName = "github.com/shigde/sfu/internal/media"
+const tracerName = telemetry.TracerName
 
 func NewRouter(
 	securityConfig *auth.SecurityConfig,
@@ -39,22 +40,20 @@ func NewRouter(
 	// Lobby User Endpoints
 	router.HandleFunc("/space/setting", auth.Csrf(auth.HttpMiddleware(securityConfig, getSettings(rtpConfig)))).Methods("GET")
 	router.HandleFunc("/space/{space}/stream/{id}/whip", auth.HttpMiddleware(securityConfig, whip(streamService, liveLobbyService))).Methods("POST")
-	router.HandleFunc("/space/{space}/stream/{id}/whip", auth.TokenMiddleware(whipDelete(streamService, liveLobbyService))).Methods("DELETE")
-	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.TokenMiddleware(whepOffer(streamService, liveLobbyService))).Methods("POST")
-	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.TokenMiddleware(whepAnswer(streamService, liveLobbyService))).Methods("PATCH")
+	router.HandleFunc("/space/{space}/stream/{id}/whep", auth.TokenMiddleware(whep(streamService, liveLobbyService))).Methods("POST")
+	router.HandleFunc("/space/{space}/stream/{id}/res", auth.TokenMiddleware(whipDelete(streamService, liveLobbyService))).Methods("DELETE")
 
-	// Lobby User Live Endpoints
+	// RTMP Live Endpoints
 	router.HandleFunc("/space/{space}/stream/{id}/live", auth.TokenMiddleware(publishLiveStream(streamService, liveLobbyService))).Methods("POST")
 	router.HandleFunc("/space/{space}/stream/{id}/live", auth.TokenMiddleware(getStatusOfLiveStream(streamService))).Methods("GET")
 	router.HandleFunc("/space/{space}/stream/{id}/live", auth.TokenMiddleware(stopLiveStream(streamService, liveLobbyService))).Methods("DELETE")
 
-	// Static Stream listeners
-	router.HandleFunc("/space/{space}/stream/{id}/static/whep", auth.HttpMiddleware(securityConfig, whepStaticAnswer(streamService, liveLobbyService))).Methods("POST")
+	// Federartion api endpoints
+	router.HandleFunc("/fed/space/{space}/stream/{id}/whep", auth.HttpMiddleware(securityConfig, fedWhep(streamService, liveLobbyService))).Methods("POST")
+	router.HandleFunc("/fed/space/{space}/stream/{id}/whip", auth.HttpMiddleware(securityConfig, fedWhip(streamService, liveLobbyService))).Methods("POST")
+	router.HandleFunc("/fed/space/{space}/stream/{id}/res", auth.HttpMiddleware(securityConfig, fedResource(streamService, liveLobbyService))).Methods("DELETE")
 
-	// Server to Server endpoints
-	router.HandleFunc("/space/{space}/stream/{id}/pipe", auth.HttpMiddleware(securityConfig, openPipe(streamService, liveLobbyService))).Methods("POST")
-	router.HandleFunc("/space/{space}/stream/{id}/hostingress", auth.HttpMiddleware(securityConfig, openHostIngress(streamService, liveLobbyService))).Methods("POST")
-	router.HandleFunc("/space/{space}/stream/{id}/pipe", auth.HttpMiddleware(securityConfig, closePipe(streamService, liveLobbyService))).Methods("DELETE")
+	// router.HandleFunc("/space/{space}/stream/{id}/static/whep", auth.HttpMiddleware(securityConfig, whepStaticAnswer(streamService, liveLobbyService))).Methods("POST")
 
 	return router
 }

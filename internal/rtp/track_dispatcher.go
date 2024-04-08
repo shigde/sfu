@@ -1,6 +1,8 @@
 package rtp
 
+import "context"
+
 type TrackDispatcher interface {
-	DispatchAddTrack(track *TrackInfo)
-	DispatchRemoveTrack(track *TrackInfo)
+	DispatchAddTrack(ctx context.Context, track *TrackInfo)
+	DispatchRemoveTrack(ctx context.Context, track *TrackInfo)
 }

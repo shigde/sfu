@@ -1,4 +1,4 @@
-package lobby
+package federation
 
 import (
 	"fmt"
@@ -19,9 +19,15 @@ type hostSettings struct {
 	token      string
 }
 
-func newHostSettings(streamLobby *LobbyEntity, homeInstanceActor *url.URL, token string) *hostSettings {
-	isHost := isSameShigInstance(streamLobby.Host, homeInstanceActor.String())
-	actorUrl, _ := url.Parse(streamLobby.Host)
+type hostx interface {
+	GetHost() string
+	GetSpace() string
+	GetLiveStreamID() string
+}
+
+func NewHostSettings(host hostx, homeInstanceActor *url.URL, token string) *hostSettings {
+	isHost := isSameShigInstance(host.GetHost(), homeInstanceActor.String())
+	actorUrl, _ := url.Parse(host.GetHost())
 	hostUrl, _ := url.Parse(fmt.Sprintf("%s://%s", actorUrl.Scheme, actorUrl.Host))
 
 	// @TODO read this from the activitypub.models.Instance object
@@ -36,8 +42,8 @@ func newHostSettings(streamLobby *LobbyEntity, homeInstanceActor *url.URL, token
 		url:        hostUrl,
 		token:      token,
 		name:       actorId,
-		space:      streamLobby.Space,
-		stream:     streamLobby.LiveStreamId.String(),
+		space:      host.GetSpace(),
+		stream:     host.GetLiveStreamID(),
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/exp/slog"
 )
 
@@ -38,7 +39,7 @@ func newMediaStream(sessionCxt context.Context, remoteId string, sessionId uuid.
 
 func (s *mediaStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) error {
 	slog.Debug("rtp.mediaStream: write audio track", "streamId", s.id, "remoteTrackId", track.ID(), "purpose", s.purpose.ToString())
-	ctx, span := otel.Tracer(tracerName).Start(ctx, "mediaStream:writeAudioRtp")
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "rtp.ingress: write_audio_rtp")
 	defer span.End()
 	audio, err := s.createNewAudioLocalTrack(track)
 	if err != nil {
@@ -49,19 +50,32 @@ func (s *mediaStream) writeAudioRtp(ctx context.Context, track *webrtc.TrackRemo
 
 	// start local audio track
 	go func() {
-		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.audioTrack, s.audioInfo))
+		var ctx context.Context
+		defer s.dispatcher.DispatchRemoveTrack(ctx, newTrackInfo(s.audioTrack, s.audioInfo))
 
-		if err = s.audioWriter.writeRtp(track, s.audioTrack); err != nil {
+		// blocking loop
+		err := s.audioWriter.writeRtp(track, s.audioTrack)
+
+		ctx, span := newTraceSpan(context.Background(), s.sessionCxt, "rtp.ingress: remove_audio_track")
+		span.SetAttributes(
+			attribute.String("mediaStreamId", s.audioTrack.StreamID()),
+			attribute.String("localTrack", s.audioTrack.ID()),
+			attribute.String("kind", "audio"),
+			attribute.String("purpose", s.purpose.ToString()),
+		)
+		if err != nil {
+			span.RecordError(err)
 			slog.Error("rtp.mediaStream: writing local audio track", "streamId", s.id, "err", err)
 		}
 		slog.Debug("rtp.mediaStream: stop writing local audio track", "streamId", s.id, "trackId", s.audioTrack.ID(), "purpose", s.purpose.ToString())
+		span.End()
 	}()
 	return nil
 }
 
 func (s *mediaStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) error {
-	slog.Debug("rtp.mediaStream: write video track", "streamId", s.id, "remoteTrackId", track.ID(), "purpose", s.purpose.ToString())
-	_, span := otel.Tracer(tracerName).Start(ctx, "mediaStream:writeVideoRtp")
+	slog.Debug("rtp.ingress: write video track", "streamId", s.id, "remoteTrackId", track.ID(), "purpose", s.purpose.ToString())
+	_, span := otel.Tracer(tracerName).Start(ctx, "rtp.mediaStream: write_video_rtp")
 	defer span.End()
 
 	video, err := s.createNewVideoLocalTrack(track)
@@ -74,12 +88,26 @@ func (s *mediaStream) writeVideoRtp(ctx context.Context, track *webrtc.TrackRemo
 
 	// start local video track
 	go func() {
-		defer s.dispatcher.DispatchRemoveTrack(newTrackInfo(s.videoTrack, s.videoInfo))
+		var ctx context.Context
+		defer s.dispatcher.DispatchRemoveTrack(ctx, newTrackInfo(s.videoTrack, s.videoInfo))
 
-		if err = s.videoWriter.writeRtp(track, s.videoTrack); err != nil {
+		// blocking loop
+		err := s.videoWriter.writeRtp(track, s.videoTrack)
+
+		ctx, span := newTraceSpan(context.Background(), s.sessionCxt, "rtp.ingress: remove_video_track")
+		span.SetAttributes(
+			attribute.String("mediaStreamId", s.videoTrack.StreamID()),
+			attribute.String("localTrack", s.videoTrack.ID()),
+			attribute.String("kind", "video"),
+			attribute.String("purpose", s.purpose.ToString()),
+		)
+
+		if err != nil {
+			span.RecordError(err)
 			slog.Error("rtp.mediaStream: writing local video track ", "streamId", s.id, "err", err)
 		}
 		slog.Debug("rtp.mediaStream: stop writing local video track", "streamId", s.id, "trackId", s.videoTrack.ID(), "purpose", s.purpose.ToString())
+		span.End()
 	}()
 
 	return nil

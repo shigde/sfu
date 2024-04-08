@@ -26,29 +26,36 @@ func newMediaWriter(sessionCxt context.Context, id string) *mediaWriter {
 
 func (w *mediaWriter) writeRtp(remoteTrack *webrtc.TrackRemote, localTrack *webrtc.TrackLocalStaticRTP) error {
 	rtpBuf := make([]byte, rtpBufferSize)
+	slog.Debug("rtp.mediaWriter write RTP", "track id", w.id)
 	for {
 		select {
 		case <-w.sessionCxt.Done():
 			slog.Info("rtp.mediaWriter closed by session closed", "track id", w.id)
 			return nil
 		case <-w.quit:
-			slog.Info("rtp.mediaWriter closed locally", "track id", w.id)
+			slog.Debug("rtp.mediaWriter closed locally", "track id", w.id)
 			return nil
 		default:
 			i, _, err := remoteTrack.Read(rtpBuf)
 			switch {
 			case errors.Is(err, io.EOF):
+				slog.Debug("rtp.mediaWriter closed EOF", "track id", w.id)
 				w.close()
 				return nil
 			case err != nil:
 				w.close()
+				slog.Error("rtp.mediaWriter reading rtp buffer", "track id", w.id)
 				return fmt.Errorf("reading rtp buffer: %w", err)
 			}
 			// ErrClosedPipe means we don't have any subscribers, this is ok if no peers have connected yet
-			if _, err := localTrack.Write(rtpBuf[:i]); err != nil && !errors.Is(err, io.ErrClosedPipe) {
+			if _, err := localTrack.Write(rtpBuf[:i]); err != nil {
 				// stop reading because writing error
-				w.close()
-				return fmt.Errorf("reading rtp buffer: %w", err)
+				if !errors.Is(err, io.ErrClosedPipe) {
+					w.close()
+					slog.Warn("bug-1: rtp.mediaWriter err reading rtp buffer", "track id", w.id)
+					return fmt.Errorf("bug-1: reading rtp buffer: %w", err)
+				}
+				slog.Debug("rtp.mediaWriter CLOSED PIPE!", "track id", w.id)
 			}
 		}
 	}

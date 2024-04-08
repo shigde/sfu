@@ -9,6 +9,8 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
+// EstablishStaticEgressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
 func EstablishStaticEgressEndpoint(ctx context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "engine:create static egress endpoint")
 	defer span.End()

@@ -5,7 +5,7 @@ port = 8080
 [log]
 # INFO,WARN,ERROR,DEBUG
 level = "DEBUG"
-## logfile = "stdout"
+##logfile = "stdout"
 logfile = "./mon/dev/log/sfu.log"
 
 [store]
@@ -30,7 +30,7 @@ endpoint = "/metrics" # Endpoint where the Prometheus metrics are delivered
 port = 8091
 
 [telemetry]
-enable = false
+enable = true
 
 [rtp]
 # Setup ice server for turn and stun

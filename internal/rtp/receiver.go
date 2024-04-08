@@ -10,7 +10,6 @@ import (
 	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/rtp/stats"
 	"github.com/shigde/sfu/internal/telemetry"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/exp/slog"
 )
@@ -40,17 +39,19 @@ func newReceiver(sessionCxt context.Context, sessionId uuid.UUID, liveStream uui
 }
 
 func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.RTPReceiver) {
-	ctx, span := otel.Tracer(tracerName).Start(context.Background(), "rtp.receiver: on ingress track")
+	ctx, span := newTraceSpan(context.Background(), r.sessionCxt, "rtp.ingress: add_"+remoteTrack.Kind().String()+"_track")
 	defer span.End()
 
 	trackSdpInfo := r.getIngressTrackSdpInfo(remoteTrack.ID())
 	trackSdpInfo.IngressMid = rtpReceiver.RTPTransceiver().Mid()
 
 	stream := r.getStream(r.sessionCxt, r.id, remoteTrack.StreamID(), *trackSdpInfo, remoteTrack.Kind().String())
-	span.SetAttributes(attribute.String("streamId", remoteTrack.StreamID()))
-	span.SetAttributes(attribute.String("track", remoteTrack.ID()))
-	span.SetAttributes(attribute.String("kind", remoteTrack.Kind().String()))
-	span.SetAttributes(attribute.String("purpose", stream.getPurpose().ToString()))
+	span.SetAttributes(
+		attribute.String("mediaStreamId", remoteTrack.StreamID()),
+		attribute.String("track", remoteTrack.ID()),
+		attribute.String("kind", remoteTrack.Kind().String()),
+		attribute.String("purpose", stream.getPurpose().ToString()),
+	)
 	slog.Debug("rtp.receiver: on ingress track", "streamId", remoteTrack.StreamID(), "track", remoteTrack.ID(), "kind", remoteTrack.Kind(), "purpose", stream.getPurpose().ToString())
 
 	// collect metrics
@@ -73,7 +74,7 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 		slog.Debug("rtp.receiver: on ingress audio track", "streamId", remoteTrack.StreamID(), "track", remoteTrack.ID(), "kind", remoteTrack.Kind(), "purpose", stream.getPurpose().ToString())
 		if err := stream.writeAudioRtp(ctx, remoteTrack, rtpReceiver); err != nil {
 			slog.Error("rtp.receiver: on ingress audio track", "err", err, "streamId", remoteTrack.StreamID(), "track", remoteTrack.ID(), "kind", remoteTrack.Kind(), "purpose", stream.getPurpose().ToString())
-			telemetry.RecordError(span, err)
+			_ = telemetry.RecordError(span, err)
 			// stop handler goroutine because error
 			return
 		}
@@ -84,7 +85,7 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 		slog.Debug("rtp.receiver: on ingress video track", "streamId", remoteTrack.StreamID(), "track", remoteTrack.ID(), "kind", remoteTrack.Kind(), "purpose", stream.getPurpose().ToString())
 		if err := stream.writeVideoRtp(ctx, remoteTrack, rtpReceiver); err != nil {
 			slog.Error("rtp.receiver: on ingress video track", "err", err, "streamId", remoteTrack.StreamID(), "track", remoteTrack.ID(), "kind", remoteTrack.Kind(), "purpose", stream.getPurpose().ToString())
-			telemetry.RecordError(span, err)
+			_ = telemetry.RecordError(span, err)
 			// stop handler goroutine because error
 			return
 		}
@@ -94,7 +95,7 @@ func (r *receiver) onTrack(remoteTrack *webrtc.TrackRemote, rtpReceiver *webrtc.
 
 	slog.Debug("rtp.receiver: info track", "streamId", trackInfo.GetTrackLocal().StreamID(), "track", trackInfo.GetTrackLocal().ID(), "kind", trackInfo.GetTrackLocal().Kind(), "purpose", trackInfo.Purpose.ToString())
 	// send track to Lobby Hub
-	r.dispatcher.DispatchAddTrack(trackInfo)
+	r.dispatcher.DispatchAddTrack(ctx, trackInfo)
 
 }
 func (r *receiver) getIngressTrackSdpInfo(ingressTrackId string) *TrackSdpInfo {

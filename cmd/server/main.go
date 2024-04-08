@@ -49,12 +49,12 @@ func main() {
 		defer shutdownRelease()
 
 		if err := server.Shutdown(shutdownCtx); err != nil {
-			log.Error("shutting down server gracefully: %v", err)
+			log.Error("shutting down server gracefully: %v", "err", err)
 		}
 	}()
 
 	if err := server.Serve(); err != nil {
-		log.Error("server stopped: %w", err)
+		log.Error("server stopped: ", "err", err)
 	}
 	log.Info("server finished")
 	log.Close()

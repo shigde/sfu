@@ -13,8 +13,10 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
+// EstablishIngressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
 func EstablishIngressEndpoint(sessionCxt context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
-	_, span := otel.Tracer(tracerName).Start(sessionCxt, "rtp:establish_ingress_endpoint")
+	_, span := otel.Tracer(tracerName).Start(sessionCxt, "establish_ingress_endpoint")
 	// Add node in dashboard
 	metric.GraphNodeUpdate(metric.BuildNode(sessionId.String(), liveStream.String(), "ingress"))
 
@@ -33,13 +35,13 @@ func EstablishIngressEndpoint(sessionCxt context.Context, e *Engine, sessionId u
 	}
 
 	receiver := newReceiver(sessionCxt, sessionId, liveStream, endpoint.dispatcher, endpoint.trackSdpInfoRepository)
-	withGetter := withOnStatsGetter(func(getter stats.Getter) {
+	withStatsGetter := withOnStatsGetter(func(getter stats.Getter) {
 		statsRegistry := rtpStats.NewRegistry(sessionId.String(), getter)
 		receiver.statsRegistry = statsRegistry
 		endpoint.statsRegistry = statsRegistry
 	})
 
-	api, err := e.createApi(withGetter)
+	api, err := e.createApi(withStatsGetter)
 	if err != nil {
 		return nil, fmt.Errorf("creating api: %w", err)
 	}

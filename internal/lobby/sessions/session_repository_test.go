@@ -1,4 +1,4 @@
-package lobby
+package sessions
 
 import (
 	"sync"
@@ -8,24 +8,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testSessionRepositorySetup(t *testing.T) (*sessionRepository, *session) {
+func testSessionRepositorySetup(t *testing.T) (*SessionRepository, *Session) {
 	t.Helper()
-	repository := newSessionRepository()
-	s := &session{Id: uuid.New(), user: uuid.New()}
+	repository := NewSessionRepository()
+	s := &Session{Id: uuid.New(), user: uuid.New()}
 	repository.Add(s)
 
 	return repository, s
 }
 func TestSessionRepository(t *testing.T) {
 
-	assertSession := func(t testing.TB, got *session, want *session) {
+	assertSession := func(t testing.TB, got *Session, want *Session) {
 		t.Helper()
 		if got != want {
 			t.Errorf("got %s want %s", got.Id, want.Id)
 		}
 	}
 
-	assertRepoLength := func(t testing.TB, repo *sessionRepository, want int) {
+	assertRepoLength := func(t testing.TB, repo *SessionRepository, want int) {
 		t.Helper()
 
 		if len(repo.All()) != want {
@@ -33,7 +33,7 @@ func TestSessionRepository(t *testing.T) {
 		}
 	}
 
-	assertRepoHasSession := func(t testing.TB, repo *sessionRepository, want *session) {
+	assertRepoHasSession := func(t testing.TB, repo *SessionRepository, want *Session) {
 		t.Helper()
 		want, session := repo.FindById(want.Id)
 		assert.True(t, session)
@@ -43,7 +43,7 @@ func TestSessionRepository(t *testing.T) {
 
 	t.Run("Add Session", func(t *testing.T) {
 		repo, _ := testSessionRepositorySetup(t)
-		s := &session{Id: uuid.New()}
+		s := &Session{Id: uuid.New()}
 		repo.Add(s)
 		assertRepoHasSession(t, repo, s)
 		assertRepoLength(t, repo, 2)
@@ -51,7 +51,7 @@ func TestSessionRepository(t *testing.T) {
 
 	t.Run("Delete Session", func(t *testing.T) {
 		repo, _ := testSessionRepositorySetup(t)
-		s := &session{Id: uuid.New()}
+		s := &Session{Id: uuid.New()}
 		repo.Add(s)
 
 		if deleted := repo.Delete(s.Id); !deleted {
@@ -63,7 +63,7 @@ func TestSessionRepository(t *testing.T) {
 
 	t.Run("Contains Session", func(t *testing.T) {
 		repo, firstSession := testSessionRepositorySetup(t)
-		s := &session{Id: uuid.New()}
+		s := &Session{Id: uuid.New()}
 		repo.Add(s)
 
 		assert.True(t, repo.Contains(s.Id))
@@ -73,7 +73,7 @@ func TestSessionRepository(t *testing.T) {
 
 	t.Run("Find Session By Id", func(t *testing.T) {
 		repo, firstSession := testSessionRepositorySetup(t)
-		want := &session{Id: uuid.New()}
+		want := &Session{Id: uuid.New()}
 		repo.Add(want)
 
 		_, find := repo.FindById(firstSession.Id)
@@ -85,7 +85,7 @@ func TestSessionRepository(t *testing.T) {
 
 	t.Run("Find Session By User Id", func(t *testing.T) {
 		repo, firstSession := testSessionRepositorySetup(t)
-		want := &session{Id: uuid.New(), user: uuid.New()}
+		want := &Session{Id: uuid.New(), user: uuid.New()}
 		repo.Add(want)
 
 		_, find := repo.FindByUserId(firstSession.user)
@@ -117,13 +117,13 @@ func TestSessionRepository(t *testing.T) {
 
 		for i := 0; i < wantedCount; i++ {
 			go func() {
-				repo.Add(&session{Id: uuid.New()})
+				repo.Add(&Session{Id: uuid.New()})
 				wg.Done()
 			}()
 
 			if i == createOn {
 				go func() {
-					repo.Add(&session{Id: id})
+					repo.Add(&Session{Id: id})
 					assert.True(t, repo.Contains(id))
 					close(created)
 					wg.Done()
@@ -146,5 +146,4 @@ func TestSessionRepository(t *testing.T) {
 		assertRepoLength(t, repo, wantedCount+1)
 		assert.False(t, repo.Contains(id))
 	})
-
 }

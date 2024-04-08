@@ -13,8 +13,6 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-const tracerName = "github.com/shigde/sfu/internal/engine"
-
 type Engine struct {
 	config webrtc.Configuration
 }
@@ -77,15 +75,12 @@ func (e *Engine) createApi(apiOptions ...engineApiOption) (*engineApi, error) {
 	return api, nil
 }
 
-func (e *Engine) EstablishIngressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
-	return EstablishIngressEndpoint(ctx, e, sessionId, liveStream, offer, options...)
+func (e *Engine) EstablishEndpoint(ctx context.Context, sessionCtx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, endpointType EndpointType, options ...EndpointOption) (*Endpoint, error) {
+	return EstablishEndpoint(ctx, sessionCtx, e, sessionId, liveStream, offer, endpointType, options...)
 }
 
-func (e *Engine) EstablishEgressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, options ...EndpointOption) (*Endpoint, error) {
-	return EstablishEgressEndpoint(ctx, e, sessionId, liveStream, options...)
-}
-func (e *Engine) EstablishStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
-	return EstablishStaticEgressEndpoint(ctx, e, sessionId, liveStream, offer, options...)
+func (e *Engine) OfferEndpoint(ctx context.Context, sessionCtx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, endpointType EndpointType, options ...EndpointOption) (*Endpoint, error) {
+	return nil, nil
 }
 
 func creatDC(pc *webrtc.PeerConnection, onChannel func(dc *webrtc.DataChannel)) error {
@@ -106,8 +101,28 @@ func creatDC(pc *webrtc.PeerConnection, onChannel func(dc *webrtc.DataChannel)) 
 	return nil
 }
 
+// Deprecated API
+
+// EstablishIngressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
+func (e *Engine) EstablishIngressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
+	return EstablishIngressEndpoint(ctx, e, sessionId, liveStream, offer, options...)
+}
+
+// EstablishEgressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
+func (e *Engine) EstablishEgressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, options ...EndpointOption) (*Endpoint, error) {
+	return EstablishEgressEndpoint(ctx, e, sessionId, liveStream, options...)
+}
+
+// EstablishStaticEgressEndpoint
+// Deprecated: Because the Endpoint API is getting simpler
+func (e *Engine) EstablishStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
+	return EstablishStaticEgressEndpoint(ctx, e, sessionId, liveStream, offer, options...)
+}
+
 // NewStaticMediaSenderEndpoint can be used to send static streams from file in a lobby.
-// @deprecated
+// Deprecated: Because the Endpoint API is getting simpler
 func (e *Engine) NewStaticMediaSenderEndpoint(media *static.MediaFile) (*Endpoint, error) {
 	stateHandler := newMediaStateEventHandler()
 	api, err := e.createApi()
@@ -161,6 +176,7 @@ func (e *Engine) NewStaticMediaSenderEndpoint(media *static.MediaFile) (*Endpoin
 }
 
 // NewSignalConnection can be used to listen on lobby events.
+// Deprecated: Because the Endpoint API is getting simpler
 func (e *Engine) NewSignalConnection(ctx context.Context, handler StateEventHandler) (*Connection, error) {
 	api, err := e.createApi()
 	if err != nil {
@@ -200,7 +216,8 @@ func (e *Engine) NewSignalConnection(ctx context.Context, handler StateEventHand
 	return &Connection{PeerConnection: peerConnection, GatherComplete: gatherComplete}, nil
 }
 
-// NewStaticReceiverEndpoint can be used to receive Medias from a lobby.
+// NewReceiverConnection
+// Deprecated: Because the Endpoint API is getting simpler
 func (e *Engine) NewReceiverConnection(ctx context.Context, offer webrtc.SessionDescription, handler StateEventHandler, rtmpEndpoint string) (*Connection, error) {
 	api, err := e.createApi()
 	if err != nil {
