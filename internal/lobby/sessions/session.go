@@ -127,7 +127,7 @@ func (s *Session) CreateIngressEndpoint(ctx context.Context, offer *webrtc.Sessi
 func (s *Session) OfferIngressEndpoint(ctx context.Context) (*webrtc.SessionDescription, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	ctx, span := s.trace(ctx, "create_ingress_endpoint")
+	ctx, span := s.trace(ctx, "offer_ingress_endpoint")
 	defer span.End()
 	if s.isDone() {
 		return nil, telemetry.RecordError(span, ErrSessionAlreadyClosed)

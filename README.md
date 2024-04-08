@@ -1,5 +1,12 @@
 # Shig Instance
 
+## !!Attention!!
+I'm currently doing a refactoring to make the code more readable. 
+The Main branch is currently broken. 
+The latest (running) version is available in branch: https://github.com/shigde/sfu/tree/running-main-v1
+
+---
+
 Shig is a federated service designed to distribute and replicate live streams among Fediverse instances. 
 It's built upon the WHIP/WHEP approach for both inbound and outbound streams.
 Through an ActivityPub integration, Shig can follow other Fediverse services and receive updates on live stream activities.
