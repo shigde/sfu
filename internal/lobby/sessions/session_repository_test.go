@@ -146,5 +146,4 @@ func TestSessionRepository(t *testing.T) {
 		assertRepoLength(t, repo, wantedCount+1)
 		assert.False(t, repo.Contains(id))
 	})
-
 }

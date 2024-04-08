@@ -21,6 +21,7 @@ const sessionTracer = telemetry.TracerName
 
 type RtpEngine interface {
 	EstablishEndpoint(ctx context.Context, sessionCtx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, endpointType rtp.EndpointType, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
+	OfferEndpoint(ctx context.Context, sessionCtx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, endpointType rtp.EndpointType, options ...rtp.EndpointOption) (*rtp.Endpoint, error)
 }
 
 var (
@@ -79,6 +80,8 @@ func NewSession(ctx context.Context, user uuid.UUID, hub *Hub, engine RtpEngine,
 	return session
 }
 
+// CreateIngressEndpoint
+// Receives an Offer and generates an Answer to establish an Ingress WebRTC connection.
 func (s *Session) CreateIngressEndpoint(ctx context.Context, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -92,7 +95,10 @@ func (s *Session) CreateIngressEndpoint(ctx context.Context, offer *webrtc.Sessi
 		return nil, telemetry.RecordError(span, ErrIngressAlreadyExists)
 	}
 
+	//signalSetting.OnDataC.
+
 	option := make([]rtp.EndpointOption, 0)
+	// option = append(option, rtp.EndpointWithDataChannel(setting.GetDataChannelCbk()))
 	option = append(option, rtp.EndpointWithDataChannel(s.signal.OnIngressChannel))
 	option = append(option, rtp.EndpointWithLostConnectionListener(s.onLostConnection))
 	option = append(option, rtp.EndpointWithTrackDispatcher(s.hub))
@@ -115,6 +121,50 @@ func (s *Session) CreateIngressEndpoint(ctx context.Context, offer *webrtc.Sessi
 	return answer, nil
 }
 
+// OfferIngressEndpoint
+// Creates an offer and prepares an Ingress WebRTC connection. The connection then waits for the response from the
+// other peer.
+func (s *Session) OfferIngressEndpoint(ctx context.Context) (*webrtc.SessionDescription, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	ctx, span := s.trace(ctx, "create_ingress_endpoint")
+	defer span.End()
+	if s.isDone() {
+		return nil, telemetry.RecordError(span, ErrSessionAlreadyClosed)
+	}
+
+	if s.ingress != nil {
+		return nil, telemetry.RecordError(span, ErrIngressAlreadyExists)
+	}
+
+	//signalSetting.OnDataC.
+
+	option := make([]rtp.EndpointOption, 0)
+	// option = append(option, rtp.EndpointWithDataChannel(setting.GetDataChannelCbk()))
+	option = append(option, rtp.EndpointWithDataChannel(s.signal.OnIngressChannel))
+	option = append(option, rtp.EndpointWithLostConnectionListener(s.onLostConnection))
+	option = append(option, rtp.EndpointWithTrackDispatcher(s.hub))
+
+	endpoint, err := s.rtpEngine.OfferEndpoint(ctx, s.ctx, s.Id, s.hub.LiveStreamId, rtp.IngressEndpoint, option...)
+	if err != nil {
+		return nil, telemetry.RecordErrorf(span, "create rtp endpoint", err)
+	}
+	s.ingress = endpoint
+
+	span.AddEvent("Wait for Local Description.")
+	ctxTimeout, cancel := context.WithTimeout(ctx, processWaitingTimeout)
+	defer cancel()
+	answer, err := s.ingress.GetLocalDescription(ctxTimeout)
+	if err != nil {
+		return nil, telemetry.RecordErrorf(span, "create ingress answer resource", err)
+	}
+
+	span.AddEvent("Receive Local Description.")
+	return answer, nil
+}
+
+// CreateEgressEndpoint
+// Receives an Offer and generates an Answer to establish an Egress WebRTC connection.
 func (s *Session) CreateEgressEndpoint(ctx context.Context, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -131,6 +181,8 @@ func (s *Session) CreateEgressEndpoint(ctx context.Context, offer *webrtc.Sessio
 	// For an egress endpoint we need a data channel. The data channel is used for media update signaling.
 	// That's why we're waiting until it's built
 	// ----> data channel setup
+	// signalOption.setUpSignalChannel(s.signal)
+
 	if s.ingress == nil {
 		return nil, telemetry.RecordError(span, ErrNoSignalChannel)
 	}
@@ -159,6 +211,73 @@ func (s *Session) CreateEgressEndpoint(ctx context.Context, offer *webrtc.Sessio
 	option = append(option, rtp.EndpointWithLostConnectionListener(s.onLostConnection))
 
 	endpoint, err := s.rtpEngine.EstablishEndpoint(ctx, s.ctx, s.Id, s.hub.LiveStreamId, *offer, rtp.EgressEndpoint, option...)
+	if err != nil {
+		return nil, telemetry.RecordErrorf(span, "create rtp endpoint", err)
+	}
+	s.egress = endpoint
+	// @TODO: The signaling should be independent of ingress and egress
+	s.signal.addEgressEndpoint(s.egress)
+
+	span.AddEvent("Wait for Local Description.")
+	ctxTimeout, cancel := context.WithTimeout(ctx, processWaitingTimeout)
+	defer cancel()
+	answer, err := s.egress.GetLocalDescription(ctxTimeout)
+	if err != nil {
+		return nil, telemetry.RecordErrorf(span, "create egress answer resource", err)
+	}
+	span.AddEvent("Receive Local Description.")
+	return answer, nil
+}
+
+// OfferEgressEndpoint
+// Creates an offer and prepares an Egress WebRTC connection. The connection then waits for the response from the
+// other peer.
+func (s *Session) OfferEgressEndpoint(ctx context.Context) (*webrtc.SessionDescription, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	ctx, span := s.trace(ctx, "offer_egress_endpoint")
+	defer span.End()
+	if s.isDone() {
+		return nil, telemetry.RecordError(span, ErrSessionAlreadyClosed)
+	}
+
+	if s.egress != nil {
+		return nil, telemetry.RecordError(span, ErrEgressAlreadyExists)
+	}
+
+	// For an egress endpoint we need a data channel. The data channel is used for media update signaling.
+	// That's why we're waiting until it's built
+	// ----> data channel setup
+	// signalOption.setUpSignalChannel(s.signal)
+
+	if s.ingress == nil {
+		return nil, telemetry.RecordError(span, ErrNoSignalChannel)
+	}
+
+	select {
+	case err := <-s.signal.waitForMessengerSetupFinished():
+		if err != nil {
+			return nil, telemetry.RecordErrorf(span, "waiting for messenger", err)
+		}
+	case <-s.ctx.Done():
+		return nil, telemetry.RecordError(span, ErrSessionAlreadyClosed)
+	case <-time.After(processWaitingTimeout):
+		return nil, telemetry.RecordError(span, ErrSessionProcessWaitingTimeout)
+	}
+	// <-- end date channel setup
+
+	hub := s.hub
+	withTrackCbk := rtp.EndpointWithGetCurrentTrackCbk(func(ctx context.Context, sessionId uuid.UUID) ([]*rtp.TrackInfo, error) {
+		return hub.getTrackList(ctx, sessionId, filterForSession(sessionId))
+	})
+
+	option := make([]rtp.EndpointOption, 0)
+	option = append(option, withTrackCbk)
+	option = append(option, rtp.EndpointWithDataChannel(s.signal.OnEmptyChannel))
+	option = append(option, rtp.EndpointWithNegotiationNeededListener(s.signal.OnNegotiationNeeded))
+	option = append(option, rtp.EndpointWithLostConnectionListener(s.onLostConnection))
+
+	endpoint, err := s.rtpEngine.OfferEndpoint(ctx, s.ctx, s.Id, s.hub.LiveStreamId, rtp.EgressEndpoint, option...)
 	if err != nil {
 		return nil, telemetry.RecordErrorf(span, "create rtp endpoint", err)
 	}
