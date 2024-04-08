@@ -52,7 +52,7 @@ func TestWhipDeleteReq(t *testing.T) {
 	th, space, stream, _, bearer := testRouterSetup(t)
 	sessionCookie, reqToken := runWhipRequest(t, th.router, space.Identifier, stream.UUID.String(), bearer)
 
-	req := newSDPContentRequest("DELETE", fmt.Sprintf("/space/%s/stream/%s/whip", space.Identifier, stream.UUID.String()), nil, bearer, 0)
+	req := newSDPContentRequest("DELETE", fmt.Sprintf("/space/%s/stream/%s/res", space.Identifier, stream.UUID.String()), nil, bearer, 0)
 	req.AddCookie(sessionCookie)
 	req.Header.Set(mocks.ReqTokenHeaderName, reqToken)
 
