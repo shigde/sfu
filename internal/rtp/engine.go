@@ -79,6 +79,10 @@ func (e *Engine) EstablishEndpoint(ctx context.Context, sessionCtx context.Conte
 	return EstablishEndpoint(ctx, sessionCtx, e, sessionId, liveStream, offer, endpointType, options...)
 }
 
+func (e *Engine) OfferEndpoint(ctx context.Context, sessionCtx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, endpointType EndpointType, options ...EndpointOption) (*Endpoint, error) {
+	return nil, nil
+}
+
 func creatDC(pc *webrtc.PeerConnection, onChannel func(dc *webrtc.DataChannel)) error {
 	ordered := false
 	maxRetransmits := uint16(0)

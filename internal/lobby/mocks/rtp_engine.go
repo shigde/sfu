@@ -34,3 +34,7 @@ func NewRtpEngineForOffer(answer *webrtc.SessionDescription) *RtpEngineMock {
 func (e *RtpEngineMock) EstablishEndpoint(_ context.Context, _ context.Context, _ uuid.UUID, _ uuid.UUID, _ webrtc.SessionDescription, _ rtp.EndpointType, o ...rtp.EndpointOption) (*rtp.Endpoint, error) {
 	return e.Conn, e.Err
 }
+
+func (e *RtpEngineMock) OfferEndpoint(ctx context.Context, sessionCtx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, endpointType rtp.EndpointType, options ...rtp.EndpointOption) (*rtp.Endpoint, error) {
+	return e.Conn, e.Err
+}
