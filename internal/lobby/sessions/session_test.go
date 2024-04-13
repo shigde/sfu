@@ -31,7 +31,7 @@ func testSetupEgress(t *testing.T, session *Session) {
 	close(session.signal.receivedMessenger)
 	// @TODO: The signaling should be independent of ingress and egress
 	session.ingress = mocks.NewEndpoint(nil)
-	session.signal.ingress = session.ingress
+	session.signal.answerer = session.ingress
 }
 
 func TestSession_CreateIngressEndpoint(t *testing.T) {
@@ -39,7 +39,7 @@ func TestSession_CreateIngressEndpoint(t *testing.T) {
 		session, _ := testSessionSetup(t)
 		session.stop()
 
-		_, err := session.CreateIngressEndpoint(context.Background(), mocks.Offer)
+		_, err := session.CreateIngressEndpoint(context.Background(), mocks.Offer, SilentSignalChannel)
 		assert.ErrorIs(t, err, ErrSessionAlreadyClosed)
 	})
 
@@ -47,7 +47,7 @@ func TestSession_CreateIngressEndpoint(t *testing.T) {
 		session, _ := testSessionSetup(t)
 		session.ingress = mocks.NewEndpoint(nil)
 
-		_, err := session.CreateIngressEndpoint(context.Background(), mocks.Offer)
+		_, err := session.CreateIngressEndpoint(context.Background(), mocks.Offer, SilentSignalChannel)
 		assert.ErrorIs(t, err, ErrIngressAlreadyExists)
 	})
 
@@ -55,7 +55,7 @@ func TestSession_CreateIngressEndpoint(t *testing.T) {
 		session, engine := testSessionSetup(t)
 		engine.Err = errors.New("fail")
 
-		_, err := session.CreateIngressEndpoint(context.Background(), mocks.Offer)
+		_, err := session.CreateIngressEndpoint(context.Background(), mocks.Offer, SilentSignalChannel)
 		assert.ErrorContains(t, err, "create rtp endpoint")
 	})
 
@@ -65,14 +65,14 @@ func TestSession_CreateIngressEndpoint(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // Force to Run in time out because waiting for ice gathering complete
 
-		_, err := session.CreateIngressEndpoint(ctx, mocks.Offer)
+		_, err := session.CreateIngressEndpoint(ctx, mocks.Offer, SilentSignalChannel)
 		assert.ErrorContains(t, err, "create ingress answer resource")
 	})
 
 	t.Run("get answer", func(t *testing.T) {
 		session, _ := testSessionSetup(t)
 
-		answer, _ := session.CreateIngressEndpoint(context.Background(), mocks.Offer)
+		answer, _ := session.CreateIngressEndpoint(context.Background(), mocks.Offer, SilentSignalChannel)
 		assert.Equal(t, mocks.Answer, answer)
 	})
 }
@@ -82,7 +82,7 @@ func TestSession_CreateEgressEndpoint(t *testing.T) {
 		session, _ := testSessionSetup(t)
 		session.stop()
 
-		_, err := session.CreateEgressEndpoint(context.Background(), mocks.Offer)
+		_, err := session.CreateEgressEndpoint(context.Background(), mocks.Offer, SilentSignalChannel)
 		assert.ErrorIs(t, err, ErrSessionAlreadyClosed)
 	})
 
@@ -91,13 +91,13 @@ func TestSession_CreateEgressEndpoint(t *testing.T) {
 		session.ingress = mocks.NewEndpoint(nil)
 		session.egress = mocks.NewEndpoint(nil)
 
-		_, err := session.CreateEgressEndpoint(context.Background(), mocks.Offer)
+		_, err := session.CreateEgressEndpoint(context.Background(), mocks.Offer, SilentSignalChannel)
 		assert.ErrorIs(t, err, ErrEgressAlreadyExists)
 	})
 
 	t.Run("if signal channel endpoint not exists", func(t *testing.T) {
 		session, _ := testSessionSetup(t)
-		_, err := session.CreateEgressEndpoint(context.Background(), mocks.Offer)
+		_, err := session.CreateEgressEndpoint(context.Background(), mocks.Offer, SilentSignalChannel)
 		assert.ErrorIs(t, err, ErrNoSignalChannel)
 	})
 
@@ -107,7 +107,7 @@ func TestSession_CreateEgressEndpoint(t *testing.T) {
 		processWaitingTimeout = 0 // Force to Run in time out because signaling setup is not complete
 		engine.Err = errors.New("fail")
 
-		_, err := session.CreateEgressEndpoint(context.Background(), mocks.Offer)
+		_, err := session.CreateEgressEndpoint(context.Background(), mocks.Offer, SilentSignalChannel)
 		assert.ErrorIs(t, err, ErrSessionProcessWaitingTimeout)
 		processWaitingTimeout = runtimeProcessWaitingTimeout
 	})
@@ -117,7 +117,7 @@ func TestSession_CreateEgressEndpoint(t *testing.T) {
 		testSetupEgress(t, session)
 		engine.Err = errors.New("fail")
 
-		_, err := session.CreateEgressEndpoint(context.Background(), mocks.Offer)
+		_, err := session.CreateEgressEndpoint(context.Background(), mocks.Offer, SilentSignalChannel)
 		assert.ErrorContains(t, err, "create rtp endpoint")
 	})
 
@@ -128,7 +128,7 @@ func TestSession_CreateEgressEndpoint(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // Force to Run in timeout because waiting for ice gathering complete
 
-		_, err := session.CreateEgressEndpoint(ctx, mocks.Offer)
+		_, err := session.CreateEgressEndpoint(ctx, mocks.Offer, SilentSignalChannel)
 		assert.ErrorContains(t, err, "create egress answer resource")
 	})
 
@@ -136,7 +136,7 @@ func TestSession_CreateEgressEndpoint(t *testing.T) {
 		session, _ := testSessionSetup(t)
 		testSetupEgress(t, session)
 
-		answer, _ := session.CreateEgressEndpoint(context.Background(), mocks.Offer)
+		answer, _ := session.CreateEgressEndpoint(context.Background(), mocks.Offer, SilentSignalChannel)
 		assert.Equal(t, mocks.Answer, answer)
 	})
 }
