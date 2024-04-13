@@ -86,7 +86,7 @@ func (c *Connector) BuildEgress() (*commands.OfferEgress, error) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	cmd := commands.NewOfferEgress(ctx, c.host.instanceId, sessions.BidirectionalSignalChannel)
+	cmd := commands.NewOfferEgress(ctx, c.api, c.host.instanceId, sessions.BidirectionalSignalChannel)
 
 	return cmd, nil
 }
