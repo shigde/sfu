@@ -14,19 +14,23 @@ import (
 )
 
 type ApiClient struct {
-	login  loginGetter
-	url    string
-	bearer string
+	login    loginGetter
+	spaceId  string
+	streamId string
+	url      string
+	bearer   string
 }
 
 type loginGetter interface {
 	GetUser() *authentication.User
 }
 
-func NewApiClient(loginGetter loginGetter, shigUrl string) *ApiClient {
+func NewApiClient(loginGetter loginGetter, shigUrl string, spaceId string, streamId string) *ApiClient {
 	return &ApiClient{
-		login: loginGetter,
-		url:   shigUrl,
+		login:    loginGetter,
+		url:      shigUrl,
+		spaceId:  spaceId,
+		streamId: streamId,
 	}
 }
 
@@ -73,13 +77,13 @@ func (a *ApiClient) Login() (*authentication.Token, error) {
 	return &result, nil
 }
 
-func (a *ApiClient) PostHostPipeOffer(spaceId string, streamId string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
-	requestUrl := fmt.Sprintf("%s/space/%s/stream/%s/pipe", a.url, spaceId, streamId)
+func (a *ApiClient) PostWhepOffer(offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+	requestUrl := fmt.Sprintf("%s/fed/space/%s/stream/%s/whep", a.url, a.spaceId, a.streamId)
 	return a.doOfferRequest(requestUrl, offer)
 }
 
-func (a *ApiClient) PostHostIngressOffer(spaceId string, streamId string, offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
-	requestUrl := fmt.Sprintf("%s/space/%s/stream/%s/hostingress", a.url, spaceId, streamId)
+func (a *ApiClient) PostWhipOffer(offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
+	requestUrl := fmt.Sprintf("%s/fed/space/%s/stream/%s/whip", a.url, a.spaceId, a.streamId)
 	return a.doOfferRequest(requestUrl, offer)
 }
 

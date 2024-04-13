@@ -403,3 +403,11 @@ func (s *Session) initComplete() bool {
 	}
 	return false
 }
+
+func (s *Session) SetEgressAnswer(answer *webrtc.SessionDescription) chan struct{} {
+	return make(chan struct{})
+}
+
+func (s *Session) SetIngressAnswer(answer *webrtc.SessionDescription) chan struct{} {
+	return make(chan struct{})
+}

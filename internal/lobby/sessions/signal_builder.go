@@ -60,9 +60,8 @@ B) Server - Server Scenario:
 type SignalChannelKind int
 
 const (
-	SilentSignalChannel                  SignalChannelKind = iota + 1
-	UnidirectionalReceivingSignalChannel                   // This type not exist on sever side
-	UnidirectionalSendingSignalChannel
+	SilentSignalChannel SignalChannelKind = iota + 1
+	UnidirectionalSignalChannel
 	BidirectionalSignalChannel
 )
 

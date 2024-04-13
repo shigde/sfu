@@ -62,7 +62,7 @@ func (m *LobbyManager) NewEgressResource(ctx context.Context, lobbyId uuid.UUID,
 		return nil, fmt.Errorf("getting or creating lobby: %w", err)
 	}
 
-	cmd := commands.NewCreateEgress(ctx, user, offer, sessions.UnidirectionalSendingSignalChannel)
+	cmd := commands.NewCreateEgress(ctx, user, offer, sessions.UnidirectionalSignalChannel)
 	lobbyObj.runCommand(cmd)
 
 	select {
