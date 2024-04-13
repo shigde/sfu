@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/shigde/sfu/internal/lobby/clients"
 	"github.com/shigde/sfu/internal/lobby/commands"
+	"github.com/shigde/sfu/internal/lobby/sessions"
 	"golang.org/x/exp/slog"
 )
 
@@ -34,7 +35,7 @@ func NewConnector(
 	token string,
 ) *Connector {
 	host := newHost(hostActorIri, token)
-	api := clients.NewApiClient(host, hostActorIri.Host)
+	api := clients.NewApiClient(host, hostActorIri.Host, space, liveStream)
 	return &Connector{
 		ctx:          ctx,
 		homeActorIri: homeActorIri,
@@ -45,13 +46,17 @@ func NewConnector(
 	}
 }
 
-func (c *Connector) BuildIngress() (*commands.Command, error) {
+func (c *Connector) BuildIngress() (*commands.OfferIngress, error) {
 	slog.Debug("lobby.HostController. connect to live stream host instance", "instanceId", c.host.instanceId)
 	if _, err := c.api.Login(); err != nil {
 		return nil, fmt.Errorf("login to remote host: %w", err)
 	}
-	// ctx, cancelReq := context.WithCancel(context.Background())
-	//	defer cancelReq()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	cmd := commands.NewOfferIngress(ctx, c.api, c.host.instanceId, sessions.BidirectionalSignalChannel)
+
+	return cmd, nil
 	//
 	//	request := lobby2.newLobbyRequest(ctx, instanceId)
 	//	data := lobby2.newHostGetPipeOfferData()
@@ -71,11 +76,19 @@ func (c *Connector) BuildIngress() (*commands.Command, error) {
 	//		}
 	//	}
 	//	return c.onHostPipeAnswerResponse(answer, instanceId)
-	return nil, nil
 }
 
-func (c *Connector) BuildEgress() (*commands.Command, error) {
-	return nil, nil
+func (c *Connector) BuildEgress() (*commands.OfferEgress, error) {
+	slog.Debug("lobby.HostController. connect to live stream host instance", "instanceId", c.host.instanceId)
+	if _, err := c.api.Login(); err != nil {
+		return nil, fmt.Errorf("login to remote host: %w", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	cmd := commands.NewOfferEgress(ctx, c.api, c.host.instanceId, sessions.BidirectionalSignalChannel)
+
+	return cmd, nil
 }
 
 func (c *Connector) IsThisInstanceLiveSteamHost() bool {
