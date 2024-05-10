@@ -78,12 +78,12 @@ func (a *ApiClient) Login() (*authentication.Token, error) {
 }
 
 func (a *ApiClient) PostWhepOffer(offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
-	requestUrl := fmt.Sprintf("%s/fed/space/%s/stream/%s/whep", a.url, a.spaceId, a.streamId)
+	requestUrl := fmt.Sprintf("%s/space/%s/stream/%s/whep", a.url, a.spaceId, a.streamId)
 	return a.doOfferRequest(requestUrl, offer)
 }
 
 func (a *ApiClient) PostWhipOffer(offer *webrtc.SessionDescription) (*webrtc.SessionDescription, error) {
-	requestUrl := fmt.Sprintf("%s/fed/space/%s/stream/%s/whip", a.url, a.spaceId, a.streamId)
+	requestUrl := fmt.Sprintf("%s/space/%s/stream/%s/whip", a.url, a.spaceId, a.streamId)
 	return a.doOfferRequest(requestUrl, offer)
 }
 
