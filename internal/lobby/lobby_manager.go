@@ -45,7 +45,7 @@ func (m *LobbyManager) NewIngressResource(ctx context.Context, lobbyId uuid.UUID
 		return nil, fmt.Errorf("creating new session failes")
 	}
 
-	cmd := commands.NewCreateIngress(ctx, user, offer, sessions.SilentSignalChannel)
+	cmd := commands.NewCreateIngress(ctx, user, offer, sessions.UnidirectionalSignalChannel)
 	lobbyObj.runCommand(cmd)
 
 	select {

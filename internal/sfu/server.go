@@ -104,9 +104,18 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 
 func (s *Server) Serve() error {
 	slog.Info("server Serve() listen", "addr", s.server.Addr)
+
+	if s.config.HTTPS {
+		if err := s.server.ListenAndServeTLS(s.config.Crt, s.config.Key); !errors.Is(err, http.ErrServerClosed) {
+			return fmt.Errorf("listening and serve: %w", err)
+		}
+		return nil
+	}
+
 	if err := s.server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("listening and serve: %w", err)
 	}
+
 	return nil
 }
 

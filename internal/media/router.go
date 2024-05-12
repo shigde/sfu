@@ -2,6 +2,7 @@ package media
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -54,7 +55,8 @@ func NewRouter(
 	router.HandleFunc("/fed/space/{space}/stream/{id}/res", auth.HttpMiddleware(securityConfig, fedResource(streamService, liveLobbyService))).Methods("DELETE")
 
 	// router.HandleFunc("/space/{space}/stream/{id}/static/whep", auth.HttpMiddleware(securityConfig, whepStaticAnswer(streamService, liveLobbyService))).Methods("POST")
-
+	fs := http.FileServer(http.Dir("./web/"))
+	router.PathPrefix("/").Handler(http.StripPrefix("/", fs))
 	return router
 }
 

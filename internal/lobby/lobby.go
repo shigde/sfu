@@ -116,11 +116,11 @@ func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, homeActorIri *url.URL
 
 	// if this local instance not the owner of the stream, the lobby will relay all tracks to the remote host of the
 	// stream
-	if !connector.IsThisInstanceLiveSteamHost() {
-		go func(l *lobby) {
-			l.connectToLiveStreamHostInstance()
-		}(lobObj)
-	}
+	//if !connector.IsThisInstanceLiveSteamHost() {
+	//	go func(l *lobby) {
+	//		l.connectToLiveStreamHostInstance()
+	//	}(lobObj)
+	//}
 
 	return lobObj
 }

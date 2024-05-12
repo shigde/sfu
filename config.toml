@@ -2,11 +2,16 @@
 host = "0.0.0.0"
 port = 8080
 
+# HTTPS
+https = false
+crt = "./tls/localhost.crt"
+key = "./tls/localhost.key"
+
 [log]
 # INFO,WARN,ERROR,DEBUG
 level = "DEBUG"
-##logfile = "stdout"
-logfile = "./mon/dev/log/sfu.log"
+logfile = "stdout"
+#logfile = "./mon/dev/log/sfu.log"
 
 [store]
 # currently only Sqlite3 supported
@@ -30,7 +35,7 @@ endpoint = "/metrics" # Endpoint where the Prometheus metrics are delivered
 port = 8091
 
 [telemetry]
-enable = true
+enable = false
 
 [rtp]
 # Setup ice server for turn and stun
@@ -75,3 +80,7 @@ registerToken = "this-token-must-be-changed-in-public"
 [[federation.trustedInstance]]
 actor = "http://remote-stream.localhost:8070/federation/accounts/shig"
 name = "shig"
+
+[web]
+enable = true
+dir = "./web"
