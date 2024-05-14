@@ -18,3 +18,11 @@ type Space struct {
 	Account    *auth.Account `json:"-" gorm:"foreignKey:AccountId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	gorm.Model
 }
+
+func NewSpace(channel *models.Actor, account *auth.Account) *Space {
+	space := &Space{}
+	space.Account = account
+	space.Channel = channel
+	space.Identifier = buildFederatedId(channel.PreferredUsername, channel.GetActorIri().Host)
+	return space
+}

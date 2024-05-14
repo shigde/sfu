@@ -38,7 +38,13 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 	}
 
 	if err := migration.Migrate(config.FederationConfig, store); err != nil {
-		return nil, fmt.Errorf("bild database shema %w", err)
+		return nil, fmt.Errorf("build database shema %w", err)
+	}
+
+	if config.StorageConfig.LoadFixtures {
+		if err := migration.LoadFixtures(config.FederationConfig, store); err != nil {
+			return nil, fmt.Errorf("load fixtures %w", err)
+		}
 	}
 
 	// RTP lobby

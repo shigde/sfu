@@ -35,7 +35,7 @@ func NewHostSettings(host hostx, homeInstanceActor *url.URL, token string) *host
 	// name := "shig@fosdem-stream.shig.de"
 	preferredName := "shig"
 	actorId := fmt.Sprintf("%s@%s", preferredName, homeInstanceActor.Host)
-	instanceId := auth.CreateShigInstanceId(actorId)
+	instanceId := auth.CreateInstanceUuid(actorId)
 	return &hostSettings{
 		instanceId: instanceId,
 		isHost:     isHost,

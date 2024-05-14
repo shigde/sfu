@@ -23,7 +23,7 @@ type host struct {
 func newHost(actorIri url.URL, token string) *host {
 	preferredName := preferredNameFromActor(actorIri)
 	actorId := fmt.Sprintf("%s@%s", preferredName, actorIri.Host)
-	instanceId := auth.CreateShigInstanceId(actorId)
+	instanceId := auth.CreateInstanceUuid(actorId)
 	return &host{
 		actorIri:   actorIri,
 		actorId:    actorId,

@@ -3,7 +3,7 @@ host = "0.0.0.0"
 port = 8080
 
 # HTTPS
-https = false
+https = true
 crt = "./tls/localhost.crt"
 key = "./tls/localhost.key"
 
@@ -17,6 +17,7 @@ logfile = "stdout"
 # currently only Sqlite3 supported
 name = "sqlite3"
 dataSource = "shig.db"
+loadFixtures = true
 
 [security]
 # set list of domains allowed to request api
@@ -70,7 +71,7 @@ iceServer = [{ urls = ["stun:stun.l.google.com:19302"] }]
 enable = true
 # The domain of your public api
 domain = "stream.localhost:8080"
-https = false
+https = true
 release = "v0"
 instanceUsername = "shig"
 serverName = "shig"
@@ -78,7 +79,7 @@ private = false
 registerToken = "this-token-must-be-changed-in-public"
 
 [[federation.trustedInstance]]
-actor = "http://remote-stream.localhost:8070/federation/accounts/shig"
+actor = "https://remote.localhost:8070/federation/accounts/shig"
 name = "shig"
 
 [web]

@@ -27,3 +27,16 @@ type LiveStream struct {
 	UpdatedAt time.Time          `json:"-"`
 	DeletedAt gorm.DeletedAt     `json:"-" gorm:"index"`
 }
+
+func NewLiveStream(account *auth.Account, lobbyEntity *lobby.LobbyEntity, space *Space, video *models.Video) *LiveStream {
+	streamID, _ := uuid.Parse(video.Uuid)
+	stream := &LiveStream{}
+	stream.Lobby = lobbyEntity
+	stream.Account = account
+	stream.Space = space
+	stream.UUID = streamID
+	stream.Video = video
+	stream.User = account.User
+	return stream
+
+}

@@ -8,19 +8,27 @@ import (
 	"github.com/shigde/sfu/internal/activitypub/models"
 )
 
-func CreateInstanceAccount(actorId string, actor *models.Actor) *Account {
-	md5Uuid := CreateShigInstanceId(actorId)
+func CreateInstanceAccount(userId string, actor *models.Actor) *Account {
+	md5Uuid := CreateInstanceUuid(userId)
 	return &Account{
-		User:    actorId,
-		UUID:    md5Uuid.String(),
-		ActorId: actor.ID,
-		Actor:   actor,
+		User: userId,
+		UUID: md5Uuid.String(),
+		// ActorId: actor.ID,
+		Actor: actor,
 	}
 }
 
-func CreateShigInstanceId(_ string) uuid.UUID {
-	actorId := "test-this-out"
-	nameByte := []byte(actorId)
+func CreateInstanceUuid(userId string) uuid.UUID {
+	nameByte := []byte(userId)
 	md5String := fmt.Sprintf("%x", md5.Sum(nameByte))
 	return uuid.MustParse(md5String)
+}
+
+func CreateAccount(actorId string, actor *models.Actor, uuidStr string) *Account {
+	return &Account{
+		User:    actorId,
+		UUID:    uuidStr,
+		ActorId: actor.ID,
+		Actor:   actor,
+	}
 }
