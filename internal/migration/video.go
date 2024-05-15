@@ -21,6 +21,5 @@ func NewVideo(name string, uuidStr string, instance *models.Instance, owner *mod
 		LatencyMode:     1,
 		State:           4,
 	}
-
 	return video
 }
