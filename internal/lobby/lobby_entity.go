@@ -6,7 +6,7 @@ import (
 )
 
 type LobbyEntity struct {
-	LiveStreamId uuid.UUID `json:"streamId"`
+	LiveStreamId uuid.UUID `json:"streamId" gorm:"not null;index;unique;"`
 	UUID         uuid.UUID `json:"-"`
 	Space        string
 	IsRunning    bool   `json:"isLobbyRunning"`
