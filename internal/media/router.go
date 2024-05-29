@@ -33,6 +33,7 @@ func NewRouter(
 	router.Use(cors)
 	// Auth
 	router.Use(logging.LoggingMiddleware)
+
 	router.HandleFunc("/authenticate", getAuthenticationHandler(accountService)).Methods("POST")
 	// Space and LiveStream Resource Endpoints
 	router.HandleFunc("/space/{space}/streams", auth.HttpMiddleware(securityConfig, getStreamList(streamService))).Methods("GET")
@@ -53,10 +54,8 @@ func NewRouter(
 	router.HandleFunc("/fed/space/{space}/stream/{id}/whep", auth.HttpMiddleware(securityConfig, fedWhep(streamService, liveLobbyService))).Methods("POST")
 	router.HandleFunc("/fed/space/{space}/stream/{id}/whip", auth.HttpMiddleware(securityConfig, fedWhip(streamService, liveLobbyService))).Methods("POST")
 	router.HandleFunc("/fed/space/{space}/stream/{id}/res", auth.HttpMiddleware(securityConfig, fedResource(streamService, liveLobbyService))).Methods("DELETE")
-
-	// router.HandleFunc("/space/{space}/stream/{id}/static/whep", auth.HttpMiddleware(securityConfig, whepStaticAnswer(streamService, liveLobbyService))).Methods("POST")
-	fs := http.FileServer(http.Dir("./web/"))
-	router.PathPrefix("/").Handler(http.StripPrefix("/", fs))
+	router.NotFoundHandler = indexHTMLWhenNotFound(http.Dir("./web")) // Fallthrough for HTML5 routing
+	http.Handle("/", router)
 	return router
 }
 

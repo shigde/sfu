@@ -13,7 +13,7 @@ import (
 type LiveStream struct {
 	VideoId   string             `json:"-" gorm:"not null;"`
 	Video     *models.Video      `json:"-" gorm:"foreignKey:VideoId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	UUID      uuid.UUID          `json:"uuid"`
+	UUID      uuid.UUID          `json:"uuid" gorm:"not null;index;unique;"`
 	Title     string             `json:"title" gorm:"-"`
 	LobbyId   uint               `json:"-" gorm:"not null;"`
 	Lobby     *lobby.LobbyEntity `json:"-" gorm:"foreignKey:LobbyId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
