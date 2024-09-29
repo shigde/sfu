@@ -5,7 +5,7 @@ import {map} from 'rxjs/operators';
 import {SessionService} from '@shigde/core';
 
 @Injectable({providedIn: 'root'})
-export class UserRouteAccessGuard implements CanActivate {
+export class AdminAccessGuard implements CanActivate {
   constructor(private router: Router, private session: SessionService) {
   }
 

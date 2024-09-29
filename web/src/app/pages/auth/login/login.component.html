@@ -1,0 +1,32 @@
+<!--<form #f="ngForm" (ngSubmit)="onLogin(f)">-->
+<!--  <div class="form-group mb-3">-->
+<!--    <label for="exampleFormControlSelect1">Select a User</label>-->
+<!--    <select class="form-select" id="exampleFormControlSelect1" name="user" ngModel> data-cy="username">-->
+<!--      <option value="" disabled>Choose a state</option>-->
+<!--      <option *ngFor="let user of users" [ngValue]="user">-->
+<!--        {{ user.name }}-->
+<!--      </option>-->
+<!--    </select>-->
+<!--  </div>-->
+<!--  <button class="btn btn-primary">Login</button>-->
+<!--</form>-->
+
+
+<div class="login-card">
+
+  <div class="card-title">
+    <h1>Login</h1>
+
+  </div>
+  <form class="form-group" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+    <input name="email" type="email" formControlName="email" placeholder="Email">
+    <input type="password" formControlName="password" placeholder="Password">
+    <button>Submit</button>
+  </form>
+
+  <div class="card-terms">
+    <span>You don't have an account? <a href="/signup" >Sign up</a></span>
+  </div>
+
+
+</div>
