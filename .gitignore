@@ -23,15 +23,15 @@ main
 /util/
 /doc/
 /mon/dev/log/
-Links.md
+doc/Links.md
 shig.db
 output.ivf
 output.ogg
 input.ivf
 input.ogg
-Notes.md
-statistic.md
-busines.md
+doc/Notes.md
+doc/statistic.md
+doc/product/busines.md
 config.prod.toml
 .shigClt.prod.toml
 
