@@ -1,7 +1,7 @@
 SERVER_NAME = shig
 CLT_NAME = shigclt
 GO_LDFLAGS = -ldflags "-s -w"
-GO_VERSION = 1.20
+GO_VERSION = 1.21
 GO_TESTPKGS:=$(shell go list ./... | grep -v cmd | grep -v examples)
 
 export CGO_ENABLED=1
@@ -12,8 +12,15 @@ go_init:
 	go mod download
 	go generate ./...
 
+web_init:
+	cd web && npm install
+
 clean:
 	rm -rf bin
+	rm -rf web/dist
+
+build_web: web_init
+	cd web && npm run build
 
 build: go_init
 	go build -race -o ./bin/$(SERVER_NAME) ./cmd/server

@@ -1,0 +1,48 @@
+{
+  "name": "web-client",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve --proxy-config proxy.config.json --host 0.0.0.0 --disable-host-check --ssl",
+    "start:remote": "ng serve --proxy-config proxy.remote.config.json --host 0.0.0.0 --port 4201 --disable-host-check --ssl",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/animations": "^17.0.8",
+    "@angular/common": "^17.0.8",
+    "@angular/compiler": "^17.0.8",
+    "@angular/core": "^17.0.8",
+    "@angular/forms": "^17.0.8",
+    "@angular/platform-browser": "^17.0.8",
+    "@angular/platform-browser-dynamic": "^17.0.8",
+    "@angular/router": "^17.0.8",
+    "@material/web": "^1.1.1",
+    "@popperjs/core": "^2.11.6",
+    "@shigde/core": "file:../../shig-js-sdk/dist/core",
+    "bootstrap": "^5.2.3",
+    "dexie": "^3.2.4",
+    "multistreamsmixer": "^1.2.2",
+    "rxjs": "~7.8.0",
+    "save": "^2.9.0",
+    "sdp-transform": "^2.14.1",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.14.2"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^17.0.8",
+    "@angular/cli": "~17.0.8",
+    "@angular/compiler-cli": "^17.0.8",
+    "@angular/localize": "^17.0.8",
+    "@types/jasmine": "~4.3.0",
+    "jasmine-core": "~4.6.0",
+    "karma": "~6.4.0",
+    "karma-chrome-launcher": "~3.2.0",
+    "karma-coverage": "~2.2.0",
+    "karma-jasmine": "~5.1.0",
+    "karma-jasmine-html-reporter": "~2.1.0",
+    "typescript": "~5.2.2"
+  }
+}

@@ -1,0 +1,12 @@
+<form #f="ngForm" (ngSubmit)="onLogin(f)">
+  <div class="form-group mb-3">
+    <label for="exampleFormControlSelect1">Select a User</label>
+    <select class="form-select" id="exampleFormControlSelect1" name="user" ngModel> data-cy="username">
+      <option value="" disabled>Choose a state</option>
+      <option *ngFor="let user of users" [ngValue]="user">
+        {{ user.name }}
+      </option>
+    </select>
+  </div>
+  <button class="btn btn-primary">Login</button>
+</form>
