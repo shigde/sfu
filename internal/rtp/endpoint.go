@@ -26,11 +26,17 @@ type Endpoint struct {
 	peerConnection         peerConnection
 	receiver               *receiver
 	trackSdpInfoRepository *trackSdpInfoRepository
-	gatherComplete         <-chan struct{}
-	initComplete           chan struct{}
-	closed                 chan struct{}
-	statsRegistry          *stats.Registry
-	iceState               webrtc.ICEConnectionState
+	// Means ice candidates are gathered
+	// The ICE candidates are exchanged via the SDP, so the caller must wait until
+	// all candidates have been written into the SDP.
+	gatherComplete <-chan struct{}
+	// Means the "Offer Answer Exchange" cycle is complete.
+	// An egress endpoint is created without tracks. The renegotiation process begins
+	// only the connection is established (initComplete) for the first time.
+	initComplete  chan struct{}
+	closed        chan struct{}
+	statsRegistry *stats.Registry
+	iceState      webrtc.ICEConnectionState
 	// With Endpoint Optionals #######################################
 	onChannel           func(dc *webrtc.DataChannel)
 	onEstablished       func()

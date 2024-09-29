@@ -71,7 +71,7 @@ func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, homeActorIri *url.URL
 
 		connector: connector,
 	}
-	// session handling should be sequentiell to avoid races conditions in whole group state
+	// session handling should be sequentiell to avoid race conditions in whole group state
 	go func(l *lobby, sessionCreator <-chan sessions.Item, sessionGarbage chan sessions.Item, cmdRunner <-chan command) {
 		for {
 			select {
@@ -114,11 +114,13 @@ func newLobby(entity *LobbyEntity, rtp sessions.RtpEngine, homeActorIri *url.URL
 		}
 	}(lobObj, creator, garbage, runner)
 
-	if !connector.IsThisInstanceLiveSteamHost() {
-		go func(l *lobby) {
-			l.connectToLiveStreamHostInstance()
-		}(lobObj)
-	}
+	// if this local instance not the owner of the stream, the lobby will relay all tracks to the remote host of the
+	// stream
+	//if !connector.IsThisInstanceLiveSteamHost() {
+	//	go func(l *lobby) {
+	//		l.connectToLiveStreamHostInstance()
+	//	}(lobObj)
+	//}
 
 	return lobObj
 }
@@ -169,11 +171,31 @@ func (l *lobby) handle(cmd command) {
 }
 
 func (l *lobby) connectToLiveStreamHostInstance() {
-	if ok := l.newSession(l.connector.GetInstanceId(), sessions.InstanceSession); !ok {
-		slog.Error("no session found for instance connection")
+	// First login to remote owner instance of this live stream
+	if err := l.connector.Login(); err != nil {
+		slog.Error("logging in to remote shig instance")
 		return
 	}
 
+	// After logged in we build a local session for this connection
+	if ok := l.newSession(l.connector.GetInstanceId(), sessions.InstanceSession); !ok {
+		slog.Error("no session connected for instance connection")
+		return
+	}
+
+	// We open a local Egress endpoint and connecting to a remote Ingress Endpoint
+	cmdEgress, err := l.connector.BuildEgress()
+	if err != nil {
+		slog.Error("build Egress connection", "err", err)
+		return
+	}
+	l.runCommand(cmdEgress)
+	if err = cmdEgress.WaitForDone(); err != nil {
+		slog.Error("run egress build connection cmd", "err", err)
+		return
+	}
+
+	// At least we open a local Ingress endpoint and connection to a remote Egress endpoint
 	cmdIngress, err := l.connector.BuildIngress()
 	if err != nil {
 		slog.Error("build Ingress connection", "err", err)
@@ -185,14 +207,5 @@ func (l *lobby) connectToLiveStreamHostInstance() {
 		return
 	}
 
-	cmdEgress, err := l.connector.BuildEgress()
-	if err != nil {
-		slog.Error("build Egress connection", "err", err)
-		return
-	}
-	l.runCommand(cmdEgress)
-	if err = cmdEgress.WaitForDone(); err != nil {
-		slog.Error("run egress build connection cmd", "err", err)
-		return
-	}
+	// Connection established!!
 }

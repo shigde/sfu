@@ -38,7 +38,13 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 	}
 
 	if err := migration.Migrate(config.FederationConfig, store); err != nil {
-		return nil, fmt.Errorf("bild database shema %w", err)
+		return nil, fmt.Errorf("build database shema %w", err)
+	}
+
+	if config.StorageConfig.LoadFixtures {
+		if err := migration.LoadFixtures(config.FederationConfig, store); err != nil {
+			return nil, fmt.Errorf("load fixtures %w", err)
+		}
 	}
 
 	// RTP lobby
@@ -104,9 +110,18 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 
 func (s *Server) Serve() error {
 	slog.Info("server Serve() listen", "addr", s.server.Addr)
+
+	if s.config.HTTPS {
+		if err := s.server.ListenAndServeTLS(s.config.Crt, s.config.Key); !errors.Is(err, http.ErrServerClosed) {
+			return fmt.Errorf("listening and serve: %w", err)
+		}
+		return nil
+	}
+
 	if err := s.server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("listening and serve: %w", err)
 	}
+
 	return nil
 }
 

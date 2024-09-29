@@ -8,10 +8,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type StorageConfig struct {
-	Name       string `mapstructure:"name"`
-	DataSource string `mapstructure:"dataSource"`
-}
 type Store struct {
 	db *gorm.DB
 }

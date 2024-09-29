@@ -10,10 +10,9 @@ import (
 	"github.com/shigde/sfu/internal/metric"
 	rtpStats "github.com/shigde/sfu/internal/rtp/stats"
 	"github.com/shigde/sfu/internal/telemetry"
-	"golang.org/x/exp/slog"
 )
 
-func EstablishEndpoint(ctx context.Context, sessionCxt context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, endpointType EndpointType, options ...EndpointOption) (*Endpoint, error) {
+func establishEndpoint(ctx context.Context, sessionCxt context.Context, e *Engine, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, endpointType EndpointType, options ...EndpointOption) (*Endpoint, error) {
 	_, span := newTraceSpan(ctx, sessionCxt, "rtp: establish_endpoint")
 	defer span.End()
 	metric.GraphNodeUpdate(metric.BuildNode(sessionId.String(), liveStream.String(), endpointType.ToString()))
@@ -83,38 +82,4 @@ func EstablishEndpoint(ctx context.Context, sessionCxt context.Context, e *Engin
 	}
 	endpoint.SetInitComplete()
 	return endpoint, nil
-}
-
-func setupOnNegotiationNeeded(sessionCxt context.Context, endpoint *Endpoint, sessionId uuid.UUID, liveStream uuid.UUID) {
-
-	// @TODO: Fix the race
-	// First we create the egress endpoint and after this we add the individual tracks.
-	// I don't know why, but Pion doesn't trigger renegotiation when creating a peer connection with tracks and the sdp
-	// exchange is not finish. A peer connection without tracks where all tracks are added afterwards triggers renegotiation.
-	// Unfortunately, "sendingTracks" could be outdated in the meantime.
-	// This creates a race between remove and add track that I still have to think about it.
-	if endpoint.getCurrentTracksCbk != nil {
-		go func() {
-			slog.Debug("rtp.establish_endpoint: add tracks", "sessionId", sessionId, "liveStream", liveStream)
-			select {
-			case <-sessionCxt.Done():
-				return
-			case <-endpoint.initComplete:
-				// this is a data race with the lobby hub
-				ctx, span := newTraceSpan(context.Background(), endpoint.sessionCxt, "endpoint_negotiation_add_track")
-				if tracksList, err := endpoint.getCurrentTracksCbk(ctx, sessionId); err == nil {
-					for _, trackInfo := range tracksList {
-						endpoint.AddTrack(ctx, trackInfo)
-					}
-				}
-				span.End()
-			}
-		}()
-	}
-
-	if endpoint.onNegotiationNeeded != nil {
-		slog.Debug("rtp.engine: sender: OnNegotiationNeeded setup start")
-		endpoint.peerConnection.OnNegotiationNeeded(endpoint.doRenegotiation)
-		slog.Debug("rtp.engine: sender: OnNegotiationNeeded setup finish")
-	}
 }

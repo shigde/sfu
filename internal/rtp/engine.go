@@ -76,11 +76,11 @@ func (e *Engine) createApi(apiOptions ...engineApiOption) (*engineApi, error) {
 }
 
 func (e *Engine) EstablishEndpoint(ctx context.Context, sessionCtx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, endpointType EndpointType, options ...EndpointOption) (*Endpoint, error) {
-	return EstablishEndpoint(ctx, sessionCtx, e, sessionId, liveStream, offer, endpointType, options...)
+	return establishEndpoint(ctx, sessionCtx, e, sessionId, liveStream, offer, endpointType, options...)
 }
 
 func (e *Engine) OfferEndpoint(ctx context.Context, sessionCtx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, endpointType EndpointType, options ...EndpointOption) (*Endpoint, error) {
-	return nil, nil
+	return offerEndpoint(ctx, sessionCtx, e, sessionId, liveStream, endpointType, options...)
 }
 
 func creatDC(pc *webrtc.PeerConnection, onChannel func(dc *webrtc.DataChannel)) error {
@@ -102,24 +102,6 @@ func creatDC(pc *webrtc.PeerConnection, onChannel func(dc *webrtc.DataChannel)) 
 }
 
 // Deprecated API
-
-// EstablishIngressEndpoint
-// Deprecated: Because the Endpoint API is getting simpler
-func (e *Engine) EstablishIngressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
-	return EstablishIngressEndpoint(ctx, e, sessionId, liveStream, offer, options...)
-}
-
-// EstablishEgressEndpoint
-// Deprecated: Because the Endpoint API is getting simpler
-func (e *Engine) EstablishEgressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, options ...EndpointOption) (*Endpoint, error) {
-	return EstablishEgressEndpoint(ctx, e, sessionId, liveStream, options...)
-}
-
-// EstablishStaticEgressEndpoint
-// Deprecated: Because the Endpoint API is getting simpler
-func (e *Engine) EstablishStaticEgressEndpoint(ctx context.Context, sessionId uuid.UUID, liveStream uuid.UUID, offer webrtc.SessionDescription, options ...EndpointOption) (*Endpoint, error) {
-	return EstablishStaticEgressEndpoint(ctx, e, sessionId, liveStream, offer, options...)
-}
 
 // NewStaticMediaSenderEndpoint can be used to send static streams from file in a lobby.
 // Deprecated: Because the Endpoint API is getting simpler

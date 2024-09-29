@@ -29,8 +29,11 @@ type Environment struct {
 }
 
 type ServerConfig struct {
-	Host string `mapstructure:"host"`
-	Port int    `mapstructure:"port"`
+	Host  string `mapstructure:"host"`
+	Port  int    `mapstructure:"port"`
+	HTTPS bool   `mapstructure:"https"`
+	Crt   string `mapstructure:"crt"`
+	Key   string `mapstructure:"key"`
 }
 
 type ServerEnv struct {
@@ -46,6 +49,15 @@ func ValidateServerConfig(config *ServerConfig, env *ServerEnv) error {
 	}
 	if config.Port < 1 {
 		return fmt.Errorf("server.Port should not be empty")
+	}
+
+	if config.HTTPS {
+		if len(config.Key) < 1 {
+			return fmt.Errorf("server.Key should not be empty")
+		}
+		if len(config.Crt) < 1 {
+			return fmt.Errorf("server.Crt should not be empty")
+		}
 	}
 	return nil
 }

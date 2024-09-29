@@ -9,6 +9,7 @@ import (
 	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/sfu"
+	"github.com/shigde/sfu/internal/storage"
 	"github.com/shigde/sfu/internal/telemetry"
 	"github.com/spf13/viper"
 )
@@ -31,12 +32,8 @@ func ParseConfig(file string, env *sfu.Environment) (*sfu.Config, error) {
 		return nil, fmt.Errorf("loading config file: %w", err)
 	}
 
-	if config.StorageConfig.Name != "sqlite3" {
-		return nil, fmt.Errorf("store.name currently supportes only Sqlite3")
-	}
-
-	if len(config.StorageConfig.DataSource) == 0 {
-		return nil, fmt.Errorf("store.dataSource should not be empty")
+	if err := storage.ValidateStorageConfig(config.StorageConfig); err != nil {
+		return nil, err
 	}
 
 	if len(config.LogConfig.Logfile) == 0 {

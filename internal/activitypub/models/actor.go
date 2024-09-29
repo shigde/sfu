@@ -40,25 +40,11 @@ type Actor struct {
 
 func NewInstanceActor(instanceUrl *url.URL, name string) (*Actor, error) {
 	actorIri := instance.BuildAccountIri(instanceUrl, name)
-	now := time.Now()
 	privateKey, publicKey, err := crypto.GenerateKeys()
 	if err != nil {
 		return nil, fmt.Errorf("generation key pair")
 	}
-	return &Actor{
-		ActorType:         "Application",
-		PublicKey:         string(publicKey),
-		PrivateKey:        sql.NullString{String: string(privateKey), Valid: true},
-		ActorIri:          actorIri.String(),
-		FollowingIri:      instance.BuildFollowingIri(actorIri).String(),
-		FollowersIri:      instance.BuildFollowersIri(actorIri).String(),
-		InboxIri:          instance.BuildInboxIri(actorIri).String(),
-		OutboxIri:         instance.BuildOutboxIri(actorIri).String(),
-		SharedInboxIri:    instance.BuildSharedInboxIri(instanceUrl).String(),
-		DisabledAt:        sql.NullTime{},
-		RemoteCreatedAt:   now,
-		PreferredUsername: name,
-	}, nil
+	return newActor(Application, actorIri, instanceUrl, name, publicKey, privateKey), nil
 }
 
 func NewTrustedInstanceActor(actorIri *url.URL, name string) (*Actor, error) {
@@ -66,11 +52,43 @@ func NewTrustedInstanceActor(actorIri *url.URL, name string) (*Actor, error) {
 	if err != nil {
 		return nil, fmt.Errorf("trusted instance actor instanceUrl url")
 	}
+	return newActor(Application, actorIri, instanceUrl, name, make([]byte, 0), make([]byte, 0)), nil
+}
+
+func NewPersonActor(instanceUrl *url.URL, name string) (*Actor, error) {
+	actorIri := instance.BuildAccountIri(instanceUrl, name)
+	privateKey, publicKey, err := crypto.GenerateKeys()
+	if err != nil {
+		return nil, fmt.Errorf("generation key pair")
+	}
+	return newActor(Person, actorIri, instanceUrl, name, publicKey, privateKey), nil
+}
+
+func NewChannelActor(instanceUrl *url.URL, name string) (*Actor, error) {
+	actorIri := instance.BuildAccountIri(instanceUrl, name)
+	privateKey, publicKey, err := crypto.GenerateKeys()
+	if err != nil {
+		return nil, fmt.Errorf("generation key pair")
+	}
+	return newActor(Group, actorIri, instanceUrl, name, publicKey, privateKey), nil
+}
+
+func newActor(actorType ActorType, actorIri *url.URL, instanceUrl *url.URL, name string, publicKey []byte, privateKey []byte) *Actor {
 	now := time.Now()
+
+	var privateKeyStr = sql.NullString{}
+	if len(privateKey) > 0 {
+		privateKeyStr = sql.NullString{String: string(privateKey), Valid: true}
+	}
+	var publicKeyStr = ""
+	if len(publicKey) > 0 {
+		publicKeyStr = string(publicKey)
+	}
+
 	return &Actor{
-		ActorType:         "Application",
-		PublicKey:         "",
-		PrivateKey:        sql.NullString{},
+		ActorType:         actorType.String(),
+		PublicKey:         publicKeyStr,
+		PrivateKey:        privateKeyStr,
 		ActorIri:          actorIri.String(),
 		FollowingIri:      instance.BuildFollowingIri(actorIri).String(),
 		FollowersIri:      instance.BuildFollowersIri(actorIri).String(),
@@ -80,7 +98,7 @@ func NewTrustedInstanceActor(actorIri *url.URL, name string) (*Actor, error) {
 		DisabledAt:        sql.NullTime{},
 		RemoteCreatedAt:   now,
 		PreferredUsername: name,
-	}, nil
+	}
 }
 
 func (s *Actor) GetActorIri() *url.URL {

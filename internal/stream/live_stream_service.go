@@ -26,7 +26,6 @@ func NewLiveStreamService(repo *LiveStreamRepository, spaceRepo *SpaceRepository
 
 func (ls *LiveStreamService) CreateStreamAccessByVideo(ctx context.Context, video *models.Video) error {
 	userId := buildFederatedId(video.Owner.PreferredUsername, video.Owner.GetActorIri().Host)
-	channelId := buildFederatedId(video.Channel.PreferredUsername, video.Channel.GetActorIri().Host)
 
 	streamID, _ := uuid.Parse(video.Uuid)
 
@@ -39,20 +38,9 @@ func (ls *LiveStreamService) CreateStreamAccessByVideo(ctx context.Context, vide
 	account.User = userId
 	account.UUID = uuid.NewString()
 
-	lobbyEntity := lobby.NewLobbyEntity(streamID, channelId, video.Instance.Actor.ActorIri)
-
-	space := &Space{}
-	space.Account = account
-	space.Channel = video.Channel
-	space.Identifier = channelId
-
-	stream := &LiveStream{}
-	stream.Lobby = lobbyEntity
-	stream.Account = account
-	stream.Space = space
-	stream.UUID = streamID
-	stream.Video = video
-	stream.User = userId
+	space := NewSpace(video.Channel, account)
+	lobbyEntity := lobby.NewLobbyEntity(streamID, space.Identifier, video.Instance.Actor.ActorIri)
+	stream := NewLiveStream(account, lobbyEntity, space, video)
 
 	if err := ls.streamRepo.UpsertLiveStream(ctx, stream); err != nil {
 		return fmt.Errorf("upsert live stream: %w", err)
