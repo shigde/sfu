@@ -4,7 +4,7 @@ import {BrowserModule} from '@angular/platform-browser';
 import {AppRoutingModule} from './app-routing.module';
 import {AppComponent} from './app.component';
 import {DashboardComponent} from './dashboard/dashboard.component';
-import {HttpClientModule} from '@angular/common/http';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 
 import {LiveStreamComponent} from './live-stream/live-stream.component';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
@@ -15,8 +15,7 @@ import {LobbyEntryComponent} from './lobby-entry/lobby-entry.component';
 import {SettingsComponent} from './svg/settings.component';
 
 
-@NgModule({
-    declarations: [
+@NgModule({ declarations: [
         AppComponent,
         DashboardComponent,
         LiveStreamComponent,
@@ -24,20 +23,15 @@ import {SettingsComponent} from './svg/settings.component';
         LobbyEntryComponent,
         SettingsComponent
     ],
-    imports: [
-        CommonModule,
+    bootstrap: [AppComponent], imports: [CommonModule,
         BrowserModule,
-        HttpClientModule,
         AppRoutingModule,
         ReactiveFormsModule,
         FormsModule,
-        ShigModule
-    ],
-    providers: [
+        ShigModule], providers: [
         httpInterceptorProviders,
-    ],
-    bootstrap: [AppComponent]
-})
+        provideHttpClient(withInterceptorsFromDi()),
+    ] })
 export class AppModule {
 
     // ngDoBootstrap() {
