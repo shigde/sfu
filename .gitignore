@@ -73,6 +73,17 @@ config.prod.toml
 /web/libpeerconnection.log
 /web/testem.log
 /web/typings
+/web/node_modules/
+
+# App ignores
+TestResults.json
+/cmd/main.go
+config-remote.toml
+/docs/img/pipeline-i.png
+/docs/img/pipeline-ii.png
+/docs/img/pipeline.png
+/shig-save.db
+/shig.remote.db
 
 # System files
 Thumbs.db
