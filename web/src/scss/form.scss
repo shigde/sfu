@@ -1,0 +1,20 @@
+.form-group input[type="submit"] {
+  background-color: #8dcaff;
+  color: #ffffff;
+  font-size: 16px;
+  outline: none;
+  border-radius: 5px;
+  border: none;
+  padding: 8px 15px;
+  width: 100%;
+}
+
+.form-group input {
+  margin: 5px 0;
+  width: 100%;
+  background-color: $gray-200;
+  border: none;
+  outline: none;
+  padding: 12px 20px;
+  border-radius: 4px;
+}

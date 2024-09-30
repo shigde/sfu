@@ -1,0 +1,61 @@
+.card-app {
+  display: flex;
+  flex-direction: column;
+  margin: 10px 10px;
+  box-shadow: 0 5px 10px 0 rgba(0, 0, 0, 0.3);
+  background-color: #ffffff;
+  padding: 30px 30px;
+  border-radius: 10px;
+  min-width: 350px;
+  max-width: 600px;
+}
+
+.card-app input[type="checkbox"] {
+  width: unset;
+}
+.card-app input {
+  margin: 5px 0;
+  width: 100%;
+  background-color: $gray-200;
+  border: none;
+  outline: none;
+  padding: 12px 20px;
+  border-radius: 4px;
+}
+
+.card-app button {
+  background-color: #8dcaff;;
+  color: #ffffff;
+  font-size: 16px;
+  outline: none;
+  border-radius: 5px;
+  border: none;
+  padding: 8px 15px;
+  width: 100%;
+}
+
+.card-title h1 {
+  font-size: 26px;
+  font-weight: bold;
+}
+
+.card-terms {
+  padding: 10px;
+}
+
+.card-terms span {
+  margin: 5px;
+}
+
+
+card-title {
+  padding: 10px;
+}
+
+.card-title h1 {
+  font-size: 26px;
+  font-weight: bold;
+}
+
+
+

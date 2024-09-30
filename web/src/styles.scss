@@ -1,24 +1,4 @@
-/* Importing Bootstrap SCSS file. */
-@import 'bootstrap/scss/bootstrap';
-
-
-// scss-docs-start color-variables
-$blue:    #8dcaff !default;
-$indigo:  #6610f2 !default;
-$purple:  #6f42c1 !default;
-$pink:    #d63384 !default;
-$red:     #dc3545 !default;
-$orange:  #fd7e14 !default;
-$yellow:  #ffc107 !default;
-$green:   #198754 !default;
-$teal:    #20c997 !default;
-$cyan:    #0dcaf0 !default;
-// scss-docs-end color-variables
-
-root {
-  --bs-btn-active-bg: #8dcaff;
-  --bs-btn-active-border-color: #8dcaff;
-}
+@import 'scss/main';
 
 :host {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
@@ -84,8 +64,6 @@ svg.material-icons {
   height: 24px;
   width: auto;
 }
-
-
 
 .github-star-badge {
   color: #24292e;
