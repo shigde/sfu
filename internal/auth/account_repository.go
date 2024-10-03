@@ -61,7 +61,22 @@ func (r *AccountRepository) Add(ctx context.Context, account *Account) (string, 
 
 	result := tx.Create(account)
 	if result.Error != nil || result.RowsAffected != 1 {
-		return "", fmt.Errorf("adding live stream: %w", result.Error)
+		return "", fmt.Errorf("adding account: %w", result.Error)
 	}
 	return account.UUID, nil
+}
+
+func (r *AccountRepository) AddVerificationToken(ctx context.Context, token *AccountVerificationToken) error {
+	r.locker.Lock()
+	tx, cancel := r.store.GetDatabaseWithContext(ctx)
+	defer func() {
+		r.locker.Unlock()
+		cancel()
+	}()
+
+	result := tx.Create(token)
+	if result.Error != nil || result.RowsAffected != 1 {
+		return fmt.Errorf("adding token: %w", result.Error)
+	}
+	return nil
 }

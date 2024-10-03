@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 
 	"github.com/shigde/sfu/internal/activitypub/models"
 	"github.com/shigde/sfu/internal/mail"
@@ -14,24 +15,47 @@ import (
 type AccountService struct {
 	config        *SecurityConfig
 	instanceToken string
-	mail          *mail.SenderService
+	instanceUrl   *url.URL
+	mailSender    *mail.SenderService
 	repo          *AccountRepository
 }
 
-func NewAccountService(repo *AccountRepository, instanceToken string, config *SecurityConfig) *AccountService {
+func NewAccountService(
+	repo *AccountRepository,
+	instanceToken string,
+	instanceUrl *url.URL,
+	config *SecurityConfig,
+	mail *mail.SenderService,
+) *AccountService {
 	return &AccountService{
 		config:        config,
 		instanceToken: instanceToken,
+		instanceUrl:   instanceUrl,
+		mailSender:    mail,
 		repo:          repo,
 	}
 }
 
 func (s *AccountService) CreateAccount(ctx context.Context, account *Account) error {
-	_, err := s.repo.Add(ctx, account)
+
+	actor, err := models.NewPersonActor(s.instanceUrl, account.User)
+	if err != nil {
+		return fmt.Errorf("failed create actor: %w", err)
+	}
+
+	account.Actor = actor
+	_, err = s.repo.Add(ctx, account)
 	if err != nil {
 		return fmt.Errorf("failed create account: %w", err)
 	}
-	s.mail.SendRegisterMail(account.User, account.Email, "tokkkkkkkkkkkkken")
+
+	token := NewEmailVerificationToken(account)
+
+	if err = s.repo.AddVerificationToken(ctx, token); err != nil {
+		return fmt.Errorf("failed create token: %w", err)
+	}
+
+	s.mailSender.SendRegisterMail(account.User, account.Email, token.UUID)
 	return nil
 }
 

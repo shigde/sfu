@@ -12,6 +12,7 @@ import (
 	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/config"
 	"github.com/shigde/sfu/internal/lobby"
+	"github.com/shigde/sfu/internal/mail"
 	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/migration"
 	"github.com/shigde/sfu/internal/routes"
@@ -63,9 +64,18 @@ func NewServer(ctx context.Context, cfg *config.SFU) (*Server, error) {
 	liveStreamService := stream.NewLiveStreamService(streamRepo, spaceRepo)
 	liveLobbyService := stream.NewLiveLobbyService(store, lobbyManager)
 
+	// Mail
+
+	mailSender := mail.NewSenderService()
 	// Auth provider
 	accountRepo := auth.NewAccountRepository(store)
-	accountService := auth.NewAccountService(accountRepo, cfg.RegisterToken, cfg.SecurityConfig)
+	accountService := auth.NewAccountService(
+		accountRepo,
+		cfg.RegisterToken,
+		cfg.FederationConfig.InstanceUrl,
+		cfg.SecurityConfig,
+		mailSender,
+	)
 
 	router := routes.NewRouter(
 		cfg.SecurityConfig,

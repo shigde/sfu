@@ -10,6 +10,10 @@ import (
 type SenderService struct {
 }
 
+func NewSenderService() *SenderService {
+	return &SenderService{}
+}
+
 func (s *SenderService) SendRegisterMail(name string, email string, activateToken string) {
 
 	// Sender data.
