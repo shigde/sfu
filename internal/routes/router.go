@@ -1,4 +1,4 @@
-package media
+package routes
 
 import (
 	"context"
@@ -35,10 +35,10 @@ func NewRouter(
 	router.Use(logging.LoggingMiddleware)
 
 	router.HandleFunc("/authenticate", getAuthenticationHandler(accountService)).Methods("POST")
-	router.HandleFunc("/auth/login", getLoginHandler(accountService)).Methods("POST")
-	router.HandleFunc("/auth/register", getRegisterHandler(accountService)).Methods("POST")
-	router.HandleFunc("/auth/password", getNewPasswordHandler(accountService)).Methods("POST")
-	router.HandleFunc("/auth/verify", getVerificationHandler(accountService)).Methods("POST")
+	//router.HandleFunc("/auth/login", getLoginHandler(accountService)).Methods("POST")
+	//router.HandleFunc("/auth/register", getRegisterHandler(accountService)).Methods("POST")
+	//router.HandleFunc("/auth/password", getNewPasswordHandler(accountService)).Methods("POST")
+	//router.HandleFunc("/auth/verify", getVerificationHandler(accountService)).Methods("POST")
 
 	// Space and LiveStream Resource Endpoints
 	router.HandleFunc("/space/{space}/streams", auth.HttpMiddleware(securityConfig, getStreamList(streamService))).Methods("GET")

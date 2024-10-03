@@ -1,4 +1,4 @@
-package media
+package routes
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"github.com/shigde/sfu/internal/activitypub/models"
 	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/lobby"
-	"github.com/shigde/sfu/internal/media/mocks"
+	"github.com/shigde/sfu/internal/routes/mocks"
 	"github.com/shigde/sfu/internal/storage"
 	"github.com/shigde/sfu/internal/stream"
 )

@@ -11,9 +11,9 @@ import (
 	"github.com/shigde/sfu/internal/activitypub"
 	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/lobby"
-	"github.com/shigde/sfu/internal/media"
 	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/migration"
+	"github.com/shigde/sfu/internal/routes"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/storage"
 	"github.com/shigde/sfu/internal/stream"
@@ -66,7 +66,7 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 	accountRepo := auth.NewAccountRepository(store)
 	accountService := auth.NewAccountService(accountRepo, config.RegisterToken, config.SecurityConfig)
 
-	router := media.NewRouter(
+	router := routes.NewRouter(
 		config.SecurityConfig,
 		config.RtpConfig,
 		accountService,

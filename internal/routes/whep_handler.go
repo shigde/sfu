@@ -1,4 +1,4 @@
-package media
+package routes
 
 import (
 	"crypto/md5"
@@ -50,7 +50,7 @@ func whep(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 			return
 		}
 
-		offer, err := http2.getSdpPayload(w, r, webrtc.SDPTypeOffer)
+		offer, err := http2.GetSdpPayload(w, r, webrtc.SDPTypeOffer)
 		if err != nil {
 			_ = telemetry.RecordError(span, err)
 			w.WriteHeader(http.StatusBadRequest)

@@ -1,4 +1,4 @@
-package media
+package routes
 
 import (
 	"crypto/md5"
@@ -32,7 +32,7 @@ func openPipe(streamService *stream.LiveStreamService, liveService *stream.LiveL
 			return
 		}
 
-		offer, err := http2.getSdpPayload(w, r, webrtc.SDPTypeOffer)
+		offer, err := http2.GetSdpPayload(w, r, webrtc.SDPTypeOffer)
 		if err != nil {
 			telemetry.RecordError(span, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -101,7 +101,7 @@ func openHostIngress(streamService *stream.LiveStreamService, liveService *strea
 			return
 		}
 
-		offer, err := http2.getSdpPayload(w, r, webrtc.SDPTypeOffer)
+		offer, err := http2.GetSdpPayload(w, r, webrtc.SDPTypeOffer)
 		if err != nil {
 			telemetry.RecordError(span, err)
 			w.WriteHeader(http.StatusBadRequest)

@@ -1,4 +1,4 @@
-package media
+package routes
 
 import (
 	"net/http"
@@ -7,7 +7,7 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-func fedResource(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
+func fedWhep(streamService *stream.LiveStreamService, liveService *stream.LiveLobbyService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, span := otel.Tracer(tracerName).Start(r.Context(), "api: fed_whep_create")
 		defer span.End()
