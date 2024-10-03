@@ -9,6 +9,7 @@ import (
 
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/auth"
+	http2 "github.com/shigde/sfu/internal/http"
 	"github.com/shigde/sfu/internal/lobby"
 	"github.com/shigde/sfu/internal/stream"
 	"github.com/shigde/sfu/internal/telemetry"
@@ -31,7 +32,7 @@ func openPipe(streamService *stream.LiveStreamService, liveService *stream.LiveL
 			return
 		}
 
-		offer, err := getSdpPayload(w, r, webrtc.SDPTypeOffer)
+		offer, err := http2.getSdpPayload(w, r, webrtc.SDPTypeOffer)
 		if err != nil {
 			telemetry.RecordError(span, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -100,7 +101,7 @@ func openHostIngress(streamService *stream.LiveStreamService, liveService *strea
 			return
 		}
 
-		offer, err := getSdpPayload(w, r, webrtc.SDPTypeOffer)
+		offer, err := http2.getSdpPayload(w, r, webrtc.SDPTypeOffer)
 		if err != nil {
 			telemetry.RecordError(span, err)
 			w.WriteHeader(http.StatusBadRequest)

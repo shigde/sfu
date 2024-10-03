@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/shigde/sfu/internal/auth"
+	http2 "github.com/shigde/sfu/internal/http"
 	"github.com/shigde/sfu/pkg/authentication"
 )
 
@@ -33,13 +34,13 @@ func getAuthenticationHandler(
 }
 
 func getJsonAuthPayload(w http.ResponseWriter, r *http.Request) (*authentication.User, error) {
-	dec, err := getJsonPayload(w, r)
+	dec, err := http2.GetJsonPayload(w, r)
 	if err != nil {
 		return nil, err
 	}
 	var user authentication.User
 	if err := dec.Decode(&user); err != nil {
-		return nil, invalidPayload
+		return nil, http2.InvalidPayload
 	}
 	return &user, nil
 }

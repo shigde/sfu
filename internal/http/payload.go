@@ -1,4 +1,4 @@
-package media
+package http
 
 import (
 	"encoding/json"
@@ -12,15 +12,15 @@ import (
 const maxPayloadByte = 1048576
 
 var (
-	invalidContentType = errors.New("invalid content type")
-	invalidPayload     = errors.New("invalid payload")
+	InvalidContentType = errors.New("invalid content type")
+	InvalidPayload     = errors.New("invalid payload")
 	emptyPayload       = errors.New("empty payload")
 )
 
-func getJsonPayload(w http.ResponseWriter, r *http.Request) (*json.Decoder, error) {
+func GetJsonPayload(w http.ResponseWriter, r *http.Request) (*json.Decoder, error) {
 	contentType := r.Header.Get("Content-Type")
 	if contentType != "application/json" {
-		return nil, invalidContentType
+		return nil, InvalidContentType
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxPayloadByte)
@@ -29,10 +29,10 @@ func getJsonPayload(w http.ResponseWriter, r *http.Request) (*json.Decoder, erro
 	return dec, nil
 }
 
-func getSdpPayload(w http.ResponseWriter, r *http.Request, sdpType webrtc.SDPType) (*webrtc.SessionDescription, error) {
+func GetSdpPayload(w http.ResponseWriter, r *http.Request, sdpType webrtc.SDPType) (*webrtc.SessionDescription, error) {
 	contentType := r.Header.Get("Content-Type")
 	if contentType != "application/sdp" {
-		return nil, invalidContentType
+		return nil, InvalidContentType
 	}
 	if r.Body == nil {
 		return nil, emptyPayload
@@ -43,7 +43,7 @@ func getSdpPayload(w http.ResponseWriter, r *http.Request, sdpType webrtc.SDPTyp
 	defer r.Body.Close()
 
 	if err != nil {
-		return nil, invalidPayload
+		return nil, InvalidPayload
 	}
 	bodyString := string(bodyBytes)
 

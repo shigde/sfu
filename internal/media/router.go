@@ -35,6 +35,11 @@ func NewRouter(
 	router.Use(logging.LoggingMiddleware)
 
 	router.HandleFunc("/authenticate", getAuthenticationHandler(accountService)).Methods("POST")
+	router.HandleFunc("/auth/login", getLoginHandler(accountService)).Methods("POST")
+	router.HandleFunc("/auth/register", getRegisterHandler(accountService)).Methods("POST")
+	router.HandleFunc("/auth/password", getNewPasswordHandler(accountService)).Methods("POST")
+	router.HandleFunc("/auth/verify", getVerificationHandler(accountService)).Methods("POST")
+
 	// Space and LiveStream Resource Endpoints
 	router.HandleFunc("/space/{space}/streams", auth.HttpMiddleware(securityConfig, getStreamList(streamService))).Methods("GET")
 	router.HandleFunc("/space/{space}/stream/{id}", auth.HttpMiddleware(securityConfig, getStream(streamService))).Methods("GET")
@@ -54,7 +59,7 @@ func NewRouter(
 	router.HandleFunc("/fed/space/{space}/stream/{id}/whep", auth.HttpMiddleware(securityConfig, fedWhep(streamService, liveLobbyService))).Methods("POST")
 	router.HandleFunc("/fed/space/{space}/stream/{id}/whip", auth.HttpMiddleware(securityConfig, fedWhip(streamService, liveLobbyService))).Methods("POST")
 	router.HandleFunc("/fed/space/{space}/stream/{id}/res", auth.HttpMiddleware(securityConfig, fedResource(streamService, liveLobbyService))).Methods("DELETE")
-	router.NotFoundHandler = indexHTMLWhenNotFound(http.Dir("./web")) // Fallthrough for HTML5 routing
+	router.NotFoundHandler = indexHTMLWhenNotFound(http.Dir("./web/dist/web-client/browser/")) // Fallthrough for HTML5 routing
 	http.Handle("/", router)
 	return router
 }

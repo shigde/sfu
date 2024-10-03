@@ -13,7 +13,7 @@ func indexHTMLWhenNotFound(fs http.FileSystem) http.Handler {
 	return http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		_, err := fs.Open(path.Clean(req.URL.Path)) // Do not allow path traversals.
 		if errors.Is(err, os.ErrNotExist) {
-			http.ServeFile(resp, req, "./web/index.html")
+			http.ServeFile(resp, req, "./web/dist/web-client/browser/index.html")
 			return
 		}
 		fileServer.ServeHTTP(resp, req)

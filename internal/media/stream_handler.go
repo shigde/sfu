@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/internal/auth"
+	http2 "github.com/shigde/sfu/internal/http"
 	"github.com/shigde/sfu/internal/stream"
 )
 
@@ -138,13 +139,13 @@ func updateStream(streamService *stream.LiveStreamService) http.HandlerFunc {
 }
 
 func getStreamResourcePayload(w http.ResponseWriter, r *http.Request, liveStream *stream.LiveStream) error {
-	dec, err := getJsonPayload(w, r)
+	dec, err := http2.GetJsonPayload(w, r)
 	if err != nil {
 		return err
 	}
 
 	if err := dec.Decode(&liveStream); err != nil {
-		return invalidPayload
+		return http2.InvalidPayload
 	}
 
 	return nil

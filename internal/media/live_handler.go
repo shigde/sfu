@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	http2 "github.com/shigde/sfu/internal/http"
 	"github.com/shigde/sfu/internal/stream"
 )
 
@@ -72,13 +73,13 @@ func getStatusOfLiveStream(streamService *stream.LiveStreamService) http.Handler
 }
 
 func getStreamLiveInfoPayload(w http.ResponseWriter, r *http.Request) (*stream.LiveStreamInfo, error) {
-	dec, err := getJsonPayload(w, r)
+	dec, err := http2.GetJsonPayload(w, r)
 	if err != nil {
 		return nil, err
 	}
 	info := &stream.LiveStreamInfo{}
 	if err := dec.Decode(info); err != nil {
-		return nil, invalidPayload
+		return nil, http2.InvalidPayload
 	}
 	return info, nil
 }
