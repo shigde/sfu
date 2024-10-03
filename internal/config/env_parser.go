@@ -1,12 +1,11 @@
 package config
 
 import (
-	"github.com/shigde/sfu/internal/sfu"
 	"github.com/spf13/viper"
 )
 
-func ParseEnv() *sfu.Environment {
-	env := &sfu.Environment{}
+func ParseEnv() *Environment {
+	env := &Environment{}
 	viper.SetEnvPrefix("shigde_instance") // will be uppercased automatically
 	if err := viper.BindEnv("domain"); err != nil {
 		return env

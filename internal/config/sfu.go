@@ -1,4 +1,4 @@
-package sfu
+package config
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 	"github.com/shigde/sfu/internal/telemetry"
 )
 
-type Config struct {
+type SFU struct {
 	*ServerConfig              `mapstructure:"server"`
 	*auth.SecurityConfig       `mapstructure:"security"`
 	*storage.StorageConfig     `mapstructure:"store"`

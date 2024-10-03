@@ -8,14 +8,13 @@ import (
 	"github.com/shigde/sfu/internal/auth"
 	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/rtp"
-	"github.com/shigde/sfu/internal/sfu"
 	"github.com/shigde/sfu/internal/storage"
 	"github.com/shigde/sfu/internal/telemetry"
 	"github.com/spf13/viper"
 )
 
-func ParseConfig(file string, env *sfu.Environment) (*sfu.Config, error) {
-	config := &sfu.Config{}
+func ParseConfig(file string, env *Environment) (*SFU, error) {
+	config := &SFU{}
 
 	if _, err := os.Stat(file); err != nil {
 		return nil, fmt.Errorf("opening config file: %w", err)
@@ -56,7 +55,7 @@ func ParseConfig(file string, env *sfu.Environment) (*sfu.Config, error) {
 		return nil, err
 	}
 
-	if err := sfu.ValidateServerConfig(config.ServerConfig, &env.ServerEnv); err != nil {
+	if err := ValidateServerConfig(config.ServerConfig, &env.ServerEnv); err != nil {
 		return nil, err
 	}
 

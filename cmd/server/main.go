@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/shigde/sfu/internal"
 	"github.com/shigde/sfu/internal/config"
 	"github.com/shigde/sfu/internal/logging"
-	"github.com/shigde/sfu/internal/sfu"
 )
 
 func main() {
@@ -36,7 +36,7 @@ func main() {
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	server, err := sfu.NewServer(ctx, conf)
+	server, err := internal.NewServer(ctx, conf)
 	if err != nil {
 		panic(fmt.Errorf("creating new server: %w", err))
 	}

@@ -1,4 +1,4 @@
-package sfu
+package internal
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/shigde/sfu/internal/activitypub"
 	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/config"
 	"github.com/shigde/sfu/internal/lobby"
 	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/migration"
@@ -27,35 +28,35 @@ var maxRequestTime = time.Second * 5
 type Server struct {
 	ctx    context.Context
 	server *http.Server
-	config *Config
+	cfg    *config.SFU
 	tp     *trace.TracerProvider
 }
 
-func NewServer(ctx context.Context, config *Config) (*Server, error) {
-	store, err := storage.NewStore(config.StorageConfig)
+func NewServer(ctx context.Context, cfg *config.SFU) (*Server, error) {
+	store, err := storage.NewStore(cfg.StorageConfig)
 	if err != nil {
 		return nil, fmt.Errorf("setup storage %w", err)
 	}
 
-	if err := migration.Migrate(config.FederationConfig, store); err != nil {
+	if err := migration.Migrate(cfg.FederationConfig, store); err != nil {
 		return nil, fmt.Errorf("build database shema %w", err)
 	}
 
-	if config.StorageConfig.LoadFixtures {
-		if err := migration.LoadFixtures(config.FederationConfig, store); err != nil {
+	if cfg.StorageConfig.LoadFixtures {
+		if err := migration.LoadFixtures(cfg.FederationConfig, store); err != nil {
 			return nil, fmt.Errorf("load fixtures %w", err)
 		}
 	}
 
 	// RTP lobby
-	engine, err := rtp.NewEngine(config.RtpConfig)
+	engine, err := rtp.NewEngine(cfg.RtpConfig)
 	if err != nil {
 		return nil, fmt.Errorf("creating webrtc engine: %w", err)
 	}
 
-	host, _ := url.Parse(config.FederationConfig.InstanceUrl.String())
-	host.Path = fmt.Sprintf("federation/accounts/%s", config.FederationConfig.InstanceUsername)
-	lobbyManager := lobby.NewLobbyManager(store, engine, host, config.FederationConfig.RegisterToken)
+	host, _ := url.Parse(cfg.FederationConfig.InstanceUrl.String())
+	host.Path = fmt.Sprintf("federation/accounts/%s", cfg.FederationConfig.InstanceUsername)
+	lobbyManager := lobby.NewLobbyManager(store, engine, host, cfg.FederationConfig.RegisterToken)
 
 	streamRepo := stream.NewLiveStreamRepository(store)
 	spaceRepo := stream.NewSpaceRepository(store)
@@ -64,11 +65,11 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 
 	// Auth provider
 	accountRepo := auth.NewAccountRepository(store)
-	accountService := auth.NewAccountService(accountRepo, config.RegisterToken, config.SecurityConfig)
+	accountService := auth.NewAccountService(accountRepo, cfg.RegisterToken, cfg.SecurityConfig)
 
 	router := routes.NewRouter(
-		config.SecurityConfig,
-		config.RtpConfig,
+		cfg.SecurityConfig,
+		cfg.RtpConfig,
 		accountService,
 		liveStreamService,
 		liveLobbyService,
@@ -76,7 +77,7 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 
 	// federation api
 	api, err := activitypub.NewApApi(
-		config.FederationConfig,
+		cfg.FederationConfig,
 		store,
 		liveStreamService,
 	)
@@ -89,11 +90,11 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 	}
 
 	// monitoring
-	if err := metric.ServeMetrics(ctx, config.MetricConfig); err != nil {
+	if err := metric.ServeMetrics(ctx, cfg.MetricConfig); err != nil {
 		return nil, fmt.Errorf("serving metrics: %w", err)
 	}
 
-	tp, err := telemetry.NewTracerProvider(ctx, config.TelemetryConfig)
+	tp, err := telemetry.NewTracerProvider(ctx, cfg.TelemetryConfig)
 	if err != nil {
 		return nil, fmt.Errorf("starting telemetry tracer provider: %w", err)
 	}
@@ -102,8 +103,8 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 	// start server
 	return &Server{
 		ctx:    ctx,
-		server: &http.Server{Addr: fmt.Sprintf("%s:%d", config.Host, config.Port), Handler: router},
-		config: config,
+		server: &http.Server{Addr: fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), Handler: router},
+		cfg:    cfg,
 		tp:     tp,
 	}, nil
 }
@@ -111,8 +112,8 @@ func NewServer(ctx context.Context, config *Config) (*Server, error) {
 func (s *Server) Serve() error {
 	slog.Info("server Serve() listen", "addr", s.server.Addr)
 
-	if s.config.HTTPS {
-		if err := s.server.ListenAndServeTLS(s.config.Crt, s.config.Key); !errors.Is(err, http.ErrServerClosed) {
+	if s.cfg.HTTPS {
+		if err := s.server.ListenAndServeTLS(s.cfg.Crt, s.cfg.Key); !errors.Is(err, http.ErrServerClosed) {
 			return fmt.Errorf("listening and serve: %w", err)
 		}
 		return nil
