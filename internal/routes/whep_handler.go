@@ -9,8 +9,8 @@ import (
 
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/auth"
-	http2 "github.com/shigde/sfu/internal/http"
 	"github.com/shigde/sfu/internal/lobby"
+	"github.com/shigde/sfu/internal/rest"
 	"github.com/shigde/sfu/internal/stream"
 	"github.com/shigde/sfu/internal/telemetry"
 	"go.opentelemetry.io/otel"
@@ -27,11 +27,11 @@ func whep(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 		if err != nil {
 			switch {
 			case errors.Is(err, auth.ErrNotAuthenticatedSession):
-				httpError(w, "no session", http.StatusForbidden, err)
+				rest.HttpError(w, "no session", http.StatusForbidden, err)
 			case errors.Is(err, auth.ErrNoUserSession):
-				httpError(w, "no user session", http.StatusForbidden, err)
+				rest.HttpError(w, "no user session", http.StatusForbidden, err)
 			default:
-				httpError(w, "internal error", http.StatusInternalServerError, err)
+				rest.HttpError(w, "internal error", http.StatusInternalServerError, err)
 			}
 			_ = telemetry.RecordError(span, err)
 			return
@@ -39,7 +39,7 @@ func whep(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 		userId, err := user.GetUuid()
 		if err != nil {
 			_ = telemetry.RecordError(span, err)
-			httpError(w, "error user", http.StatusBadRequest, err)
+			rest.HttpError(w, "error user", http.StatusBadRequest, err)
 			return
 		}
 
@@ -50,7 +50,7 @@ func whep(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 			return
 		}
 
-		offer, err := http2.GetSdpPayload(w, r, webrtc.SDPTypeOffer)
+		offer, err := rest.GetSdpPayload(w, r, webrtc.SDPTypeOffer)
 		if err != nil {
 			_ = telemetry.RecordError(span, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -67,13 +67,13 @@ func whep(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 		if err != nil && errors.Is(err, lobby.ErrSessionAlreadyExists) {
 			w.WriteHeader(http.StatusConflict)
 			_ = telemetry.RecordError(span, err)
-			httpError(w, "session already exists", http.StatusConflict, err)
+			rest.HttpError(w, "session already exists", http.StatusConflict, err)
 			return
 		}
 
 		if err != nil {
 			_ = telemetry.RecordError(span, err)
-			httpError(w, "error build whep", http.StatusInternalServerError, err)
+			rest.HttpError(w, "error build whep", http.StatusInternalServerError, err)
 			return
 		}
 		span.SetAttributes(attribute.String("sessionId", resourceId))
@@ -87,7 +87,7 @@ func whep(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 		contentLen, err := w.Write(response)
 		if err != nil {
 			_ = telemetry.RecordError(span, err)
-			httpError(w, "error build response", http.StatusInternalServerError, err)
+			rest.HttpError(w, "error build response", http.StatusInternalServerError, err)
 			return
 		}
 		w.Header().Set("Content-Length", strconv.Itoa(contentLen))
@@ -105,11 +105,11 @@ func whepOffer(streamService *stream.LiveStreamService, liveService *stream.Live
 		if err != nil {
 			switch {
 			case errors.Is(err, auth.ErrNotAuthenticatedSession):
-				httpError(w, "no session", http.StatusForbidden, err)
+				rest.HttpError(w, "no session", http.StatusForbidden, err)
 			case errors.Is(err, auth.ErrNoUserSession):
-				httpError(w, "no user session", http.StatusForbidden, err)
+				rest.HttpError(w, "no user session", http.StatusForbidden, err)
 			default:
-				httpError(w, "internal error", http.StatusInternalServerError, err)
+				rest.HttpError(w, "internal error", http.StatusInternalServerError, err)
 			}
 			telemetry.RecordError(span, err)
 			return
@@ -118,7 +118,7 @@ func whepOffer(streamService *stream.LiveStreamService, liveService *stream.Live
 		userId, err := user.GetUuid()
 		if err != nil {
 			telemetry.RecordError(span, err)
-			httpError(w, "error user", http.StatusBadRequest, err)
+			rest.HttpError(w, "error user", http.StatusBadRequest, err)
 			return
 		}
 
@@ -138,7 +138,7 @@ func whepOffer(streamService *stream.LiveStreamService, liveService *stream.Live
 
 		if err != nil {
 			telemetry.RecordError(span, err)
-			httpError(w, "error build whep", http.StatusInternalServerError, err)
+			rest.HttpError(w, "error build whep", http.StatusInternalServerError, err)
 			return
 		}
 
@@ -149,7 +149,7 @@ func whepOffer(streamService *stream.LiveStreamService, liveService *stream.Live
 		contentLen, err := w.Write(response)
 		if err != nil {
 			telemetry.RecordError(span, err)
-			httpError(w, "error build response", http.StatusInternalServerError, err)
+			rest.HttpError(w, "error build response", http.StatusInternalServerError, err)
 			return
 		}
 

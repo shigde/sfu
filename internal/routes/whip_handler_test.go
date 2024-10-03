@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
-	"github.com/shigde/sfu/internal/media/mocks"
+	"github.com/shigde/sfu/internal/routes/mocks"
 	"github.com/stretchr/testify/assert"
 )
 

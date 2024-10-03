@@ -7,7 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/internal/auth"
-	http2 "github.com/shigde/sfu/internal/http"
+	"github.com/shigde/sfu/internal/rest"
 	"github.com/shigde/sfu/internal/stream"
 )
 
@@ -21,7 +21,7 @@ func getStreamList(streamService *stream.LiveStreamService) http.HandlerFunc {
 		}
 		streams, err := streamService.AllBySpaceIdentifier(r.Context(), spaceIdentifier)
 		if err != nil {
-			httpError(w, "error reading stream list", http.StatusInternalServerError, err)
+			rest.HttpError(w, "error reading stream list", http.StatusInternalServerError, err)
 			return
 		}
 
@@ -32,7 +32,7 @@ func getStreamList(streamService *stream.LiveStreamService) http.HandlerFunc {
 		}
 
 		if err := json.NewEncoder(w).Encode(streams); err != nil {
-			httpError(w, "error reading stream list", http.StatusInternalServerError, err)
+			rest.HttpError(w, "error reading stream list", http.StatusInternalServerError, err)
 		}
 	}
 }
@@ -50,7 +50,7 @@ func getStream(streamService *stream.LiveStreamService) http.HandlerFunc {
 		}
 
 		if err := json.NewEncoder(w).Encode(streamResource); err != nil {
-			httpError(w, "stream invalid", http.StatusInternalServerError, err)
+			rest.HttpError(w, "stream invalid", http.StatusInternalServerError, err)
 		}
 	}
 }
@@ -71,7 +71,7 @@ func deleteStream(streamService *stream.LiveStreamService) http.HandlerFunc {
 		}
 
 		if err := streamService.Delete(r.Context(), id, user.UUID); err != nil {
-			httpError(w, "error delete stream", http.StatusInternalServerError, err)
+			rest.HttpError(w, "error delete stream", http.StatusInternalServerError, err)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -100,7 +100,7 @@ func createStream(streamService *stream.LiveStreamService) http.HandlerFunc {
 
 		id, err := streamService.CreateStream(r.Context(), &liveStream, spaceIdentifier, user.UUID)
 		if err != nil {
-			httpError(w, "error create stream", http.StatusInternalServerError, err)
+			rest.HttpError(w, "error create stream", http.StatusInternalServerError, err)
 			return
 		}
 		w.Header().Set("Location", fmt.Sprintf("%s/%s", r.URL.String(), id))
@@ -130,7 +130,7 @@ func updateStream(streamService *stream.LiveStreamService) http.HandlerFunc {
 		}
 
 		if err := streamService.UpdateStream(r.Context(), &liveStream, spaceIdentifier, user.UUID); err != nil {
-			httpError(w, "error update stream", http.StatusInternalServerError, err)
+			rest.HttpError(w, "error update stream", http.StatusInternalServerError, err)
 			return
 		}
 
@@ -139,13 +139,13 @@ func updateStream(streamService *stream.LiveStreamService) http.HandlerFunc {
 }
 
 func getStreamResourcePayload(w http.ResponseWriter, r *http.Request, liveStream *stream.LiveStream) error {
-	dec, err := http2.GetJsonPayload(w, r)
+	dec, err := rest.GetJsonPayload(w, r)
 	if err != nil {
 		return err
 	}
 
 	if err := dec.Decode(&liveStream); err != nil {
-		return http2.InvalidPayload
+		return rest.InvalidPayload
 	}
 
 	return nil

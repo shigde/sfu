@@ -9,8 +9,8 @@ import (
 
 	"github.com/pion/webrtc/v3"
 	"github.com/shigde/sfu/internal/auth"
-	http2 "github.com/shigde/sfu/internal/http"
 	"github.com/shigde/sfu/internal/lobby"
+	"github.com/shigde/sfu/internal/rest"
 	"github.com/shigde/sfu/internal/stream"
 	"github.com/shigde/sfu/internal/telemetry"
 	"go.opentelemetry.io/otel"
@@ -32,7 +32,7 @@ func openPipe(streamService *stream.LiveStreamService, liveService *stream.LiveL
 			return
 		}
 
-		offer, err := http2.GetSdpPayload(w, r, webrtc.SDPTypeOffer)
+		offer, err := rest.GetSdpPayload(w, r, webrtc.SDPTypeOffer)
 		if err != nil {
 			telemetry.RecordError(span, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -50,7 +50,7 @@ func openPipe(streamService *stream.LiveStreamService, liveService *stream.LiveL
 		userId, err := user.GetUuid()
 		if err != nil {
 			telemetry.RecordError(span, err)
-			httpError(w, "error user", http.StatusBadRequest, err)
+			rest.HttpError(w, "error user", http.StatusBadRequest, err)
 			return
 		}
 		auth.SetNewRequestToken(w, user.UUID)
@@ -59,13 +59,13 @@ func openPipe(streamService *stream.LiveStreamService, liveService *stream.LiveL
 		if err != nil && errors.Is(err, lobby.ErrSessionAlreadyExists) {
 			w.WriteHeader(http.StatusConflict)
 			telemetry.RecordError(span, err)
-			httpError(w, "session already exists", http.StatusConflict, err)
+			rest.HttpError(w, "session already exists", http.StatusConflict, err)
 			return
 		}
 
 		if err != nil {
 			telemetry.RecordError(span, err)
-			httpError(w, "error build host pipe", http.StatusInternalServerError, err)
+			rest.HttpError(w, "error build host pipe", http.StatusInternalServerError, err)
 			return
 		}
 
@@ -78,7 +78,7 @@ func openPipe(streamService *stream.LiveStreamService, liveService *stream.LiveL
 		contentLen, err := w.Write(response)
 		if err != nil {
 			telemetry.RecordError(span, err)
-			httpError(w, "error build response", http.StatusInternalServerError, err)
+			rest.HttpError(w, "error build response", http.StatusInternalServerError, err)
 			return
 		}
 		w.Header().Set("Content-Length", strconv.Itoa(contentLen))
@@ -101,7 +101,7 @@ func openHostIngress(streamService *stream.LiveStreamService, liveService *strea
 			return
 		}
 
-		offer, err := http2.GetSdpPayload(w, r, webrtc.SDPTypeOffer)
+		offer, err := rest.GetSdpPayload(w, r, webrtc.SDPTypeOffer)
 		if err != nil {
 			telemetry.RecordError(span, err)
 			w.WriteHeader(http.StatusBadRequest)
@@ -119,7 +119,7 @@ func openHostIngress(streamService *stream.LiveStreamService, liveService *strea
 		userId, err := user.GetUuid()
 		if err != nil {
 			telemetry.RecordError(span, err)
-			httpError(w, "error user", http.StatusBadRequest, err)
+			rest.HttpError(w, "error user", http.StatusBadRequest, err)
 			return
 		}
 		auth.SetNewRequestToken(w, user.UUID)
@@ -127,7 +127,7 @@ func openHostIngress(streamService *stream.LiveStreamService, liveService *strea
 		answer, resourceId, err := liveService.CreateLobbyHostIngressConnection(ctx, offer, liveStream, userId)
 		if err != nil {
 			telemetry.RecordError(span, err)
-			httpError(w, "error build host ingress connection", http.StatusInternalServerError, err)
+			rest.HttpError(w, "error build host ingress connection", http.StatusInternalServerError, err)
 			return
 		}
 
@@ -140,7 +140,7 @@ func openHostIngress(streamService *stream.LiveStreamService, liveService *strea
 		contentLen, err := w.Write(response)
 		if err != nil {
 			telemetry.RecordError(span, err)
-			httpError(w, "error build response", http.StatusInternalServerError, err)
+			rest.HttpError(w, "error build response", http.StatusInternalServerError, err)
 			return
 		}
 		w.Header().Set("Content-Length", strconv.Itoa(contentLen))
@@ -159,11 +159,11 @@ func closePipe(streamService *stream.LiveStreamService, liveService *stream.Live
 		if err != nil {
 			switch {
 			case errors.Is(err, auth.ErrNotAuthenticatedSession):
-				httpError(w, "no session", http.StatusForbidden, err)
+				rest.HttpError(w, "no session", http.StatusForbidden, err)
 			case errors.Is(err, auth.ErrNoUserSession):
-				httpError(w, "no user session", http.StatusForbidden, err)
+				rest.HttpError(w, "no user session", http.StatusForbidden, err)
 			default:
-				httpError(w, "internal error", http.StatusInternalServerError, err)
+				rest.HttpError(w, "internal error", http.StatusInternalServerError, err)
 			}
 			telemetry.RecordError(span, err)
 			return
@@ -172,7 +172,7 @@ func closePipe(streamService *stream.LiveStreamService, liveService *stream.Live
 		userId, err := user.GetUuid()
 		if err != nil {
 			telemetry.RecordError(span, err)
-			httpError(w, "error user", http.StatusBadRequest, err)
+			rest.HttpError(w, "error user", http.StatusBadRequest, err)
 			return
 		}
 
@@ -190,18 +190,18 @@ func closePipe(streamService *stream.LiveStreamService, liveService *stream.Live
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			httpError(w, "error", http.StatusInternalServerError, err)
+			rest.HttpError(w, "error", http.StatusInternalServerError, err)
 			return
 		}
 
 		if !left {
-			httpError(w, "error", http.StatusInternalServerError, errors.New("close host pipe lobby not possible"))
+			rest.HttpError(w, "error", http.StatusInternalServerError, errors.New("close host pipe lobby not possible"))
 			return
 		}
 
 		if err := auth.DeleteSession(w, r); err != nil {
 			telemetry.RecordError(span, err)
-			httpError(w, "error", http.StatusInternalServerError, err)
+			rest.HttpError(w, "error", http.StatusInternalServerError, err)
 		}
 
 		w.WriteHeader(http.StatusOK)

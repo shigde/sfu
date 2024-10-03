@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/shigde/sfu/internal/rest"
 	"github.com/shigde/sfu/internal/stream"
-	"golang.org/x/exp/slog"
 )
 
 var (
@@ -85,10 +85,5 @@ func handleResourceError(w http.ResponseWriter, err error) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	httpError(w, "error get media", http.StatusInternalServerError, err)
-}
-
-func httpError(w http.ResponseWriter, errResponse string, code int, err error) {
-	slog.Error(fmt.Sprintf("HTTP: %s", errResponse), "code", code, "err", err)
-	http.Error(w, errResponse, code)
+	rest.HttpError(w, "error get media", http.StatusInternalServerError, err)
 }

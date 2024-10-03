@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/rest"
 )
 
 func getUserFromSession(w http.ResponseWriter, r *http.Request) (*auth.Principal, error) {
@@ -12,11 +13,11 @@ func getUserFromSession(w http.ResponseWriter, r *http.Request) (*auth.Principal
 	if err != nil {
 		switch {
 		case errors.Is(err, auth.ErrNotAuthenticatedSession):
-			httpError(w, "no session", http.StatusForbidden, err)
+			rest.HttpError(w, "no session", http.StatusForbidden, err)
 		case errors.Is(err, auth.ErrNoUserSession):
-			httpError(w, "no user session", http.StatusForbidden, err)
+			rest.HttpError(w, "no user session", http.StatusForbidden, err)
 		default:
-			httpError(w, "internal error", http.StatusInternalServerError, err)
+			rest.HttpError(w, "internal error", http.StatusInternalServerError, err)
 		}
 
 		return nil, err
