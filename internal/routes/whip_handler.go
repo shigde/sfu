@@ -8,7 +8,8 @@ import (
 	"strconv"
 
 	"github.com/pion/webrtc/v3"
-	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/auth/request"
+	"github.com/shigde/sfu/internal/auth/session"
 	"github.com/shigde/sfu/internal/lobby"
 	"github.com/shigde/sfu/internal/rest"
 	"github.com/shigde/sfu/internal/stream"
@@ -24,7 +25,7 @@ func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 
 		w.Header().Set("Content-Type", "application/sdp")
 
-		if err := auth.StartSession(w, r); err != nil {
+		if err := session.StartSession(w, r); err != nil {
 			_ = telemetry.RecordError(span, err)
 			rest.HttpError(w, "error", http.StatusInternalServerError, err)
 		}
@@ -44,7 +45,7 @@ func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 			return
 		}
 
-		user, ok := auth.PrincipalFromContext(r.Context())
+		user, ok := session.PrincipalFromContext(r.Context())
 		if !ok {
 			_ = telemetry.RecordError(span, errors.New("no user"))
 			w.WriteHeader(http.StatusBadRequest)
@@ -62,7 +63,7 @@ func whip(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 			attribute.String("streamId", liveStream.UUID.String()),
 			attribute.String("userId", userId.String()),
 		)
-		auth.SetNewRequestToken(w, user.UUID)
+		request.SetNewRequestToken(w, user.UUID)
 
 		answer, resourceId, err := liveService.CreateLobbyIngressEndpoint(ctx, offer, liveStream, userId)
 		if err != nil && errors.Is(err, lobby.ErrSessionAlreadyExists) {
@@ -102,12 +103,12 @@ func whipDelete(streamService *stream.LiveStreamService, liveService *stream.Liv
 		defer span.End()
 
 		w.Header().Set("Content-Type", "application/sdp")
-		user, err := auth.GetPrincipalFromSession(r)
+		user, err := session.GetPrincipalFromSession(r)
 		if err != nil {
 			switch {
-			case errors.Is(err, auth.ErrNotAuthenticatedSession):
+			case errors.Is(err, session.ErrNotAuthenticatedSession):
 				rest.HttpError(w, "no session", http.StatusForbidden, err)
-			case errors.Is(err, auth.ErrNoUserSession):
+			case errors.Is(err, session.ErrNoUserSession):
 				rest.HttpError(w, "no user session", http.StatusForbidden, err)
 			default:
 				rest.HttpError(w, "internal error", http.StatusInternalServerError, err)
@@ -146,7 +147,7 @@ func whipDelete(streamService *stream.LiveStreamService, liveService *stream.Liv
 			return
 		}
 
-		if err := auth.DeleteSession(w, r); err != nil {
+		if err := session.DeleteSession(w, r); err != nil {
 			_ = telemetry.RecordError(span, err)
 			rest.HttpError(w, "error", http.StatusInternalServerError, err)
 		}

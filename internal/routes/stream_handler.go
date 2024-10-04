@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/auth/session"
 	"github.com/shigde/sfu/internal/rest"
 	"github.com/shigde/sfu/internal/stream"
 )
@@ -58,7 +58,7 @@ func getStream(streamService *stream.LiveStreamService) http.HandlerFunc {
 func deleteStream(streamService *stream.LiveStreamService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		user, ok := auth.PrincipalFromContext(r.Context())
+		user, ok := session.PrincipalFromContext(r.Context())
 		if !ok {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -81,7 +81,7 @@ func deleteStream(streamService *stream.LiveStreamService) http.HandlerFunc {
 func createStream(streamService *stream.LiveStreamService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		user, ok := auth.PrincipalFromContext(r.Context())
+		user, ok := session.PrincipalFromContext(r.Context())
 		if !ok {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -111,7 +111,7 @@ func createStream(streamService *stream.LiveStreamService) http.HandlerFunc {
 func updateStream(streamService *stream.LiveStreamService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		user, ok := auth.PrincipalFromContext(r.Context())
+		user, ok := session.PrincipalFromContext(r.Context())
 		if !ok {
 			w.WriteHeader(http.StatusInternalServerError)
 			return

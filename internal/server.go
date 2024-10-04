@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/shigde/sfu/internal/activitypub"
-	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/auth/account"
 	"github.com/shigde/sfu/internal/config"
 	"github.com/shigde/sfu/internal/lobby"
 	"github.com/shigde/sfu/internal/mail"
@@ -68,8 +68,8 @@ func NewServer(ctx context.Context, cfg *config.SFU) (*Server, error) {
 
 	mailSender := mail.NewSenderService()
 	// Auth provider
-	accountRepo := auth.NewAccountRepository(store)
-	accountService := auth.NewAccountService(
+	accountRepo := account.NewAccountRepository(store)
+	accountService := account.NewAccountService(
 		accountRepo,
 		cfg.RegisterToken,
 		cfg.FederationConfig.InstanceUrl,

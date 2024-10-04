@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/auth/account"
 	"github.com/shigde/sfu/internal/rest"
 	"github.com/shigde/sfu/pkg/authentication"
 )
 
-func Authentication(accountService *auth.AccountService) http.HandlerFunc {
+func Authentication(accountService *account.AccountService) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

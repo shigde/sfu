@@ -3,21 +3,21 @@ package handler
 import (
 	"net/http"
 
-	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/auth/account"
 	"github.com/shigde/sfu/internal/rest"
 )
 
-func Register(accountService *auth.AccountService) http.HandlerFunc {
+func Register(accountService *account.AccountService) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		account, err := getJsonRegisterPayload(w, r)
+		acc, err := getJsonRegisterPayload(w, r)
 		if err != nil {
 			rest.HttpError(w, "", http.StatusBadRequest, err)
 			return
 		}
 
-		err = accountService.CreateAccount(r.Context(), account)
+		err = accountService.CreateAccount(r.Context(), acc)
 		if err != nil {
 			rest.HttpError(w, "registration error", http.StatusBadRequest, err)
 			return
@@ -26,14 +26,18 @@ func Register(accountService *auth.AccountService) http.HandlerFunc {
 	}
 }
 
-func getJsonRegisterPayload(w http.ResponseWriter, r *http.Request) (*auth.Account, error) {
+func getJsonRegisterPayload(w http.ResponseWriter, r *http.Request) (*account.Account, error) {
 	dec, err := rest.GetJsonPayload(w, r)
 	if err != nil {
 		return nil, err
 	}
-	var account auth.Account
-	if err := dec.Decode(&account); err != nil {
+	var acc account.Account
+	if err := dec.Decode(&acc); err != nil {
 		return nil, rest.InvalidPayload
 	}
-	return &account, nil
+
+	if acc.Password, err = account.HashPassword(acc.Password); err != nil {
+		return nil, err
+	}
+	return &acc, nil
 }

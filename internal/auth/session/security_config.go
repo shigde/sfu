@@ -1,6 +1,8 @@
-package auth
+package session
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type SecurityConfig struct {
 	JWT            *JwtToken `mapstructure:"jwt"`

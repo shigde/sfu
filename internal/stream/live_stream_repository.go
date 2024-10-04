@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shigde/sfu/internal/activitypub/models"
-	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/auth/account"
 	"github.com/shigde/sfu/internal/lobby"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -172,7 +172,7 @@ func (r *LiveStreamRepository) UpsertLiveStream(ctx context.Context, stream *Liv
 		cancel()
 	}()
 
-	account := auth.Account{User: stream.User}
+	account := account.Account{User: stream.User}
 	resultAc := tx.Where("user=?", stream.User).First(&account)
 	if resultAc.Error != nil && !errors.Is(resultAc.Error, gorm.ErrRecordNotFound) {
 		return fmt.Errorf("serching account: %w", resultAc.Error)
@@ -230,7 +230,7 @@ func (r *LiveStreamRepository) BuildGuestAccounts(ctx context.Context, actors []
 
 	for _, actor := range actors {
 		user := buildFederatedId(actor.PreferredUsername, actor.GetActorIri().Host)
-		tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&auth.Account{
+		tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&account.Account{
 			ActorId: actor.ID,
 			Actor:   actor,
 			User:    user,

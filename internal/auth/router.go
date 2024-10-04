@@ -2,10 +2,11 @@ package auth
 
 import (
 	"github.com/gorilla/mux"
+	"github.com/shigde/sfu/internal/auth/account"
 	"github.com/shigde/sfu/internal/auth/handler"
 )
 
-func UseRoutes(router *mux.Router, accountService *AccountService) {
+func UseRoutes(router *mux.Router, accountService *account.AccountService) {
 	router.HandleFunc("/authenticate", handler.Authentication(accountService)).Methods("POST")
 	router.HandleFunc("/auth/login", handler.Login(accountService)).Methods("POST")
 	router.HandleFunc("/auth/register", handler.Register(accountService)).Methods("POST")

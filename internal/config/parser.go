@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/shigde/sfu/internal/activitypub/instance"
-	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/auth/session"
 	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/storage"
@@ -43,7 +43,7 @@ func ParseConfig(file string, env *Environment) (*SFU, error) {
 		return nil, err
 	}
 
-	if err := auth.ValidateSecurityConfig(config.SecurityConfig); err != nil {
+	if err := session.ValidateSecurityConfig(config.SecurityConfig); err != nil {
 		return nil, err
 	}
 

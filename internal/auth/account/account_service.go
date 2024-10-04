@@ -1,4 +1,4 @@
-package auth
+package account
 
 import (
 	"context"
@@ -7,13 +7,14 @@ import (
 	"net/url"
 
 	"github.com/shigde/sfu/internal/activitypub/models"
+	"github.com/shigde/sfu/internal/auth/session"
 	"github.com/shigde/sfu/internal/mail"
 	"github.com/shigde/sfu/pkg/authentication"
 	"golang.org/x/exp/slog"
 )
 
 type AccountService struct {
-	config        *SecurityConfig
+	config        *session.SecurityConfig
 	instanceToken string
 	instanceUrl   *url.URL
 	mailSender    *mail.SenderService
@@ -24,7 +25,7 @@ func NewAccountService(
 	repo *AccountRepository,
 	instanceToken string,
 	instanceUrl *url.URL,
-	config *SecurityConfig,
+	config *session.SecurityConfig,
 	mail *mail.SenderService,
 ) *AccountService {
 	return &AccountService{
@@ -77,7 +78,7 @@ func (s *AccountService) GetAuthToken(ctx context.Context, user *authentication.
 		return nil, fmt.Errorf("find account: %w", err)
 	}
 
-	token, err := CreateJWTToken(account.UUID, s.config.JWT)
+	token, err := session.CreateJWTToken(account.UUID, s.config.JWT)
 	if err != nil {
 		return nil, fmt.Errorf("create jwt token: %w", err)
 	}

@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
-	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/auth/session"
 	"github.com/shigde/sfu/internal/lobby/resources"
 	"github.com/shigde/sfu/internal/rtp"
 )
@@ -20,9 +20,9 @@ const (
 )
 
 var (
-	securityConfig = &auth.SecurityConfig{JWT: jwt, TrustedOrigins: []string{"*"}}
+	securityConfig = &session.SecurityConfig{JWT: jwt, TrustedOrigins: []string{"*"}}
 	rtpConfig      = &rtp.RtpConfig{ICEServer: []rtp.ICEServer{{Urls: []string{"stun:stun.l.google.com:19302"}}}}
-	jwt            = &auth.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}
+	jwt            = &session.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}
 )
 
 type testLobbyManager struct {

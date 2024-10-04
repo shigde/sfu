@@ -2,34 +2,37 @@ package routes
 
 import (
 	"context"
+	"net/url"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/shigde/sfu/internal/activitypub/models"
-	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/auth/account"
+	"github.com/shigde/sfu/internal/auth/session"
 	"github.com/shigde/sfu/internal/lobby"
 	"github.com/shigde/sfu/internal/routes/mocks"
 	"github.com/shigde/sfu/internal/storage"
 	"github.com/shigde/sfu/internal/stream"
 )
 
-func testRouterSetup(t *testing.T) (*testHelper, *stream.Space, *stream.LiveStream, *auth.Account, string) {
+func testRouterSetup(t *testing.T) (*testHelper, *stream.Space, *stream.LiveStream, *account.Account, string) {
 	t.Helper()
 
 	lobbyManager := mocks.NewLobbyManager()
 	store := storage.NewTestStore()
-	_ = store.GetDatabase().AutoMigrate(&stream.LiveStream{}, &stream.Space{}, &auth.Account{})
+	_ = store.GetDatabase().AutoMigrate(&stream.LiveStream{}, &stream.Space{}, &account.Account{})
 
 	streamRepo := stream.NewLiveStreamRepository(store)
 	spaceRepo := stream.NewSpaceRepository(store)
-	accountRepo := auth.NewAccountRepository(store)
+	accountRepo := account.NewAccountRepository(store)
+	instanceUrl, _ := url.Parse("http://shig.de")
 
 	liveStreamService := stream.NewLiveStreamService(streamRepo, spaceRepo)
 	liveLobbyService := stream.NewLiveLobbyService(store, lobbyManager)
-	accountService := auth.NewAccountService(accountRepo, "test-token", mocks.SecurityConfig)
+	accountService := account.NewAccountService(accountRepo, "test-token", instanceUrl, mocks.SecurityConfig, nil)
 
-	account := &auth.Account{}
+	account := &account.Account{}
 	account.UUID = uuid.NewString()
 	account.User = "testUser@test.de"
 	_, _ = accountRepo.Add(context.Background(), account)
@@ -53,7 +56,7 @@ func testRouterSetup(t *testing.T) (*testHelper, *stream.Space, *stream.LiveStre
 
 	_, _ = streamRepo.Add(context.Background(), liveStream)
 
-	bearer, _ := auth.CreateJWTToken(account.UUID, mocks.SecurityConfig.JWT)
+	bearer, _ := session.CreateJWTToken(account.UUID, mocks.SecurityConfig.JWT)
 	bearer = "Bearer " + bearer
 
 	th := &testHelper{}

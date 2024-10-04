@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shigde/sfu/internal/activitypub/models"
-	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/auth/account"
 	"github.com/shigde/sfu/internal/lobby"
 )
 
@@ -32,7 +32,7 @@ func (ls *LiveStreamService) CreateStreamAccessByVideo(ctx context.Context, vide
 	// video.Guests
 	ls.streamRepo.BuildGuestAccounts(ctx, video.Guests)
 
-	account := &auth.Account{}
+	account := &account.Account{}
 	account.Actor = video.Owner
 	account.ActorId = video.Owner.ID
 	account.User = userId

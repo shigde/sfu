@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/auth/session"
 	"github.com/shigde/sfu/internal/rtp"
 )
 
@@ -18,7 +18,7 @@ const (
 )
 
 var (
-	SecurityConfig = &auth.SecurityConfig{JWT: JWT, TrustedOrigins: []string{"*"}}
+	SecurityConfig = &session.SecurityConfig{JWT: JWT, TrustedOrigins: []string{"*"}}
 	RtpConfig      = &rtp.RtpConfig{ICEServer: []rtp.ICEServer{{Urls: []string{"stun:stun.l.google.com:19302"}}}}
-	JWT            = &auth.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}
+	JWT            = &session.JwtToken{Enabled: true, Key: "SecretValueReplaceThis", DefaultExpireTime: 604800}
 )

@@ -1,4 +1,4 @@
-package auth
+package account
 
 import (
 	"crypto/md5"

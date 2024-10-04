@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"github.com/pion/webrtc/v3"
-	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/auth/session"
 	"github.com/shigde/sfu/internal/lobby"
 	"github.com/shigde/sfu/internal/rest"
 	"github.com/shigde/sfu/internal/stream"
@@ -23,12 +23,12 @@ func whep(streamService *stream.LiveStreamService, liveService *stream.LiveLobby
 		defer span.End()
 
 		w.Header().Set("Content-Type", "application/sdp")
-		user, err := auth.GetPrincipalFromSession(r)
+		user, err := session.GetPrincipalFromSession(r)
 		if err != nil {
 			switch {
-			case errors.Is(err, auth.ErrNotAuthenticatedSession):
+			case errors.Is(err, session.ErrNotAuthenticatedSession):
 				rest.HttpError(w, "no session", http.StatusForbidden, err)
-			case errors.Is(err, auth.ErrNoUserSession):
+			case errors.Is(err, session.ErrNoUserSession):
 				rest.HttpError(w, "no user session", http.StatusForbidden, err)
 			default:
 				rest.HttpError(w, "internal error", http.StatusInternalServerError, err)
@@ -101,12 +101,12 @@ func whepOffer(streamService *stream.LiveStreamService, liveService *stream.Live
 		defer span.End()
 
 		w.Header().Set("Content-Type", "application/sdp")
-		user, err := auth.GetPrincipalFromSession(r)
+		user, err := session.GetPrincipalFromSession(r)
 		if err != nil {
 			switch {
-			case errors.Is(err, auth.ErrNotAuthenticatedSession):
+			case errors.Is(err, session.ErrNotAuthenticatedSession):
 				rest.HttpError(w, "no session", http.StatusForbidden, err)
-			case errors.Is(err, auth.ErrNoUserSession):
+			case errors.Is(err, session.ErrNoUserSession):
 				rest.HttpError(w, "no user session", http.StatusForbidden, err)
 			default:
 				rest.HttpError(w, "internal error", http.StatusInternalServerError, err)

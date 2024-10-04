@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/auth/account"
 	"github.com/shigde/sfu/pkg/authentication"
 )
 
@@ -23,7 +23,7 @@ type host struct {
 func newHost(actorIri url.URL, token string) *host {
 	preferredName := preferredNameFromActor(actorIri)
 	actorId := fmt.Sprintf("%s@%s", preferredName, actorIri.Host)
-	instanceId := auth.CreateInstanceUuid(actorId)
+	instanceId := account.CreateInstanceUuid(actorId)
 	return &host{
 		actorIri:   actorIri,
 		actorId:    actorId,

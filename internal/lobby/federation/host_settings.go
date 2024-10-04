@@ -5,7 +5,7 @@ import (
 	"net/url"
 
 	"github.com/google/uuid"
-	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/auth/account"
 	"golang.org/x/exp/slog"
 )
 
@@ -35,7 +35,7 @@ func NewHostSettings(host hostx, homeInstanceActor *url.URL, token string) *host
 	// name := "shig@fosdem-stream.shig.de"
 	preferredName := "shig"
 	actorId := fmt.Sprintf("%s@%s", preferredName, homeInstanceActor.Host)
-	instanceId := auth.CreateInstanceUuid(actorId)
+	instanceId := account.CreateInstanceUuid(actorId)
 	return &hostSettings{
 		instanceId: instanceId,
 		isHost:     isHost,

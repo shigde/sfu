@@ -7,7 +7,7 @@ import (
 
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
-	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/auth/account"
 	"github.com/shigde/sfu/internal/lobby"
 	"github.com/shigde/sfu/internal/storage"
 	"github.com/shigde/sfu/internal/stream"
@@ -24,7 +24,7 @@ func Migrate(config *instance.FederationConfig, storage storage.Storage) error {
 		&models.Follow{},
 		&models.Actor{},
 		&models.Instance{},
-		&auth.Account{},
+		&account.Account{},
 		&lobby.LobbyEntity{},
 		&stream.Space{},
 		&stream.LiveStream{},
@@ -73,7 +73,7 @@ func buildTrustedInstanceAccount(db *gorm.DB, trustedInstance instance.TrustedIn
 		return fmt.Errorf("migration loading actor: %w", result.Error)
 	}
 
-	account := auth.CreateInstanceAccount(actorId, &savedActor)
+	account := account.CreateInstanceAccount(actorId, &savedActor)
 	db.Create(account)
 
 	trInstance := models.NewInstance(&savedActor)

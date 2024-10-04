@@ -1,9 +1,11 @@
-package auth
+package request
 
 import (
 	"math/rand"
 	"net/http"
 	"time"
+
+	"github.com/shigde/sfu/internal/auth/session"
 )
 
 const (
@@ -24,7 +26,7 @@ func TokenMiddleware(f http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		user, err := GetPrincipalFromSession(r)
+		user, err := session.GetPrincipalFromSession(r)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 			return

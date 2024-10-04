@@ -6,7 +6,7 @@ import (
 
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
-	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/auth/account"
 	"github.com/shigde/sfu/internal/storage"
 )
 
@@ -70,8 +70,8 @@ func LoadFixtures(config *instance.FederationConfig, storage storage.Storage) er
 	db.Save(user123ChannelActor)
 	db.Save(rootChannelActor)
 
-	user123Account := auth.CreateAccount(creatUserId("user123", streamInstanceUrl), user123Actor, "96efea69-a084-4a33-9936-78d30c6301e8")
-	rootAccount := auth.CreateAccount(creatUserId("root", streamInstanceUrl), rootActor, "ecd7c26a-f4ec-458b-8496-1a2834e50274")
+	user123Account := account.CreateAccount(creatUserId("user123", streamInstanceUrl), user123Actor, "96efea69-a084-4a33-9936-78d30c6301e8")
+	rootAccount := account.CreateAccount(creatUserId("root", streamInstanceUrl), rootActor, "ecd7c26a-f4ec-458b-8496-1a2834e50274")
 	db.Save(user123Account)
 	db.Save(rootAccount)
 
@@ -136,7 +136,7 @@ func LoadFixtures(config *instance.FederationConfig, storage storage.Storage) er
 	db.Save(remoteUserActor)
 	db.Save(remoteUserChannelActor)
 
-	remoteUserAccount := auth.CreateAccount(creatUserId("remoteUser", remoteInstanceUrl), remoteUserActor, "517c225b-ae98-44fd-8ff6-2e2e4eeb7900")
+	remoteUserAccount := account.CreateAccount(creatUserId("remoteUser", remoteInstanceUrl), remoteUserActor, "517c225b-ae98-44fd-8ff6-2e2e4eeb7900")
 	db.Save(remoteUserAccount)
 
 	video4 := NewVideo("live-stream-4", "034973c3-1756-4de3-b565-96264aa893c2", remoteInstance, remoteUserActor, remoteUserChannelActor)

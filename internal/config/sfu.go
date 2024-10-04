@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/shigde/sfu/internal/activitypub/instance"
-	"github.com/shigde/sfu/internal/auth"
+	"github.com/shigde/sfu/internal/auth/session"
 	"github.com/shigde/sfu/internal/logging"
 	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/rtp"
@@ -14,7 +14,7 @@ import (
 
 type SFU struct {
 	*ServerConfig              `mapstructure:"server"`
-	*auth.SecurityConfig       `mapstructure:"security"`
+	*session.SecurityConfig    `mapstructure:"security"`
 	*storage.StorageConfig     `mapstructure:"store"`
 	*logging.LogConfig         `mapstructure:"log"`
 	*metric.MetricConfig       `mapstructure:"metric"`
