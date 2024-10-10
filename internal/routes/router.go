@@ -38,7 +38,7 @@ func NewRouter(
 	router.Use(logging.LoggingMiddleware)
 
 	// Auth Routes
-	auth.UseRoutes(router, accountService)
+	auth.UseRoutes(router.PathPrefix("/api").Subrouter(), accountService)
 
 	// Space and LiveStream Resource Endpoints
 	router.HandleFunc("/space/{space}/streams", session.HttpMiddleware(securityConfig, getStreamList(streamService))).Methods("GET")

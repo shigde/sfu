@@ -5,6 +5,7 @@ import (
 
 	"github.com/shigde/sfu/internal/auth/account"
 	"github.com/shigde/sfu/internal/rest"
+	"golang.org/x/exp/slog"
 )
 
 func Register(accountService *account.AccountService) http.HandlerFunc {
@@ -17,11 +18,10 @@ func Register(accountService *account.AccountService) http.HandlerFunc {
 			return
 		}
 
-		err = accountService.CreateAccount(r.Context(), acc)
-		if err != nil {
-			rest.HttpError(w, "registration error", http.StatusBadRequest, err)
-			return
+		if err = accountService.CreateAccount(r.Context(), acc); err != nil {
+			slog.Error("auth.Register:", "err", err)
 		}
+
 		w.WriteHeader(http.StatusCreated)
 	}
 }

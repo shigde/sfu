@@ -5,53 +5,59 @@ import (
 	"fmt"
 	"html/template"
 	"net/smtp"
+	"net/url"
 )
 
 type SenderService struct {
+	cfg         *MailConfig
+	instanceUrl *url.URL
 }
 
-func NewSenderService() *SenderService {
-	return &SenderService{}
+func NewSenderService(config *MailConfig, instanceUrl *url.URL) *SenderService {
+	return &SenderService{
+		cfg:         config,
+		instanceUrl: instanceUrl,
+	}
 }
 
-func (s *SenderService) SendRegisterMail(name string, email string, activateToken string) {
+func (s *SenderService) SendActivateAccountMail(name string, email string, activateToken string) error {
 
-	// Sender data.
-	from := "support@shig.de"
-	password := "Faderef661$##"
-
-	// Receiver email address.
-	to := []string{
-		"enrico.schw@gmx.de",
+	if !s.cfg.Enable {
+		return nil
 	}
 
-	// smtp server configuration.
-	smtpHost := "smtp.gmail.com"
-	smtpPort := "587"
+	// Receiver email address.
+	to := []string{email}
+	link := s.instanceUrl.String() + "/activateAccount/" + activateToken
 
 	// Authentication.
-	auth := smtp.PlainAuth("", from, password, smtpHost)
+	auth := smtp.PlainAuth("", s.cfg.From, s.cfg.Pass, s.cfg.SmtpHost)
 
-	t, _ := template.ParseFiles("register.html")
+	t, err := template.ParseFiles("internal/mail/template/activate_account.html")
+	if err != nil {
+		return fmt.Errorf("parsing email template: %w", err)
+	}
 
 	var body bytes.Buffer
 
 	mimeHeaders := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
-	body.Write([]byte(fmt.Sprintf("Subject: This is a test subject \n%s\n\n", mimeHeaders)))
+	if _, err = body.Write([]byte(fmt.Sprintf("Subject: Activate Your Account \n%s\n\n", mimeHeaders))); err != nil {
+		return fmt.Errorf("writing email boddy: %w", err)
+	}
 
 	t.Execute(&body, struct {
-		Name    string
-		Message string
+		User     string
+		Link     string
+		Instance string
 	}{
-		Name:    "Puneet Singh",
-		Message: "This is a test message in a HTML template",
+		User:     name,
+		Link:     link,
+		Instance: s.instanceUrl.String(),
 	})
 
 	// Sending email.
-	err := smtp.SendMail(smtpHost+":"+smtpPort, auth, from, to, body.Bytes())
-	if err != nil {
-		fmt.Println(err)
-		return
+	if err = smtp.SendMail(s.cfg.SmtpHost+":"+s.cfg.SmtpPort, auth, s.cfg.From, to, body.Bytes()); err != nil {
+		return fmt.Errorf("sendingx email boddy: %w", err)
 	}
-	fmt.Println("Email Sent!")
+	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/auth/session"
 	"github.com/shigde/sfu/internal/logging"
+	"github.com/shigde/sfu/internal/mail"
 	"github.com/shigde/sfu/internal/metric"
 	"github.com/shigde/sfu/internal/rtp"
 	"github.com/shigde/sfu/internal/storage"
@@ -21,6 +22,7 @@ type SFU struct {
 	*telemetry.TelemetryConfig `mapstructure:"telemetry"`
 	*rtp.RtpConfig             `mapstructure:"rtp"`
 	*instance.FederationConfig `mapstructure:"federation"`
+	*mail.MailConfig           `mapstructure:"mail"`
 }
 
 type Environment struct {

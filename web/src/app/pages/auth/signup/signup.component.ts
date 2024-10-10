@@ -2,6 +2,7 @@ import {Component} from '@angular/core';
 import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Router} from '@angular/router';
 import {AuthService} from '@shigde/core';
+import {catchError, of, take, tap} from 'rxjs';
 
 @Component({
   selector: 'app-signup',
@@ -14,6 +15,8 @@ import {AuthService} from '@shigde/core';
 })
 export class SignupComponent {
 
+  public sussess = false;
+  public fail = false;
 
   public signupForm = new FormGroup({
     user: new FormControl('', [Validators.required]),
@@ -32,12 +35,16 @@ export class SignupComponent {
       const password = `${this.signupForm.value.password}`;
       const account = {user, email, password};
 
-      this.authService.registerAccount(account)
-        .then((data:any) => {
-          console.log(data);
-          this.router.navigate(['/login']);
-        })
-        .catch((err: any) => console.log(err))
+      this.authService.registerAccount(account).pipe(
+        take(1),
+        tap(a => this.sussess = true),
+        catchError((_) => this.handleError())
+      ).subscribe();
     }
+  }
+
+  private handleError() {
+    this.fail = true;
+    return of('');
   }
 }

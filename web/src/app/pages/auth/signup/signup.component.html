@@ -3,6 +3,10 @@
     <h1>Create Account</h1>
     <span>Already have an account? <a routerLink="/login">Sign In</a></span>
   </div>
+  <div>
+    <p class="alert-success" *ngIf="sussess">Your account was created! We send you an email!</p>
+    <p class="alert-danger" *ngIf="fail">Error, bad inputs!</p>
+  </div>
   <form class="form-group" [formGroup]="signupForm" (ngSubmit)="onSubmit()">
     <input type="text" name="user" placeholder="User Name" formControlName="user">
     <input type="email" name="email" placeholder="Email" formControlName="email">

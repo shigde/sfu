@@ -41,22 +41,25 @@ func (s *AccountService) CreateAccount(ctx context.Context, account *Account) er
 
 	actor, err := models.NewPersonActor(s.instanceUrl, account.User)
 	if err != nil {
-		return fmt.Errorf("failed create actor: %w", err)
+		return fmt.Errorf("creating actor: %w", err)
 	}
 
 	account.Actor = actor
 	_, err = s.repo.Add(ctx, account)
 	if err != nil {
-		return fmt.Errorf("failed create account: %w", err)
+		return fmt.Errorf("adding account: %w", err)
 	}
 
 	token := NewEmailVerificationToken(account)
 
 	if err = s.repo.AddVerificationToken(ctx, token); err != nil {
-		return fmt.Errorf("failed create token: %w", err)
+		return fmt.Errorf("creating verify token: %w", err)
 	}
 
-	s.mailSender.SendRegisterMail(account.User, account.Email, token.UUID)
+	if err = s.mailSender.SendActivateAccountMail(account.User, account.Email, token.UUID); err != nil {
+		return fmt.Errorf("sending verify email: %w", err)
+	}
+
 	return nil
 }
 
