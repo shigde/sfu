@@ -25,7 +25,7 @@ func Migrate(config *instance.FederationConfig, storage storage.Storage) error {
 		&models.Actor{},
 		&models.Instance{},
 		&account.Account{},
-		&account.AccountVerificationToken{},
+		&account.VerificationToken{},
 		&lobby.LobbyEntity{},
 		&stream.Space{},
 		&stream.LiveStream{},

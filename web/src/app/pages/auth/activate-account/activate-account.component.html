@@ -1,0 +1,19 @@
+<div>
+
+  <h1>Activate Account!</h1>
+
+  <ng-container *ngIf="!success && !fail">
+  <p>We activating your Account. Please wait a Moment!</p>
+  </ng-container>
+
+  <ng-container *ngIf="success">
+    <div>Your account is activated! Please login!</div>
+    <div>Please <a href="/login">Login</a>!</div>
+  </ng-container>
+
+  <ng-container *ngIf="fail">
+    <div>The activation of your account fails!</div>
+    <div>Please <a href="/sigin">SignIn</a>!</div>
+  </ng-container>
+
+</div>

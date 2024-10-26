@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/activitypub/models"
 	"github.com/shigde/sfu/internal/auth/account"
 	"gorm.io/gorm"
@@ -37,7 +38,7 @@ func buildInstance(db *gorm.DB, instanceUrl *url.URL, instanceName string) (*mod
 
 	// create instance
 	db.Save(actor)
-	userId := creatUserId(instanceName, instanceUrl)
+	userId := instance.BuildUserId(instanceName, instanceUrl)
 	account := account.CreateInstanceAccount(userId, actor)
 	db.Create(account)
 

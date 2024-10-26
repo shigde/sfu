@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/shigde/sfu/internal/auth/session"
 	"github.com/shigde/sfu/internal/rest"
 	"github.com/shigde/sfu/internal/stream"
 )
@@ -59,7 +60,7 @@ func getStatusOfLiveStream(streamService *stream.LiveStreamService) http.Handler
 			return
 		}
 
-		if _, err = getUserFromSession(w, r); err != nil {
+		if _, err = session.GetUserFromSession(w, r); err != nil {
 			rest.HttpError(w, "forbidden", http.StatusForbidden, err)
 			return
 		}
@@ -91,7 +92,7 @@ func readingRequestData(w http.ResponseWriter, r *http.Request, streamService *s
 		return nil, uuid.Nil, err
 	}
 
-	user, err := getUserFromSession(w, r)
+	user, err := session.GetUserFromSession(w, r)
 	if err != nil {
 		rest.HttpError(w, "forbidden", http.StatusForbidden, err)
 		return nil, uuid.Nil, err

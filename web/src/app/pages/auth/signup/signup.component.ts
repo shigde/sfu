@@ -15,7 +15,7 @@ import {catchError, of, take, tap} from 'rxjs';
 })
 export class SignupComponent {
 
-  public sussess = false;
+  public success = false;
   public fail = false;
 
   public signupForm = new FormGroup({
@@ -37,7 +37,7 @@ export class SignupComponent {
 
       this.authService.registerAccount(account).pipe(
         take(1),
-        tap(a => this.sussess = true),
+        tap(a => this.success = true),
         catchError((_) => this.handleError())
       ).subscribe();
     }

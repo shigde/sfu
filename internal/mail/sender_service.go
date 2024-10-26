@@ -20,7 +20,7 @@ func NewSenderService(config *MailConfig, instanceUrl *url.URL) *SenderService {
 	}
 }
 
-func (s *SenderService) SendActivateAccountMail(name string, email string, activateToken string) error {
+func (s *SenderService) SendActivateAccountMail(name string, email string, link string) error {
 
 	if !s.cfg.Enable {
 		return nil
@@ -28,7 +28,6 @@ func (s *SenderService) SendActivateAccountMail(name string, email string, activ
 
 	// Receiver email address.
 	to := []string{email}
-	link := s.instanceUrl.String() + "/activateAccount/" + activateToken
 
 	// Authentication.
 	auth := smtp.PlainAuth("", s.cfg.From, s.cfg.Pass, s.cfg.SmtpHost)

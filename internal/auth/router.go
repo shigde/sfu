@@ -13,5 +13,5 @@ func UseRoutes(router *mux.Router, accountService *account.AccountService) {
 	router.HandleFunc("/auth/forgotPassword", handler.ForgotPassword(accountService)).Methods("POST")
 	router.HandleFunc("/auth/newPassword", handler.NewPassword(accountService)).Methods("POST")
 	router.HandleFunc("/auth/deleteAccount", handler.DeleteAccount(accountService)).Methods("POST")
-	router.HandleFunc("/auth/verify/{token}", handler.Verification(accountService)).Methods("GET")
+	router.HandleFunc("/auth/verify", handler.Verification(accountService)).Methods("PUT")
 }

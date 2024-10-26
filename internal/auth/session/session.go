@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
+	"github.com/shigde/sfu/internal/rest"
 )
 
 var (
@@ -81,4 +82,21 @@ func getSession(r *http.Request) (*sessions.Session, error) {
 		return nil, ErrNotAuthenticatedSession
 	}
 	return session, nil
+}
+
+func GetUserFromSession(w http.ResponseWriter, r *http.Request) (*Principal, error) {
+	user, err := GetPrincipalFromSession(r)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrNotAuthenticatedSession):
+			rest.HttpError(w, "no session", http.StatusForbidden, err)
+		case errors.Is(err, ErrNoUserSession):
+			rest.HttpError(w, "no user session", http.StatusForbidden, err)
+		default:
+			rest.HttpError(w, "internal error", http.StatusInternalServerError, err)
+		}
+
+		return nil, err
+	}
+	return user, nil
 }

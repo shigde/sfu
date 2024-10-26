@@ -21,11 +21,11 @@ func Authentication(accountService *account.AccountService) http.HandlerFunc {
 
 		token, err := accountService.GetAuthToken(r.Context(), user)
 		if err != nil {
-			rest.HttpError(w, "error reading stream list", http.StatusNotFound, err)
+			rest.HttpError(w, "error authentication", http.StatusNotFound, err)
 			return
 		}
 		if err := json.NewEncoder(w).Encode(token); err != nil {
-			rest.HttpError(w, "error reading stream list", http.StatusInternalServerError, err)
+			rest.HttpError(w, "error auth response", http.StatusInternalServerError, err)
 		}
 	}
 }

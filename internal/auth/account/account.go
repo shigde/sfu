@@ -7,6 +7,7 @@ import (
 )
 
 type Account struct {
+	// User: username@domian  equal to `${Actor.PreferredUsername}@domain`
 	User     string        `json:"user"     gorm:"index;unique"`
 	Email    string        `json:"email"    gorm:"index;unique"`
 	UUID     string        `json:"-"        gorm:"index;unique"`
@@ -26,11 +27,12 @@ const (
 	GUEST AccountType = 3
 )
 
-type AccountVerificationToken struct {
+type VerificationToken struct {
 	AccountId uint      `gorm:"not null"`
 	Account   *Account  `gorm:"foreignKey:AccountId;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Type      TokenType `gorm:"not null"`
 	UUID      string    `gorm:"index;unique"`
+	Verified  bool      `gorm:"not null,default:false"`
 	gorm.Model
 }
 
@@ -41,16 +43,16 @@ const (
 	PASSWORD TokenType = 1
 )
 
-func NewEmailVerificationToken(account *Account) *AccountVerificationToken {
-	return &AccountVerificationToken{
+func NewEmailVerificationToken(account *Account) *VerificationToken {
+	return &VerificationToken{
 		Account: account,
 		UUID:    uuid.NewString(),
 		Type:    EMAIL,
 	}
 }
 
-func NewPasswordVerificationToken(account *Account) *AccountVerificationToken {
-	return &AccountVerificationToken{
+func NewPasswordVerificationToken(account *Account) *VerificationToken {
+	return &VerificationToken{
 		Account: account,
 		UUID:    uuid.NewString(),
 		Type:    PASSWORD,

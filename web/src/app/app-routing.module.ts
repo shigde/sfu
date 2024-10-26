@@ -8,7 +8,7 @@ import {LobbyEntryComponent} from './pages/lobby-entry/lobby-entry.component';
 import {AdminAccessGuard} from './guards/admin-access-guard.service';
 import {PasswordForgottenComponent} from './pages/auth/password-forgotten/password-forgotten.component';
 import {SignupComponent} from './pages/auth/signup/signup.component';
-import {VerifyComponent} from './pages/auth/verify/verify.component';
+import {ActivateAccountComponent} from './pages/auth/activate-account/activate-account.component';
 
 const routes: Routes = [
     {path: '', redirectTo: '/dashboard', pathMatch: 'full'},
@@ -16,9 +16,9 @@ const routes: Routes = [
     {path: 'admin/dashboard', component: AdminDashboardComponent, canActivate: [AdminAccessGuard]},
     {path: 'lobby/:spaceId/stream/:streamId', component: LobbyEntryComponent, canActivate: [UserAccessGuard]},
     {path: 'login', component: LoginComponent},
-    {path: 'password-forgotten', component: PasswordForgottenComponent},
+    {path: 'passwordForgotten', component: PasswordForgottenComponent},
     {path: 'signup', component: SignupComponent},
-    {path: 'verify', component: VerifyComponent}
+    {path: 'activateAccount/:token', component: ActivateAccountComponent}
 ];
 
 @NgModule({
