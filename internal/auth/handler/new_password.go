@@ -61,12 +61,12 @@ func NewPasswordByForgot(accountService *account.AccountService) http.HandlerFun
 	}
 }
 
-func getPassForgetPayload(w http.ResponseWriter, r *http.Request) (*authentication.PasswordForget, error) {
+func getPassForgetPayload(w http.ResponseWriter, r *http.Request) (*authentication.PasswordForgot, error) {
 	dec, err := rest.GetJsonPayload(w, r)
 	if err != nil {
 		return nil, err
 	}
-	var pass authentication.PasswordForget
+	var pass authentication.PasswordForgot
 	if err := dec.Decode(&pass); err != nil {
 		return nil, rest.InvalidPayload
 	}
@@ -74,12 +74,12 @@ func getPassForgetPayload(w http.ResponseWriter, r *http.Request) (*authenticati
 	return &pass, nil
 }
 
-func getPassForgetWithTokenPayload(w http.ResponseWriter, r *http.Request) (*authentication.PasswordForgetWithToken, error) {
+func getPassForgetWithTokenPayload(w http.ResponseWriter, r *http.Request) (*authentication.PasswordForgotWithToken, error) {
 	dec, err := rest.GetJsonPayload(w, r)
 	if err != nil {
 		return nil, err
 	}
-	var pass authentication.PasswordForgetWithToken
+	var pass authentication.PasswordForgotWithToken
 	if err := dec.Decode(&pass); err != nil {
 		return nil, rest.InvalidPayload
 	}

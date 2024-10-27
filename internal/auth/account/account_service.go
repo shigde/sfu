@@ -16,6 +16,7 @@ import (
 )
 
 const activateAccountURLPath = "activateAccount"
+const passwordForgetURLPath = "newPassword"
 
 var ErrInvalidCredentials = errors.New("invalid credentials")
 var ErrAccountAlreadyExists = errors.New("account already exists")
@@ -62,7 +63,7 @@ func (s *AccountService) CreateAccount(ctx context.Context, account *Account) er
 	}
 
 	if existAccount != nil && !existAccount.Active {
-		// we delete previous created account if were not activated
+		// we delete a previous created account if were not activated
 		if err := s.repo.deleteByUuid(ctx, existAccount.UUID); err != nil {
 			return fmt.Errorf("deleting existing inactive account: %w", err)
 		}
@@ -114,6 +115,28 @@ func (s *AccountService) VerifyAccount(ctx context.Context, token string) error 
 		return err
 	}
 	return nil
+}
+
+func (s *AccountService) CreateForgotPasswordToken(ctx context.Context, email string) error {
+	account, err := s.repo.findActiveByEmail(ctx, email)
+	if err != nil && !errors.Is(err, ErrAccountNotFound) {
+		return fmt.Errorf("serching for pass forgot accoun: %w", err)
+	}
+
+	token := NewPasswordVerificationToken(account)
+
+	if err := s.repo.AddVerificationToken(ctx, token); err != nil {
+		return fmt.Errorf("creating verify token for new password: %w", err)
+	}
+
+	link := s.instanceUrl.String() + "/" + passwordForgetURLPath + "/" + token.UUID
+
+	if err := s.mailSender.SendActivateAccountMail(account.User, account.Email, link); err != nil {
+		return fmt.Errorf("sending verify email for new password: %w", err)
+	}
+
+	return nil
+
 }
 
 func (s *AccountService) CreateAccountByActor(ctx context.Context, actor *models.Actor) error {
