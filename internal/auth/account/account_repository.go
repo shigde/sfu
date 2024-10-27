@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/shigde/sfu/internal/storage"
@@ -48,7 +49,7 @@ func (r *AccountRepository) findByUserName(ctx context.Context, user string) (*A
 	return &account, nil
 }
 
-func (r *AccountRepository) findByEmail(ctx context.Context, email string) (*Account, error) {
+func (r *AccountRepository) findActiveByEmail(ctx context.Context, email string) (*Account, error) {
 	r.locker.RLock()
 	tx, cancel := r.store.GetDatabaseWithContext(ctx)
 	defer func() {
@@ -70,7 +71,29 @@ func (r *AccountRepository) findByEmail(ctx context.Context, email string) (*Acc
 	return &account, nil
 }
 
-func (r *AccountRepository) findByUuid(ctx context.Context, userUuid *uuid.UUID) (*Account, error) {
+func (r *AccountRepository) findByEmail(ctx context.Context, email string) (*Account, error) {
+	r.locker.RLock()
+	tx, cancel := r.store.GetDatabaseWithContext(ctx)
+	defer func() {
+		defer r.locker.RUnlock()
+		cancel()
+	}()
+
+	var account Account
+
+	result := tx.Preload("Actor").Where("email = ?", email).First(&account)
+	if result.Error != nil {
+		err := fmt.Errorf("finding all account by email %s: %w", email, result.Error)
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errors.Join(err, ErrAccountNotFound)
+		}
+		return nil, err
+	}
+
+	return &account, nil
+}
+
+func (r *AccountRepository) findActiveByUuid(ctx context.Context, userUuid *uuid.UUID) (*Account, error) {
 	r.locker.RLock()
 	tx, cancel := r.store.GetDatabaseWithContext(ctx)
 	defer func() {
@@ -90,6 +113,24 @@ func (r *AccountRepository) findByUuid(ctx context.Context, userUuid *uuid.UUID)
 	}
 
 	return &account, nil
+}
+
+func (r *AccountRepository) deleteByUuid(ctx context.Context, userUuid string) error {
+	r.locker.Lock()
+	tx, cancel := r.store.GetDatabaseWithContext(ctx)
+	defer func() {
+		defer r.locker.Unlock()
+		cancel()
+	}()
+
+	var account Account
+
+	result := tx.Unscoped().Where("uuid = ?", userUuid).Delete(&account)
+	if result.Error != nil {
+		return fmt.Errorf("delete account by uuid %s: %w", userUuid, result.Error)
+	}
+
+	return nil
 }
 
 func (r *AccountRepository) Add(ctx context.Context, account *Account) (string, error) {
@@ -136,7 +177,8 @@ func (r *AccountRepository) RedeemAccountVerificationToken(ctx context.Context, 
 
 	var verificationToken VerificationToken
 
-	result := tx.Preload("Account").Where("token = ? AND verified = ?", token, false).First(&verificationToken)
+	lastHour := time.Now().Add(-time.Hour)
+	result := tx.Preload("Account").Where("token = ? AND verified = ? AND created_at > ", token, false, lastHour).First(&verificationToken)
 	if result.Error != nil {
 		err := fmt.Errorf("seraching redeem account verification token %s: %w", token, result.Error)
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -150,6 +192,22 @@ func (r *AccountRepository) RedeemAccountVerificationToken(ctx context.Context, 
 	saved := tx.Save(&verificationToken)
 	if saved.Error != nil {
 		return fmt.Errorf("activating account by verification token %s: %w", token, result.Error)
+	}
+
+	return nil
+}
+
+func (r *AccountRepository) update(ctx context.Context, account *Account) error {
+	r.locker.Lock()
+	tx, cancel := r.store.GetDatabaseWithContext(ctx)
+	defer func() {
+		r.locker.Unlock()
+		cancel()
+	}()
+
+	saved := tx.Save(&account)
+	if saved.Error != nil {
+		return fmt.Errorf("update account %s: %w", account.ID, saved.Error)
 	}
 
 	return nil

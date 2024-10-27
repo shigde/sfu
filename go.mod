@@ -1,8 +1,6 @@
 module github.com/shigde/sfu
 
-go 1.21.0
-
-toolchain go1.21.4
+go 1.23.0
 
 require (
 	codeberg.org/gruf/go-mutexes v1.1.5

@@ -18,6 +18,7 @@ import (
 const activateAccountURLPath = "activateAccount"
 
 var ErrInvalidCredentials = errors.New("invalid credentials")
+var ErrAccountAlreadyExists = errors.New("account already exists")
 
 type AccountService struct {
 	config        *session.SecurityConfig
@@ -45,30 +46,58 @@ func NewAccountService(
 
 func (s *AccountService) CreateAccount(ctx context.Context, account *Account) error {
 	name := account.User
+	// transform username in domain-specific UserID
+	account.User = instance.BuildUserId(name, s.instanceUrl)
 
+	// Check an account exists. If exists check for recreate or ignore
+	// -------------------------------------------------------------------------------------------------------------------
+	existAccount, err := s.repo.findByEmail(ctx, account.Email)
+	if err != nil && !errors.Is(err, ErrAccountNotFound) {
+		return fmt.Errorf("loocking for existing account: %w", err)
+	}
+
+	if existAccount != nil && existAccount.Active {
+		// we ignore the try to recreate an active existing account
+		return ErrAccountAlreadyExists
+	}
+
+	if existAccount != nil && !existAccount.Active {
+		// we delete previous created account if were not activated
+		if err := s.repo.deleteByUuid(ctx, existAccount.UUID); err != nil {
+			return fmt.Errorf("deleting existing inactive account: %w", err)
+		}
+	}
+
+	// Create a new account.
+	// -------------------------------------------------------------------------------------------------------------------
 	actor, err := models.NewPersonActor(s.instanceUrl, name)
 	if err != nil {
 		return fmt.Errorf("creating actor: %w", err)
 	}
 
 	account.Actor = actor
-
-	// transform username in domain-specific UserID
-	account.User = instance.BuildUserId(name, s.instanceUrl)
-
 	_, err = s.repo.Add(ctx, account)
 	if err != nil {
 		return fmt.Errorf("adding account: %w", err)
 	}
 
+	if err = s.sendVerificationMail(ctx, account); err != nil {
+		return fmt.Errorf("verify new account: %w", err)
+	}
+
+	return nil
+}
+
+func (s *AccountService) sendVerificationMail(ctx context.Context, account *Account) error {
 	token := NewEmailVerificationToken(account)
 
-	if err = s.repo.AddVerificationToken(ctx, token); err != nil {
+	if err := s.repo.AddVerificationToken(ctx, token); err != nil {
 		return fmt.Errorf("creating verify token: %w", err)
 	}
 
 	link := s.instanceUrl.String() + "/" + activateAccountURLPath + "/" + token.UUID
-	if err = s.mailSender.SendActivateAccountMail(account.User, account.Email, link); err != nil {
+
+	if err := s.mailSender.SendActivateAccountMail(account.User, account.Email, link); err != nil {
 		return fmt.Errorf("sending verify email: %w", err)
 	}
 
@@ -114,7 +143,7 @@ func (s *AccountService) GetAuthToken(ctx context.Context, user *authentication.
 }
 
 func (s *AccountService) GetAuthTokenByLogin(ctx context.Context, login *authentication.Login) (*authentication.Token, error) {
-	account, err := s.repo.findByEmail(ctx, login.Email)
+	account, err := s.repo.findActiveByEmail(ctx, login.Email)
 	if err != nil {
 		return nil, fmt.Errorf("find login account: %w", err)
 	}
@@ -132,9 +161,20 @@ func (s *AccountService) GetAuthTokenByLogin(ctx context.Context, login *authent
 }
 
 func (s *AccountService) GetAccount(ctx context.Context, userUuid *uuid.UUID) (*Account, error) {
-	account, err := s.repo.findByUuid(ctx, userUuid)
+	account, err := s.repo.findActiveByUuid(ctx, userUuid)
 	if err != nil {
 		return nil, fmt.Errorf("find account by uuid: %w", err)
 	}
 	return account, nil
+}
+
+func (s *AccountService) GetConfig() *session.SecurityConfig {
+	return s.config
+}
+
+func (s *AccountService) DeleteAccount(ctx context.Context, userUuid *uuid.UUID) error {
+	if err := s.repo.deleteByUuid(ctx, userUuid.String()); err != nil {
+		return fmt.Errorf("delete account by uuid: %w", err)
+	}
+	return nil
 }
