@@ -212,3 +212,32 @@ func (r *AccountRepository) update(ctx context.Context, account *Account) error 
 
 	return nil
 }
+
+func (r *AccountRepository) RedeemPassForgetToken(ctx context.Context, token string) (*VerificationToken, error) {
+	r.locker.Lock()
+	tx, cancel := r.store.GetDatabaseWithContext(ctx)
+	defer func() {
+		r.locker.Unlock()
+		cancel()
+	}()
+
+	var verificationToken VerificationToken
+
+	lastHour := time.Now().Add(-time.Hour)
+	result := tx.Preload("Account").Where("token = ? AND verified = ? AND created_at > ", token, false, lastHour).First(&verificationToken)
+	if result.Error != nil {
+		err := fmt.Errorf("seraching redeem pass forget token %s: %w", token, result.Error)
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errors.Join(err, ErrTokenNotFound)
+		}
+		return nil, err
+	}
+
+	verificationToken.Verified = true
+	saved := tx.Save(&verificationToken)
+	if saved.Error != nil {
+		return nil, fmt.Errorf("redeem pass forget token %s: %w", token, result.Error)
+	}
+
+	return &verificationToken, nil
+}

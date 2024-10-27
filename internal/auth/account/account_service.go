@@ -168,6 +168,59 @@ func (s *AccountService) GetAccount(ctx context.Context, userUuid *uuid.UUID) (*
 	return account, nil
 }
 
+func (s *AccountService) UpdatePassword(ctx context.Context, userUuid *uuid.UUID, oldPass string, newPass string) error {
+	account, err := s.GetAccount(ctx, userUuid)
+	if err != nil {
+		return fmt.Errorf("find account by uuid for update pass: %w", err)
+	}
+
+	if valid := VerifyPassword(oldPass, account.Password); !valid {
+		return ErrInvalidCredentials
+	}
+
+	hash, err := HashPassword(newPass)
+	if err != nil {
+		return fmt.Errorf("creating hash for update pass by uuid: %w", err)
+	}
+	account.Password = hash
+
+	if err := s.repo.update(ctx, account); err != nil {
+		return fmt.Errorf("updating account for new pass by uuid: %w", err)
+	}
+
+	return nil
+}
+
+func (s *AccountService) UpdatePasswordByToken(ctx context.Context, token string, oldPass string, newPass string) error {
+	passToken, err := s.repo.RedeemPassForgetToken(ctx, token)
+	if errors.Is(err, ErrTokenNotFound) {
+		slog.Warn("redeem new pass token not valid", "error", err)
+		return err
+	}
+	if err != nil {
+		slog.Error("verifying redeem new pass token", "error", err)
+		return err
+	}
+
+	account := passToken.Account
+
+	if valid := VerifyPassword(oldPass, account.Password); !valid {
+		return ErrInvalidCredentials
+	}
+
+	hash, err := HashPassword(newPass)
+	if err != nil {
+		return fmt.Errorf("creating hash for update pass by token: %w", err)
+	}
+	account.Password = hash
+
+	if err := s.repo.update(ctx, account); err != nil {
+		return fmt.Errorf("updating account for new pass by token: %w", err)
+	}
+
+	return nil
+}
+
 func (s *AccountService) GetConfig() *session.SecurityConfig {
 	return s.config
 }
