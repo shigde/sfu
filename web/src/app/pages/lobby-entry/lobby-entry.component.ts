@@ -24,7 +24,8 @@ export class LobbyEntryComponent implements OnInit {
     private route: ActivatedRoute,
     session: SessionService,
   ) {
-    this.userToken = session.getToken();
+    const jwt = session.getAuthenticationToken();
+    this.userToken = `${jwt}`
     session.getUserName().subscribe((name) => {
         this.user = name
     });

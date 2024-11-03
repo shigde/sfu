@@ -66,7 +66,7 @@ func NewServer(ctx context.Context, cfg *config.SFU) (*Server, error) {
 
 	// Mail
 	mailSender := mail.NewSenderService(cfg.MailConfig, cfg.InstanceUrl)
-	mailSender.SendActivateAccountMail("enrico", "enrico.schw@gmx.de", "token")
+
 	// Auth provider
 	accountRepo := account.NewAccountRepository(store)
 	accountService := account.NewAccountService(

@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/shigde/sfu/internal/activitypub/instance"
 	"github.com/shigde/sfu/internal/auth/account"
 	"github.com/shigde/sfu/internal/auth/session"
 	"github.com/shigde/sfu/internal/rest"
+	"github.com/shigde/sfu/pkg/authentication"
 )
 
-func GetAccount(accountService *account.AccountService) http.HandlerFunc {
+func GetUser(accountService *account.AccountService) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -26,12 +28,14 @@ func GetAccount(accountService *account.AccountService) http.HandlerFunc {
 			return
 		}
 
-		account, err := accountService.GetAccount(r.Context(), &userUuid)
+		acc, err := accountService.GetAccount(r.Context(), &userUuid)
 		if err != nil {
 			rest.HttpError(w, "error reading account", http.StatusNotFound, err)
 			return
 		}
-		if err := json.NewEncoder(w).Encode(account); err != nil {
+
+		userName, hostName := instance.SplitUserId(acc.User)
+		if err := json.NewEncoder(w).Encode(&authentication.User{Name: userName, Domain: hostName, Role: account.RoleToString(acc.Role)}); err != nil {
 			rest.HttpError(w, "error reading account", http.StatusInternalServerError, err)
 			return
 		}

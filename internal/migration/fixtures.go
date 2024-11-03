@@ -61,26 +61,30 @@ func LoadFixtures(config *instance.FederationConfig, storage storage.Storage) er
 	//
 	// -----------------------------------------------------------------------------------------------------------------
 
-	user123Actor, _ := models.NewPersonActor(streamInstanceUrl, "user123")
+	userActor, _ := models.NewPersonActor(streamInstanceUrl, "user")
 	rootActor, _ := models.NewPersonActor(streamInstanceUrl, "root")
-	user123ChannelActor, _ := models.NewChannelActor(streamInstanceUrl, "user123_channel")
+	userChannelActor, _ := models.NewChannelActor(streamInstanceUrl, "user_channel")
 	rootChannelActor, _ := models.NewChannelActor(streamInstanceUrl, "root_channel")
-	db.Save(user123Actor)
+	db.Save(userActor)
 	db.Save(rootActor)
-	db.Save(user123ChannelActor)
+	db.Save(userChannelActor)
 	db.Save(rootChannelActor)
 
-	user123Account := account.CreateAccount(instance.BuildUserId("user123", streamInstanceUrl), user123Actor, "96efea69-a084-4a33-9936-78d30c6301e8")
-	rootAccount := account.CreateAccount(instance.BuildUserId("root", streamInstanceUrl), rootActor, "ecd7c26a-f4ec-458b-8496-1a2834e50274")
-	db.Save(user123Account)
+	userAccount := account.CreateAccount("user@shig.de", userActor, "96efea69-a084-4a33-9936-78d30c6301e8")
+	userAccount.Password, _ = account.HashPassword("user")
+	userAccount.Active = true
+	rootAccount := account.CreateAdminAccount("root@shig.de", rootActor, "ecd7c26a-f4ec-458b-8496-1a2834e50274")
+	rootAccount.Password, _ = account.HashPassword("root")
+	rootAccount.Active = true
+	db.Save(userAccount)
 	db.Save(rootAccount)
 
-	video1 := NewVideo("live-stream-1", "fc9d575d-bc6f-46d6-9dc5-5b687889486f", streamInstance, user123Actor, user123ChannelActor)
-	video2 := NewVideo("live-stream-2", "ce33f40c-0eeb-4b96-976a-26b5be0fa345", streamInstance, user123Actor, user123ChannelActor)
+	video1 := NewVideo("live-stream-1", "fc9d575d-bc6f-46d6-9dc5-5b687889486f", streamInstance, userActor, userChannelActor)
+	video2 := NewVideo("live-stream-2", "ce33f40c-0eeb-4b96-976a-26b5be0fa345", streamInstance, userActor, userChannelActor)
 	video3 := NewVideo("live-stream-3", "7b762908-5a7f-49a6-9d05-ddcf26e8c07e", streamInstance, rootActor, rootChannelActor)
 
-	liveStream1 := buildLiveStream(video1, user123Account)
-	liveStream2 := buildLiveStream(video2, user123Account)
+	liveStream1 := buildLiveStream(video1, userAccount)
+	liveStream2 := buildLiveStream(video2, userAccount)
 	liveStream3 := buildLiveStream(video3, rootAccount)
 	db.Save(liveStream1)
 	db.Save(liveStream2)
@@ -136,7 +140,7 @@ func LoadFixtures(config *instance.FederationConfig, storage storage.Storage) er
 	db.Save(remoteUserActor)
 	db.Save(remoteUserChannelActor)
 
-	remoteUserAccount := account.CreateAccount(instance.BuildUserId("remoteUser", remoteInstanceUrl), remoteUserActor, "517c225b-ae98-44fd-8ff6-2e2e4eeb7900")
+	remoteUserAccount := account.CreateAccount(account.PlaceholderEmail("remoteUser"), remoteUserActor, "517c225b-ae98-44fd-8ff6-2e2e4eeb7900")
 	db.Save(remoteUserAccount)
 
 	video4 := NewVideo("live-stream-4", "034973c3-1756-4de3-b565-96264aa893c2", remoteInstance, remoteUserActor, remoteUserChannelActor)

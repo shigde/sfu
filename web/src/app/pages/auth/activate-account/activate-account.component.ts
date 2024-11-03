@@ -2,11 +2,14 @@ import {Component, OnInit} from '@angular/core';
 import {AuthService} from '@shigde/core';
 import {catchError, of, take, tap} from 'rxjs';
 import {ActivatedRoute} from '@angular/router';
+import {NgIf} from '@angular/common';
 
 @Component({
   selector: 'app-activate-account',
   standalone: true,
-  imports: [],
+  imports: [
+    NgIf
+  ],
   templateUrl: './activate-account.component.html',
   styleUrl: './activate-account.component.scss'
 })

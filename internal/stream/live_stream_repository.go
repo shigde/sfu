@@ -229,13 +229,9 @@ func (r *LiveStreamRepository) BuildGuestAccounts(ctx context.Context, actors []
 	}()
 
 	for _, actor := range actors {
-		user := buildFederatedId(actor.PreferredUsername, actor.GetActorIri().Host)
-		tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&account.Account{
-			ActorId: actor.ID,
-			Actor:   actor,
-			User:    user,
-			UUID:    uuid.NewString(),
-		})
+		accUuid := uuid.NewString()
+		acc := account.CreateGuestAccount(account.PlaceholderEmail(accUuid), actor, accUuid)
+		tx.Clauses(clause.OnConflict{DoNothing: true}).Create(acc)
 	}
 	return
 }

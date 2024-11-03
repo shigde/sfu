@@ -42,8 +42,8 @@ func preferredNameFromActor(actorIri url.URL) string {
 	return path[length-1]
 }
 
-func (h *host) GetUser() *authentication.User {
-	return &authentication.User{
+func (h *host) GetUser() *authentication.ClientUser {
+	return &authentication.ClientUser{
 		UserId: h.actorId,
 		Token:  h.token,
 	}

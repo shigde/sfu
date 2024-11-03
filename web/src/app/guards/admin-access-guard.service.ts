@@ -15,7 +15,7 @@ export class AdminAccessGuard implements CanActivate {
         if (hasSession) {
           return true;
         }
-        this.router.navigate(['/login']);
+        this.router.navigate(['/']);
         return false;
       })
     );

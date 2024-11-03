@@ -11,7 +11,7 @@ type Account struct {
 	User     string        `json:"user"     gorm:"index;unique"`
 	Email    string        `json:"email"    gorm:"index;unique"`
 	UUID     string        `json:"-"        gorm:"index;unique"`
-	Type     AccountType   `json:"-"        gorm:"not null,default:2"`
+	Role     Role          `json:"-"        gorm:"not null,default:2"`
 	Password string        `json:"password" gorm:"not null"`
 	Active   bool          `json:"-"        gorm:"not null,default:false"`
 	ActorId  uint          `json:"-"        gorm:"not null;unique"`
@@ -19,12 +19,13 @@ type Account struct {
 	gorm.Model
 }
 
-type AccountType int32
+type Role int32
 
 const (
-	ADMIN AccountType = 1
-	USER  AccountType = 2
-	GUEST AccountType = 3
+	ADMIN Role = iota + 1
+	USER
+	GUEST
+	SERVICE
 )
 
 type VerificationToken struct {
@@ -56,5 +57,20 @@ func NewPasswordVerificationToken(account *Account) *VerificationToken {
 		Account: account,
 		UUID:    uuid.NewString(),
 		Type:    PASSWORD,
+	}
+}
+
+func RoleToString(role Role) string {
+	switch role {
+	case USER:
+		return "user"
+	case GUEST:
+		return "guest"
+	case ADMIN:
+		return "admin"
+	case SERVICE:
+		return "service"
+	default:
+		return "guest"
 	}
 }

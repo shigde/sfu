@@ -1,13 +1,14 @@
 # Shig Instance
 
 ## !!Attention!!
-I'm currently doing a refactoring to make the code more readable. 
-The Main branch is currently broken. 
+
+I'm currently doing a refactoring to make the code more readable.
+The Main branch is currently broken.
 The latest (running) version is available in branch: https://github.com/shigde/sfu/tree/running-main-v1
 
 ---
 
-Shig is a federated service designed to distribute and replicate live streams among Fediverse instances. 
+Shig is a federated service designed to distribute and replicate live streams among Fediverse instances.
 It's built upon the WHIP/WHEP approach for both inbound and outbound streams.
 Through an ActivityPub integration, Shig can follow other Fediverse services and receive updates on live stream activities.
 
@@ -53,8 +54,18 @@ Through an ActivityPub integration, Shig can follow other Fediverse services and
 ### Run Shig Instance
 
 ```shell
+make build_web
 make run
 ```
+
+Open in Browser: https://localhost:8080
+
+### Login with user
+
+| email        | Pass | Role  |
+|--------------|------|-------|
+| user@shig.de | user | user  |
+| roor@shig.de | root | admin |
 
 ### Run with some Data
 
@@ -70,9 +81,17 @@ Now you can start the SFU with some data.
 
 ## Build
 
+### Server
+
 ```shell
 make build
 ``` 
+
+### Web
+
+```shell
+make build_web
+```
 
 #### Build Docker Container for Shig Instance
 

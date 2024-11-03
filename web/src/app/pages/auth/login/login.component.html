@@ -1,32 +1,32 @@
-<!--<form #f="ngForm" (ngSubmit)="onLogin(f)">-->
-<!--  <div class="form-group mb-3">-->
-<!--    <label for="exampleFormControlSelect1">Select a User</label>-->
-<!--    <select class="form-select" id="exampleFormControlSelect1" name="user" ngModel> data-cy="username">-->
-<!--      <option value="" disabled>Choose a state</option>-->
-<!--      <option *ngFor="let user of users" [ngValue]="user">-->
-<!--        {{ user.name }}-->
-<!--      </option>-->
-<!--    </select>-->
-<!--  </div>-->
-<!--  <button class="btn btn-primary">Login</button>-->
-<!--</form>-->
-
-
 <div class="card-app">
 
   <div class="card-title">
     <h1>Login</h1>
-
   </div>
-  <form class="form-group" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-    <input name="email" type="email" formControlName="email" placeholder="Email">
+
+  <ng-container *ngIf="fail">
+    <p class="warning">Credentials are wrong!</p>
+  </ng-container>
+
+  <form id="login-form" class="form-group has-success has-feedback" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+    <input id="email" name="email" type="email" formControlName="email" placeholder="Email">
+
+    <div *ngIf="loginForm.get('email')?.invalid && (loginForm.get('email')?.dirty || loginForm.get('email')?.touched)" class="invalid">
+      <span *ngIf="loginForm.get('email')?.errors?.['required']">Your email is required!</span>
+      <span *ngIf="loginForm.get('email')?.errors?.['email']">Your input is not an email!</span>
+    </div>
+
     <input type="password" formControlName="password" placeholder="Password">
+
+    <div *ngIf="loginForm.get('password')?.invalid && (loginForm.get('password')?.dirty || loginForm.get('password')?.touched)" class="invalid">
+      <div *ngIf="loginForm.get('password')?.errors?.['required']">Your password is required!</div>
+    </div>
+
     <button>Submit</button>
   </form>
 
   <div class="card-terms">
     <span style="display: block">You forget your <a href="/password-forgotten" >Password</a>?</span>
   </div>
-
 
 </div>

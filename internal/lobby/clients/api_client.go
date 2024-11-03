@@ -22,7 +22,7 @@ type ApiClient struct {
 }
 
 type loginGetter interface {
-	GetUser() *authentication.User
+	GetUser() *authentication.ClientUser
 }
 
 func NewApiClient(loginGetter loginGetter, shigUrl string, spaceId string, streamId string) *ApiClient {

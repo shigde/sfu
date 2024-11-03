@@ -25,22 +25,18 @@ func NewLiveStreamService(repo *LiveStreamRepository, spaceRepo *SpaceRepository
 }
 
 func (ls *LiveStreamService) CreateStreamAccessByVideo(ctx context.Context, video *models.Video) error {
-	userId := buildFederatedId(video.Owner.PreferredUsername, video.Owner.GetActorIri().Host)
-
 	streamID, _ := uuid.Parse(video.Uuid)
 
 	// video.Guests
 	ls.streamRepo.BuildGuestAccounts(ctx, video.Guests)
 
-	account := &account.Account{}
-	account.Actor = video.Owner
-	account.ActorId = video.Owner.ID
-	account.User = userId
-	account.UUID = uuid.NewString()
+	// Video Owner Account
+	accUuid := uuid.NewString()
+	acc := account.CreateAccount(account.PlaceholderEmail(accUuid), video.Owner, accUuid)
 
-	space := NewSpace(video.Channel, account)
+	space := NewSpace(video.Channel, acc)
 	lobbyEntity := lobby.NewLobbyEntity(streamID, space.Identifier, video.Instance.Actor.ActorIri)
-	stream := NewLiveStream(account, lobbyEntity, space, video)
+	stream := NewLiveStream(acc, lobbyEntity, space, video)
 
 	if err := ls.streamRepo.UpsertLiveStream(ctx, stream); err != nil {
 		return fmt.Errorf("upsert live stream: %w", err)
@@ -52,7 +48,7 @@ func (ls *LiveStreamService) UpdateStreamAccessByVideo(ctx context.Context, vide
 	if !ls.streamRepo.Contains(ctx, video.Uuid) {
 		return ls.CreateStreamAccessByVideo(ctx, video)
 	}
-	// redundant but needed in case of update guests
+	// redundant but needed in case of update guests - duplicate accounts are ignored
 	ls.streamRepo.BuildGuestAccounts(ctx, video.Guests)
 	return nil
 }

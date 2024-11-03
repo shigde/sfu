@@ -3,12 +3,16 @@ import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/
 import {Router} from '@angular/router';
 import {AuthService} from '@shigde/core';
 import {catchError, of, take, tap} from 'rxjs';
+import {NgIf} from '@angular/common';
+
+// https://medium.com/@ojiofor/angular-reactive-forms-strong-password-validation-8dbcce92eb6c
 
 @Component({
   selector: 'app-signup',
   standalone: true,
   imports: [
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    NgIf
   ],
   templateUrl: './signup.component.html',
   styleUrl: './signup.component.scss'

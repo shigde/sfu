@@ -32,7 +32,7 @@ func NewLobbyApi(userId string, token string, shigUrl string, opt ...ClientOptio
 
 func (la *LobbyApi) Login() (*authentication.Token, error) {
 	loginUrl := fmt.Sprintf("%s/authenticate", la.ShigUrl)
-	user := &authentication.User{
+	user := &authentication.ClientUser{
 		UserId: la.UserId,
 		Token:  la.Token,
 	}

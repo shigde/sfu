@@ -8,7 +8,7 @@ import {provideHttpClient, withInterceptorsFromDi} from '@angular/common/http';
 
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
 import {CommonModule} from '@angular/common';
-import {httpInterceptorProviders, ShigModule} from '@shigde/core';
+import {httpInterceptorProviders, LoadingIndicatorComponent, ShigModule} from '@shigde/core';
 import {LobbyEntryComponent} from './pages/lobby-entry/lobby-entry.component';
 import {SettingsComponent} from './svg/settings.component';
 
@@ -25,7 +25,7 @@ import {SettingsComponent} from './svg/settings.component';
     AppRoutingModule,
     ReactiveFormsModule,
     FormsModule,
-    ShigModule], providers: [
+    ShigModule, LoadingIndicatorComponent], providers: [
     httpInterceptorProviders,
     provideHttpClient(withInterceptorsFromDi()),
   ]

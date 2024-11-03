@@ -49,6 +49,7 @@ func (s *AccountService) CreateAccount(ctx context.Context, account *Account) er
 	name := account.User
 	// transform username in domain-specific UserID
 	account.User = instance.BuildUserId(name, s.instanceUrl)
+	account.Role = USER
 
 	// Check an account exists. If exists check for recreate or ignore
 	// -------------------------------------------------------------------------------------------------------------------
@@ -97,6 +98,11 @@ func (s *AccountService) sendVerificationMail(ctx context.Context, account *Acco
 	}
 
 	link := s.instanceUrl.String() + "/" + activateAccountURLPath + "/" + token.UUID
+
+	// Do not send an email if placeholder mail is used
+	if IsPlaceholderEmail(account.Email) {
+		return nil
+	}
 
 	if err := s.mailSender.SendActivateAccountMail(account.User, account.Email, link); err != nil {
 		return fmt.Errorf("sending verify email: %w", err)
@@ -147,7 +153,7 @@ func (s *AccountService) DeleteAccountByActor(ctx context.Context, actor *models
 	return nil
 }
 
-func (s *AccountService) GetAuthToken(ctx context.Context, user *authentication.User) (*authentication.Token, error) {
+func (s *AccountService) GetAuthToken(ctx context.Context, user *authentication.ClientUser) (*authentication.Token, error) {
 	slog.Debug("Auth", "Token", user.Token, "instance Token", s.instanceToken)
 	if user.Token != s.instanceToken {
 		return nil, errors.New("invalid instance auth token")

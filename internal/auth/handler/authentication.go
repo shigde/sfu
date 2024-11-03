@@ -30,12 +30,12 @@ func Authentication(accountService *account.AccountService) http.HandlerFunc {
 	}
 }
 
-func getJsonAuthPayload(w http.ResponseWriter, r *http.Request) (*authentication.User, error) {
+func getJsonAuthPayload(w http.ResponseWriter, r *http.Request) (*authentication.ClientUser, error) {
 	dec, err := rest.GetJsonPayload(w, r)
 	if err != nil {
 		return nil, err
 	}
-	var user authentication.User
+	var user authentication.ClientUser
 	if err := dec.Decode(&user); err != nil {
 		return nil, rest.InvalidPayload
 	}
