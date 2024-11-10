@@ -4,16 +4,51 @@
     <span>Already have an account? <a routerLink="/login">Sign In</a></span>
   </div>
   <div>
-    <p class="alert-success" *ngIf="success">Your account was created! We send you an email!</p>
-    <p class="alert-danger" *ngIf="fail">Error, bad inputs!</p>
+    <p class="success" *ngIf="success">Your account was created! We send you an email!</p>
+    <p class="fail" *ngIf="fail">We could not create You Account!</p>
   </div>
-  <form class="form-group" [formGroup]="signupForm" (ngSubmit)="onSubmit()">
+  <form id="signupForm" class="form-group" [formGroup]="signupForm" (ngSubmit)="onSubmit()">
     <input type="text" name="user" placeholder="User Name" formControlName="user">
+
+    <div *ngIf="signupForm.get('user')?.invalid && (signupForm.get('user')?.dirty || signupForm.get('user')?.touched)" class="invalid">
+      <p *ngIf="signupForm.get('user')?.errors?.['required']">User name is required!</p>
+      <p *ngIf="signupForm.get('user')?.errors?.['min']">User name must be at least 4 characters long.!</p>
+    </div>
+
     <input type="email" name="email" placeholder="Email" formControlName="email">
+
+    <div *ngIf="signupForm.get('email')?.invalid && (signupForm.get('email')?.dirty || signupForm.get('email')?.touched)" class="invalid">
+      <p *ngIf="signupForm.get('email')?.errors?.['required']">Email is required!</p>
+      <p *ngIf="signupForm.get('email')?.errors?.['email']">Provide a valid email!</p>
+    </div>
+
     <input type="password" name="password" placeholder="Password" formControlName="password">
-    <input type="submit" value="Signup">
+
+    <div *ngIf="signupForm.get('password')?.invalid && (signupForm.get('password')?.touched || signupForm.get('password')?.dirty)" class="invalid">
+      <p *ngIf="signupForm.get('password')?.errors?.['uppercaseLetter']">At least one uppercase letter.</p>
+      <p *ngIf="signupForm.get('password')?.errors?.['lowercaseLetter']">At least one lowercase letter.</p>
+      <p *ngIf="signupForm.get('password')?.errors?.['digit']">At least one digit.</p>
+      <p *ngIf="signupForm.get('password')?.errors?.['specialCharacter']">At least one special character.</p>
+      <p *ngIf="signupForm.get('password')?.errors?.['minLength']">At least 8 characters long.</p>
+    </div>
+
+    <input type="password" name="confirmPassword"  formControlName="confirmPassword">
+
+    <div *ngIf="(signupForm.get('confirmPassword')?.invalid && (signupForm.get('confirmPassword')?.dirty || signupForm.get('confirmPassword')?.touched) || passForgetForm.errors?.['confirm'])"
+         class="invalid">
+      <p *ngIf="signupForm.get('confirmPassword')?.errors?.['required']">Your original password is required!</p>
+      <p *ngIf="signupForm.errors?.['confirm']">Password does'nt match.</p>
+    </div>
+
+
+
+    <input id="terms" type="checkbox" name="terms" formControlName="terms"><span> I have read and agree to the <a href="https://shig.de/?page_id=114">Terms of Service</a></span>
+
+    <div *ngIf="signupForm.get('terms')?.invalid && (signupForm.get('terms')?.touched || signupForm.get('terms')?.dirty)" class="invalid">
+      <p *ngIf="signupForm.get('terms')?.errors?.['required']">Please accept the terms!</p>
+    </div>
+
+    <input id="signupBtn"  type="submit" value="Signup">
   </form>
-  <div class="card-terms">
-      <input type="checkbox"> <span> I have read and agree to the <a href="https://shig.de/?page_id=114">Terms of Service</a></span>
-  </div>
+
 </div>

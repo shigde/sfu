@@ -5,21 +5,21 @@
   </div>
 
   <ng-container *ngIf="fail">
-    <p class="warning">Credentials are wrong!</p>
+    <p class="invalid">Login fails!</p>
   </ng-container>
 
   <form id="login-form" class="form-group has-success has-feedback" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
     <input id="email" name="email" type="email" formControlName="email" placeholder="Email">
 
     <div *ngIf="loginForm.get('email')?.invalid && (loginForm.get('email')?.dirty || loginForm.get('email')?.touched)" class="invalid">
-      <span *ngIf="loginForm.get('email')?.errors?.['required']">Your email is required!</span>
-      <span *ngIf="loginForm.get('email')?.errors?.['email']">Your input is not an email!</span>
+      <p *ngIf="loginForm.get('email')?.errors?.['required']">Your email is required!</p>
+      <p *ngIf="loginForm.get('email')?.errors?.['email']">Your input is not an email!</p>
     </div>
 
     <input type="password" formControlName="password" placeholder="Password">
 
     <div *ngIf="loginForm.get('password')?.invalid && (loginForm.get('password')?.dirty || loginForm.get('password')?.touched)" class="invalid">
-      <div *ngIf="loginForm.get('password')?.errors?.['required']">Your password is required!</div>
+      <p *ngIf="loginForm.get('password')?.errors?.['required']">Your password is required!</p>
     </div>
 
     <button>Submit</button>

@@ -23,7 +23,19 @@
 }
 
 .invalid {
-  color: #d63384;
+  color: $pink;
+  font-size: small;
+  margin-bottom: 10px;
+}
+
+.fail {
+  color: $pink;
+  font-size: small;
+  margin-bottom: 10px;
+}
+
+.success {
+  color: $teal;
   font-size: small;
   margin-bottom: 10px;
 }

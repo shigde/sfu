@@ -4,8 +4,7 @@ import {Router} from '@angular/router';
 import {AuthService} from '@shigde/core';
 import {catchError, of, take, tap} from 'rxjs';
 import {NgIf} from '@angular/common';
-
-// https://medium.com/@ojiofor/angular-reactive-forms-strong-password-validation-8dbcce92eb6c
+import {PASSWORD_CONSTRAIN, PasswordValidator} from '../../../validators/password.validator';
 
 @Component({
   selector: 'app-signup',
@@ -23,10 +22,21 @@ export class SignupComponent {
   public fail = false;
 
   public signupForm = new FormGroup({
-    user: new FormControl('', [Validators.required]),
+    user: new FormControl('', [Validators.required, Validators.min(4)]),
     email: new FormControl('', [Validators.required, Validators.email]),
-    password: new FormControl('', [Validators.required])
-  });
+    password: new FormControl('', [
+        Validators.required,
+        Validators.pattern(PASSWORD_CONSTRAIN),
+        PasswordValidator.uppercaseLetter,
+        PasswordValidator.lowercaseLetter,
+        PasswordValidator.digit,
+        PasswordValidator.specialCharacter,
+        PasswordValidator.minLength
+      ]
+    ),
+    confirmPassword: new FormControl('', [Validators.required]),
+    terms: new FormControl('', [Validators.requiredTrue]),
+  }, {validators: [PasswordValidator.confirm('confirmPassword', 'password')]});
 
   constructor(private readonly authService: AuthService, private readonly router: Router) {
   }
@@ -44,6 +54,12 @@ export class SignupComponent {
         tap(a => this.success = true),
         catchError((_) => this.handleError())
       ).subscribe();
+    } else {
+      this.signupForm.get('user')?.markAsTouched({onlySelf: true});
+      this.signupForm.get('email')?.markAsTouched({onlySelf: true});
+      this.signupForm.get('password')?.markAsTouched({onlySelf: true});
+      this.signupForm.get('terms')?.markAsTouched({onlySelf: true});
+      this.signupForm.get('confirmPassword')?.markAsTouched({onlySelf: true});
     }
   }
 

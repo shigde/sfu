@@ -1,16 +1,15 @@
 package authentication
 
-type PasswordForgotEmail struct {
+type ForgotPasswordEmail struct {
 	Email string `json:"email"`
 }
 
-type PasswordForgot struct {
-	Token       string `json:"token"`
+type UpdatePassword struct {
 	OldPassword string `json:"oldPassword"`
 	NewPassword string `json:"newPassword"`
 }
 
-type PasswordForgotWithToken struct {
-	Token string `json:"token"`
-	PasswordForgot
+type ForgotPassword struct {
+	Token    string `json:"token"`
+	Password string `json:"password"`
 }

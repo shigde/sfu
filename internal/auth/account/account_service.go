@@ -220,7 +220,7 @@ func (s *AccountService) UpdatePassword(ctx context.Context, userUuid *uuid.UUID
 	return nil
 }
 
-func (s *AccountService) UpdatePasswordByToken(ctx context.Context, token string, oldPass string, newPass string) error {
+func (s *AccountService) UpdatePasswordByToken(ctx context.Context, token string, newPass string) error {
 	passToken, err := s.repo.RedeemPassForgetToken(ctx, token)
 	if errors.Is(err, ErrTokenNotFound) {
 		slog.Warn("redeem new pass token not valid", "error", err)
@@ -232,10 +232,6 @@ func (s *AccountService) UpdatePasswordByToken(ctx context.Context, token string
 	}
 
 	account := passToken.Account
-
-	if valid := VerifyPassword(oldPass, account.Password); !valid {
-		return ErrInvalidCredentials
-	}
 
 	hash, err := HashPassword(newPass)
 	if err != nil {

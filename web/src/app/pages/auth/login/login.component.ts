@@ -37,6 +37,9 @@ export class LoginComponent {
         tap(_ => this.router.navigate(['/dashboard'])),
         catchError(_ => this.handleError())
       ).subscribe();
+    } else {
+      this.loginForm.get('email')?.markAsTouched({ onlySelf: true });
+      this.loginForm.get('password')?.markAsTouched({ onlySelf: true });
     }
   }
 
