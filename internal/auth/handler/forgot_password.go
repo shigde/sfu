@@ -9,7 +9,7 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-func SendForgotPasswordEmail(accountService *account.AccountService) http.HandlerFunc {
+func SendForgotPasswordMail(accountService *account.AccountService) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -20,7 +20,7 @@ func SendForgotPasswordEmail(accountService *account.AccountService) http.Handle
 		}
 
 		if err = accountService.CreateForgotPasswordToken(r.Context(), email); err != nil {
-			slog.Error("auth.SendForgotPasswordEmail:", "err", err)
+			slog.Error("auth.SendForgotPasswordMail:", "err", err)
 		}
 
 		w.WriteHeader(http.StatusCreated)

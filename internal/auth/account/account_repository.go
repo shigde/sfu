@@ -178,7 +178,7 @@ func (r *AccountRepository) RedeemAccountVerificationToken(ctx context.Context, 
 	var verificationToken VerificationToken
 
 	lastHour := time.Now().Add(-time.Hour)
-	result := tx.Preload("Account").Where("token = ? AND verified = ? AND created_at > ", token, false, lastHour).First(&verificationToken)
+	result := tx.Preload("Account").Where("uuid = ? AND verified = ? AND created_at > ?", token, false, lastHour).First(&verificationToken)
 	if result.Error != nil {
 		err := fmt.Errorf("seraching redeem account verification token %s: %w", token, result.Error)
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -190,6 +190,11 @@ func (r *AccountRepository) RedeemAccountVerificationToken(ctx context.Context, 
 	verificationToken.Verified = true
 	verificationToken.Account.Active = true
 	saved := tx.Save(&verificationToken)
+	if saved.Error != nil {
+		return fmt.Errorf("deactivate token: %s: %w", token, result.Error)
+	}
+
+	saved = tx.Save(verificationToken.Account)
 	if saved.Error != nil {
 		return fmt.Errorf("activating account by verification token %s: %w", token, result.Error)
 	}
@@ -224,7 +229,7 @@ func (r *AccountRepository) RedeemPassForgetToken(ctx context.Context, token str
 	var verificationToken VerificationToken
 
 	lastHour := time.Now().Add(-time.Hour)
-	result := tx.Preload("Account").Where("token = ? AND verified = ? AND created_at > ", token, false, lastHour).First(&verificationToken)
+	result := tx.Preload("Account").Where("uuid = ? AND verified = ? AND created_at > ?", token, false, lastHour).First(&verificationToken)
 	if result.Error != nil {
 		err := fmt.Errorf("seraching redeem pass forget token %s: %w", token, result.Error)
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {

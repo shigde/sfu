@@ -16,7 +16,7 @@ import (
 )
 
 const activateAccountURLPath = "activateAccount"
-const passwordForgetURLPath = "newPassword"
+const passwordForgetURLPath = "forgotPassword"
 
 var ErrInvalidCredentials = errors.New("invalid credentials")
 var ErrAccountAlreadyExists = errors.New("account already exists")
@@ -104,7 +104,8 @@ func (s *AccountService) sendVerificationMail(ctx context.Context, account *Acco
 		return nil
 	}
 
-	if err := s.mailSender.SendActivateAccountMail(account.User, account.Email, link); err != nil {
+	username, _ := instance.SplitUserId(account.User)
+	if err := s.mailSender.SendActivateAccountMail(username, account.Email, link); err != nil {
 		return fmt.Errorf("sending verify email: %w", err)
 	}
 
@@ -137,7 +138,8 @@ func (s *AccountService) CreateForgotPasswordToken(ctx context.Context, email st
 
 	link := s.instanceUrl.String() + "/" + passwordForgetURLPath + "/" + token.UUID
 
-	if err := s.mailSender.SendActivateAccountMail(account.User, account.Email, link); err != nil {
+	username, _ := instance.SplitUserId(account.User)
+	if err := s.mailSender.SendForgotPasswordMail(username, account.Email, link); err != nil {
 		return fmt.Errorf("sending verify email for new password: %w", err)
 	}
 

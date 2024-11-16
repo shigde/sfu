@@ -5,7 +5,7 @@ export const PASSWORD_CONSTRAIN: RegExp = /^(?=[^A-Z]*[A-Z])(?=[^a-z]*[a-z])(?=\
 const UPPERCASE_LETTER_CONSTRAIN: RegExp = /^(?=.*[A-Z])/;
 const LOWERCASE_LETTER_CONSTRAIN: RegExp = /(?=.*[a-z])/;
 const DIGIT_CONSTRAIN: RegExp = /(.*[0-9].*)/;
-const SPECIAL_CHARACTER_CONSTRAIN: RegExp = /^(?=.*[!@#$%^&*])/;
+const SPECIAL_CHARACTER_CONSTRAIN: RegExp = /^(?=.*[!@#$%^&*/-_:;+`´,'"(){}≠|?])/;
 const MIN_LENGTH_CONSTRAIN: RegExp = /.{8,}/;
 
 export class PasswordValidator {
@@ -17,22 +17,22 @@ export class PasswordValidator {
   }
 
   public static uppercaseLetter(control: AbstractControl): ValidationErrors | null {
-    return !control?.value?.match(UPPERCASE_LETTER_CONSTRAIN) ? null : {uppercaseLetter: true};
+    return control?.value?.match(UPPERCASE_LETTER_CONSTRAIN) ? null : {uppercaseLetter: true};
   }
 
   public static lowercaseLetter(control: AbstractControl): ValidationErrors | null {
-    return !control?.value?.match(LOWERCASE_LETTER_CONSTRAIN) ? null : {lowercaseLetter: true};
+    return control?.value?.match(LOWERCASE_LETTER_CONSTRAIN) ? null : {lowercaseLetter: true};
   }
 
   public static digit(control: AbstractControl): ValidationErrors | null {
-    return !control?.value?.match(DIGIT_CONSTRAIN) ? null : {digit: true};
+    return control?.value?.match(DIGIT_CONSTRAIN) ? null : {digit: true};
   }
 
   public static specialCharacter(control: AbstractControl): ValidationErrors | null {
-    return !control?.value?.match(SPECIAL_CHARACTER_CONSTRAIN) ? null : {specialCharacter: true};
+    return control?.value?.match(SPECIAL_CHARACTER_CONSTRAIN) ? null : {specialCharacter: true};
   }
 
   public static minLength(control: AbstractControl): ValidationErrors | null {
-    return !control?.value?.match(MIN_LENGTH_CONSTRAIN) ? null : {minLength: true};
+    return control?.value?.match(MIN_LENGTH_CONSTRAIN) ? null : {minLength: true};
   }
 }

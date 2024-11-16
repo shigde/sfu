@@ -12,7 +12,7 @@
 
     <div *ngIf="signupForm.get('user')?.invalid && (signupForm.get('user')?.dirty || signupForm.get('user')?.touched)" class="invalid">
       <p *ngIf="signupForm.get('user')?.errors?.['required']">User name is required!</p>
-      <p *ngIf="signupForm.get('user')?.errors?.['min']">User name must be at least 4 characters long.!</p>
+      <p *ngIf="signupForm.get('user')?.errors?.['min']">User name must be at least 4 characters long!</p>
     </div>
 
     <input type="email" name="email" placeholder="Email" formControlName="email">
@@ -25,19 +25,19 @@
     <input type="password" name="password" placeholder="Password" formControlName="password">
 
     <div *ngIf="signupForm.get('password')?.invalid && (signupForm.get('password')?.touched || signupForm.get('password')?.dirty)" class="invalid">
-      <p *ngIf="signupForm.get('password')?.errors?.['uppercaseLetter']">At least one uppercase letter.</p>
-      <p *ngIf="signupForm.get('password')?.errors?.['lowercaseLetter']">At least one lowercase letter.</p>
-      <p *ngIf="signupForm.get('password')?.errors?.['digit']">At least one digit.</p>
-      <p *ngIf="signupForm.get('password')?.errors?.['specialCharacter']">At least one special character.</p>
-      <p *ngIf="signupForm.get('password')?.errors?.['minLength']">At least 8 characters long.</p>
+      <p *ngIf="signupForm.get('password')?.errors?.['uppercaseLetter']">At least one uppercase letter!</p>
+      <p *ngIf="signupForm.get('password')?.errors?.['lowercaseLetter']">At least one lowercase letter!</p>
+      <p *ngIf="signupForm.get('password')?.errors?.['digit']">At least one digit!</p>
+      <p *ngIf="signupForm.get('password')?.errors?.['specialCharacter']">At least one special character!</p>
+      <p *ngIf="signupForm.get('password')?.errors?.['minLength']">At least 8 characters long!</p>
     </div>
 
-    <input type="password" name="confirmPassword"  formControlName="confirmPassword">
+    <input type="password" name="confirmPassword"  placeholder="Confirm Password" formControlName="confirmPassword">
 
-    <div *ngIf="(signupForm.get('confirmPassword')?.invalid && (signupForm.get('confirmPassword')?.dirty || signupForm.get('confirmPassword')?.touched) || passForgetForm.errors?.['confirm'])"
+    <div *ngIf="(signupForm.get('confirmPassword')?.invalid && (signupForm.get('confirmPassword')?.dirty || signupForm.get('confirmPassword')?.touched) || signupForm.errors?.['confirm'])"
          class="invalid">
       <p *ngIf="signupForm.get('confirmPassword')?.errors?.['required']">Your original password is required!</p>
-      <p *ngIf="signupForm.errors?.['confirm']">Password does'nt match.</p>
+      <p *ngIf="signupForm.errors?.['confirm']">Password doesn't match!</p>
     </div>
 
 
