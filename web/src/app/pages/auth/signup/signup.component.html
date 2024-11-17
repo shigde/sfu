@@ -1,10 +1,10 @@
 <div class="card-app">
   <div class="card-title">
     <h1>Create Account</h1>
-    <span>Already have an account? <a routerLink="/login">Sign In</a></span>
+    <span>Already have an account? <a routerLink="/login">Login</a></span>
   </div>
   <div>
-    <p class="success" *ngIf="success">Your account was created! We send you an email!</p>
+    <p class="success" *ngIf="success">Your account was created! We send you an email with an activation link!</p>
     <p class="fail" *ngIf="fail">We could not create You Account!</p>
   </div>
   <form id="signupForm" class="form-group" [formGroup]="signupForm" (ngSubmit)="onSubmit()">
@@ -48,7 +48,7 @@
       <p *ngIf="signupForm.get('terms')?.errors?.['required']">Please accept the terms!</p>
     </div>
 
-    <input id="signupBtn"  type="submit" value="Signup">
+    <input id="signupBtn"  type="submit" value="Sign-up">
   </form>
 
 </div>

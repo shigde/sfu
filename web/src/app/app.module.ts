@@ -11,6 +11,8 @@ import {CommonModule} from '@angular/common';
 import {httpInterceptorProviders, LoadingIndicatorComponent, ShigModule} from '@shigde/core';
 import {LobbyEntryComponent} from './pages/lobby-entry/lobby-entry.component';
 import {SettingsComponent} from './svg/settings.component';
+import {SidebarComponent} from './component/sidebar/sidebar.component';
+import {HeaderComponent} from './component/header/header.component';
 
 
 @NgModule({
@@ -25,7 +27,7 @@ import {SettingsComponent} from './svg/settings.component';
     AppRoutingModule,
     ReactiveFormsModule,
     FormsModule,
-    ShigModule, LoadingIndicatorComponent], providers: [
+    ShigModule, LoadingIndicatorComponent, SidebarComponent, HeaderComponent], providers: [
     httpInterceptorProviders,
     provideHttpClient(withInterceptorsFromDi()),
   ]

@@ -4,6 +4,7 @@ import {Router} from '@angular/router';
 import {User, SessionService, AuthService} from '@shigde/core';
 import {catchError, of, take, tap} from 'rxjs';
 import {NgIf} from '@angular/common';
+import {map} from 'rxjs/operators';
 
 @Component({
   selector: 'app-login',
@@ -34,12 +35,12 @@ export class LoginComponent {
     if (this.loginForm.valid) {
       this.authService.login(`${this.loginForm.value.email}`, `${this.loginForm.value.password}`).pipe(
         (take(1)),
-        tap(_ => this.router.navigate(['/dashboard'])),
+        map(_ => window.location.href = '/dashboard'),
         catchError(_ => this.handleError())
       ).subscribe();
     } else {
-      this.loginForm.get('email')?.markAsTouched({ onlySelf: true });
-      this.loginForm.get('password')?.markAsTouched({ onlySelf: true });
+      this.loginForm.get('email')?.markAsTouched({onlySelf: true});
+      this.loginForm.get('password')?.markAsTouched({onlySelf: true});
     }
   }
 
