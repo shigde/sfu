@@ -1,6 +1,11 @@
 @import 'scss/main';
 
 
+body, main{
+  display: flex;
+  min-height: 80vh;
+  flex-direction: column;
+}
 
 .loader {
   border: 5px solid $secondary-brand-color !important;

@@ -13,3 +13,11 @@
 .dropdown-toggle:not(:focus) {
   outline: 0;
 }
+
+footer {
+  background-color: #220122FF;
+  padding-top: 1rem !important;
+  margin-top: 1.5rem !important;
+  color: #8dcaff !important;
+  //background-image: linear-gradient(#8DCAFFFF, rgba(255, 255, 255, 0));
+}

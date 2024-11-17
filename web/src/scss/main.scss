@@ -1,6 +1,6 @@
 ///* Importing Bootstrap SCSS file. */
 
-
+@import "bootstrap-icons/font/bootstrap-icons.min.css";
 @import "bootstrap/scss/mixins/banner";
 @include bsBanner("");
 
@@ -8,6 +8,7 @@
 // scss-docs-start import-stack
 // Configuration
 @import "bootstrap/scss/functions";
+
 
 //// Customize some defaults
 //$body-color: #333;
@@ -61,6 +62,8 @@
 // Utilities
 @import "bootstrap/scss/utilities/api";
 // scss-docs-end import-stack
+
+
 
 // Shig Customs
 @import "./card";
