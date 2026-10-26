@@ -1,5 +1,8 @@
 # Shig Instance
 
+# Replaced by https://github.com/shigde/shig
+
+
 ## !!Attention!!
 I'm currently doing a refactoring to make the code more readable. 
 The Main branch is currently broken. 
